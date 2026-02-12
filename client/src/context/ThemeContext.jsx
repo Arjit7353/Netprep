@@ -1,34 +1,34 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 
-// Create context with default values
-const ThemeContext = createContext({
-  theme: 'light',
-  setTheme: () => {},
-  toggleTheme: () => {},
-  isDark: false
-});
+const ThemeContext = createContext(null);
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState('light');
   const [mounted, setMounted] = useState(false);
 
-  // Initialize theme on mount
   useEffect(() => {
-    const saved = localStorage.getItem('netprep-theme');
-    if (saved) {
-      setTheme(saved);
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setTheme('dark');
+    try {
+      const saved = localStorage.getItem('netprep-theme');
+      if (saved === 'dark' || saved === 'light') {
+        setTheme(saved);
+      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        setTheme('dark');
+      }
+    } catch (e) {
+      console.warn('Could not read theme from localStorage');
     }
     setMounted(true);
   }, []);
 
-  // Update DOM and localStorage when theme changes
   useEffect(() => {
     if (!mounted) return;
-    
-    localStorage.setItem('netprep-theme', theme);
-    
+
+    try {
+      localStorage.setItem('netprep-theme', theme);
+    } catch (e) {
+      console.warn('Could not save theme to localStorage');
+    }
+
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -37,7 +37,7 @@ export const ThemeProvider = ({ children }) => {
   }, [theme, mounted]);
 
   const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
   };
 
   const value = {
@@ -56,6 +56,15 @@ export const ThemeProvider = ({ children }) => {
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
+  if (!context) {
+    console.warn('useTheme called outside ThemeProvider, returning defaults');
+    return {
+      theme: 'light',
+      setTheme: () => {},
+      toggleTheme: () => {},
+      isDark: false
+    };
+  }
   return context;
 };
 

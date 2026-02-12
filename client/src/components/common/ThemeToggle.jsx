@@ -1,12 +1,7 @@
-import React from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
-const ThemeToggle = ({
-  size = 'md',
-  showLabel = true,
-  className = ''
-}) => {
+const ThemeToggle = ({ size = 'md', showLabel = true, className = '' }) => {
   const { isDark, toggleTheme } = useTheme();
 
   const sizes = {
@@ -26,14 +21,14 @@ const ThemeToggle = ({
       type="button"
       onClick={toggleTheme}
       className={`
-        ${sizes[size]}
-        flex items-center gap-2 font-medium 
-        border border-gray-300 dark:border-secondary-600
-        rounded-lg 
-        bg-white dark:bg-secondary-800
-        hover:bg-gray-50 dark:hover:bg-secondary-700
+        ${sizes[size] || sizes.md}
+        flex items-center gap-2 font-medium
+        border border-gray-300 dark:border-gray-600
+        rounded-lg
+        bg-white dark:bg-gray-800
+        hover:bg-gray-50 dark:hover:bg-gray-700
         transition-all duration-200
-        text-gray-700 dark:text-secondary-200
+        text-gray-700 dark:text-gray-200
         ${className}
       `}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -41,12 +36,12 @@ const ThemeToggle = ({
     >
       {isDark ? (
         <>
-          <Sun className={`${iconSizes[size]} text-yellow-400`} />
+          <Sun className={`${iconSizes[size] || iconSizes.md} text-yellow-400`} />
           {showLabel && <span className="hidden sm:inline">Light</span>}
         </>
       ) : (
         <>
-          <Moon className={`${iconSizes[size]} text-blue-500`} />
+          <Moon className={`${iconSizes[size] || iconSizes.md} text-blue-500`} />
           {showLabel && <span className="hidden sm:inline">Dark</span>}
         </>
       )}
