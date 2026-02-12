@@ -3,51 +3,17 @@
 
   <url>
     <loc>https://apmock.icu/</loc>
-    <lastmod>2025-02-12</lastmod>
-    <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
 
   <url>
     <loc>https://apmock.icu/questions</loc>
-    <lastmod>2025-02-12</lastmod>
-    <changefreq>daily</changefreq>
     <priority>0.9</priority>
-  </url>
-
-  <url>
-    <loc>https://apmock.icu/import</loc>
-    <lastmod>2025-02-12</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
   </url>
 
   <url>
     <loc>https://apmock.icu/tests</loc>
-    <lastmod>2025-02-12</lastmod>
-    <changefreq>daily</changefreq>
     <priority>0.9</priority>
-  </url>
-
-  <url>
-    <loc>https://apmock.icu/tests/create</loc>
-    <lastmod>2025-02-12</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://apmock.icu/results</loc>
-    <lastmod>2025-02-12</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://apmock.icu/settings</loc>
-    <lastmod>2025-02-12</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
   </url>
 
 </urlset>
