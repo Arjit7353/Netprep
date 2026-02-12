@@ -1,0 +1,612 @@
+{
+  "paper": "paper1",
+  "name": "General Paper on Teaching & Research Aptitude",
+  "nameHi": "शिक्षण और शोध अभिवृत्ति पर सामान्य पेपर",
+  "code": "00",
+  "units": [
+    {
+      "id": "unit1",
+      "name": "UNIT I: Teaching Aptitude",
+      "nameHi": "इकाई I: शिक्षण अभिवृत्ति",
+      "chapters": [
+        {
+          "id": "ch1",
+          "name": "Concept & Nature of Teaching",
+          "nameHi": "शिक्षण की अवधारणा और प्रकृति",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Concept of Teaching",
+              "nameHi": "शिक्षण की अवधारणा",
+              "subtopics": ["Definitions", "Teaching vs Training vs Indoctrination vs Conditioning"]
+            },
+            {
+              "id": "t2",
+              "name": "Levels of Teaching",
+              "nameHi": "शिक्षण के स्तर",
+              "subtopics": ["Memory Level (Herbart)", "Understanding Level (Morrison)", "Reflective Level (Hunt)"]
+            },
+            {
+              "id": "t3",
+              "name": "Objectives - Bloom's Taxonomy",
+              "nameHi": "उद्देश्य - ब्लूम की वर्गिकी",
+              "subtopics": ["Cognitive Domain", "Affective Domain", "Psychomotor Domain"]
+            }
+          ]
+        },
+        {
+          "id": "ch2",
+          "name": "The Learner & Factors Affecting",
+          "nameHi": "शिक्षार्थी और प्रभावित करने वाले कारक",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Learner Characteristics",
+              "nameHi": "शिक्षार्थी की विशेषताएं",
+              "subtopics": ["Adolescent vs Adult Learners", "Individual Differences", "Field Dependent vs Field Independent"]
+            },
+            {
+              "id": "t2",
+              "name": "Factors Affecting Teaching",
+              "nameHi": "शिक्षण को प्रभावित करने वाले कारक",
+              "subtopics": ["Teacher Factors", "Learner Factors", "Support Material & Facilities"]
+            }
+          ]
+        },
+        {
+          "id": "ch3",
+          "name": "Methods of Teaching",
+          "nameHi": "शिक्षण की विधियां",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Teacher-Centered Methods",
+              "nameHi": "शिक्षक केंद्रित विधियां",
+              "subtopics": ["Lecture Method", "Demonstration Method", "Team Teaching"]
+            },
+            {
+              "id": "t2",
+              "name": "Learner-Centered Methods",
+              "nameHi": "शिक्षार्थी केंद्रित विधियां",
+              "subtopics": ["Heuristic Method", "Project Method", "Flipped Classroom", "Programmed Instruction"]
+            },
+            {
+              "id": "t3",
+              "name": "Online Methods",
+              "nameHi": "ऑनलाइन विधियां",
+              "subtopics": ["SWAYAM", "Swayam Prabha", "MOOCs"]
+            }
+          ]
+        },
+        {
+          "id": "ch4",
+          "name": "Evaluation Systems",
+          "nameHi": "मूल्यांकन प्रणाली",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Types of Evaluation",
+              "nameHi": "मूल्यांकन के प्रकार",
+              "subtopics": ["Formative", "Summative", "Diagnostic", "Placement"]
+            },
+            {
+              "id": "t2",
+              "name": "Innovation in Evaluation",
+              "nameHi": "मूल्यांकन में नवाचार",
+              "subtopics": ["CBCS", "CBT", "CRT vs NRT"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unit2",
+      "name": "UNIT II: Research Aptitude",
+      "nameHi": "इकाई II: शोध अभिवृत्ति",
+      "chapters": [
+        {
+          "id": "ch1",
+          "name": "Meaning & Types of Research",
+          "nameHi": "शोध का अर्थ और प्रकार",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Concept & Paradigms",
+              "nameHi": "अवधारणा और प्रतिमान",
+              "subtopics": ["Positivism", "Post-Positivism"]
+            },
+            {
+              "id": "t2",
+              "name": "Types of Research",
+              "nameHi": "शोध के प्रकार",
+              "subtopics": ["Fundamental/Pure", "Applied", "Action Research", "Experimental vs Ex-Post Facto", "Descriptive vs Analytical"]
+            }
+          ]
+        },
+        {
+          "id": "ch2",
+          "name": "Methods & Steps",
+          "nameHi": "विधियां और चरण",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Research Methods",
+              "nameHi": "शोध विधियां",
+              "subtopics": ["Experimental Method", "Descriptive Method", "Historical Method", "Qualitative vs Quantitative"]
+            },
+            {
+              "id": "t2",
+              "name": "Steps of Research",
+              "nameHi": "शोध के चरण",
+              "subtopics": ["Problem Identification", "Literature Review", "Hypothesis", "Research Design", "Data Collection", "Analysis", "Conclusion", "Report"]
+            }
+          ]
+        },
+        {
+          "id": "ch3",
+          "name": "Thesis Writing & Ethics",
+          "nameHi": "शोध प्रबंध लेखन और नैतिकता",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Formatting & Referencing",
+              "nameHi": "स्वरूपण और संदर्भ",
+              "subtopics": ["APA Style", "MLA Style", "Bibliography vs References"]
+            },
+            {
+              "id": "t2",
+              "name": "Research Ethics",
+              "nameHi": "शोध नैतिकता",
+              "subtopics": ["Plagiarism", "Integrity", "Confidentiality", "Informed Consent"]
+            },
+            {
+              "id": "t3",
+              "name": "ICT in Research",
+              "nameHi": "शोध में ICT",
+              "subtopics": ["SPSS", "Mendeley", "Reference Management"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unit3",
+      "name": "UNIT III: Comprehension",
+      "nameHi": "इकाई III: बोध",
+      "chapters": [
+        {
+          "id": "ch1",
+          "name": "Reading Comprehension",
+          "nameHi": "पठन बोध",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Comprehension Strategies",
+              "nameHi": "बोध रणनीतियां",
+              "subtopics": ["Skimming", "Scanning", "Inferencing"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unit4",
+      "name": "UNIT IV: Communication",
+      "nameHi": "इकाई IV: संप्रेषण",
+      "chapters": [
+        {
+          "id": "ch1",
+          "name": "Nature of Communication",
+          "nameHi": "संप्रेषण की प्रकृति",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Types of Communication",
+              "nameHi": "संप्रेषण के प्रकार",
+              "subtopics": ["Verbal vs Non-Verbal", "Intrapersonal vs Interpersonal", "Group vs Mass Communication"]
+            },
+            {
+              "id": "t2",
+              "name": "7 Cs of Communication",
+              "nameHi": "संप्रेषण के 7 C",
+              "subtopics": ["Clear", "Concise", "Concrete", "Correct", "Coherent", "Complete", "Courteous"]
+            }
+          ]
+        },
+        {
+          "id": "ch2",
+          "name": "Classroom & Effective Communication",
+          "nameHi": "कक्षा और प्रभावी संप्रेषण",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Communication Models",
+              "nameHi": "संप्रेषण मॉडल",
+              "subtopics": ["Linear Model", "Interactive Model", "Transactional Model"]
+            },
+            {
+              "id": "t2",
+              "name": "Barriers to Communication",
+              "nameHi": "संप्रेषण में बाधाएं",
+              "subtopics": ["Physical Barriers", "Psychological Barriers", "Semantic Barriers", "Organizational Barriers", "Cultural Barriers"]
+            },
+            {
+              "id": "t3",
+              "name": "Mass Media & Society",
+              "nameHi": "जनसंचार और समाज",
+              "subtopics": ["Role of Media", "Gatekeeping", "Agenda Setting"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unit5",
+      "name": "UNIT V: Mathematical Reasoning & Aptitude",
+      "nameHi": "इकाई V: गणितीय तर्क और अभिक्षमता",
+      "chapters": [
+        {
+          "id": "ch1",
+          "name": "Series & Patterns",
+          "nameHi": "श्रृंखला और पैटर्न",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Number Series",
+              "nameHi": "संख्या श्रृंखला",
+              "subtopics": ["Missing Numbers", "Wrong Number", "Pattern Finding"]
+            },
+            {
+              "id": "t2",
+              "name": "Letter Series",
+              "nameHi": "अक्षर श्रृंखला",
+              "subtopics": ["Alphabet Series", "Alpha-Numeric Series"]
+            },
+            {
+              "id": "t3",
+              "name": "Coding-Decoding",
+              "nameHi": "कोडिंग-डिकोडिंग",
+              "subtopics": ["Letter Coding", "Number Coding", "Mixed Coding"]
+            }
+          ]
+        },
+        {
+          "id": "ch2",
+          "name": "Mathematical Aptitude",
+          "nameHi": "गणितीय अभिक्षमता",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Basic Arithmetic",
+              "nameHi": "मूल अंकगणित",
+              "subtopics": ["Fraction", "Percentage", "Ratio & Proportion", "Averages"]
+            },
+            {
+              "id": "t2",
+              "name": "Commercial Mathematics",
+              "nameHi": "वाणिज्यिक गणित",
+              "subtopics": ["Profit & Loss", "Simple Interest", "Compound Interest"]
+            },
+            {
+              "id": "t3",
+              "name": "Time & Distance",
+              "nameHi": "समय और दूरी",
+              "subtopics": ["Trains", "Boats & Streams", "Relative Speed"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unit6",
+      "name": "UNIT VI: Logical Reasoning",
+      "nameHi": "इकाई VI: युक्ति-युक्त तर्क",
+      "chapters": [
+        {
+          "id": "ch1",
+          "name": "Western Logic",
+          "nameHi": "पाश्चात्य तर्कशास्त्र",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Structure of Arguments",
+              "nameHi": "तर्क की संरचना",
+              "subtopics": ["Premise and Conclusion", "Deductive Reasoning", "Inductive Reasoning"]
+            },
+            {
+              "id": "t2",
+              "name": "Categorical Propositions",
+              "nameHi": "निरपेक्ष प्रतिज्ञप्तियां",
+              "subtopics": ["A Proposition (All)", "E Proposition (No)", "I Proposition (Some)", "O Proposition (Some not)", "Square of Opposition"]
+            },
+            {
+              "id": "t3",
+              "name": "Fallacies",
+              "nameHi": "तर्कदोष",
+              "subtopics": ["Ad Hominem", "Straw Man", "Slippery Slope", "Red Herring", "Appeal to Authority"]
+            },
+            {
+              "id": "t4",
+              "name": "Venn Diagrams",
+              "nameHi": "वेन आरेख",
+              "subtopics": ["Testing Validity", "Syllogism"]
+            }
+          ]
+        },
+        {
+          "id": "ch2",
+          "name": "Indian Logic (Nyaya)",
+          "nameHi": "भारतीय तर्कशास्त्र (न्याय)",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Pramanas (Means of Knowledge)",
+              "nameHi": "प्रमाण",
+              "subtopics": ["Pratyaksha (Perception)", "Anumana (Inference)", "Upamana (Comparison)", "Shabda (Verbal Testimony)", "Arthapatti (Implication)", "Anupalabdhi (Non-Apprehension)"]
+            },
+            {
+              "id": "t2",
+              "name": "Structure of Anumana",
+              "nameHi": "अनुमान की संरचना",
+              "subtopics": ["Vyapti (Invariable Relation)", "Hetu (Reason)", "Sadhya (Major Term)", "Paksha (Minor Term)"]
+            },
+            {
+              "id": "t3",
+              "name": "Hetvabhasas (Fallacies)",
+              "nameHi": "हेत्वाभास",
+              "subtopics": ["Asiddha", "Savyabhichara", "Satpratipaksha", "Badhita", "Viruddha"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unit7",
+      "name": "UNIT VII: Data Interpretation",
+      "nameHi": "इकाई VII: आंकड़ों की व्याख्या",
+      "chapters": [
+        {
+          "id": "ch1",
+          "name": "Graphical Representation",
+          "nameHi": "आलेखीय प्रस्तुतीकरण",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Types of Charts",
+              "nameHi": "चार्ट के प्रकार",
+              "subtopics": ["Table Chart", "Bar Chart", "Pie Chart", "Line Graph"]
+            },
+            {
+              "id": "t2",
+              "name": "Data Analysis",
+              "nameHi": "डेटा विश्लेषण",
+              "subtopics": ["Missing Data", "Percentage Calculation", "Comparison"]
+            }
+          ]
+        },
+        {
+          "id": "ch2",
+          "name": "Data & Governance",
+          "nameHi": "डेटा और शासन",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Government Data",
+              "nameHi": "सरकारी डेटा",
+              "subtopics": ["Census", "Surveys", "Reports"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unit8",
+      "name": "UNIT VIII: Information & Communication Technology (ICT)",
+      "nameHi": "इकाई VIII: सूचना और संचार प्रौद्योगिकी",
+      "chapters": [
+        {
+          "id": "ch1",
+          "name": "Basics of ICT",
+          "nameHi": "ICT की मूल बातें",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Computer Fundamentals",
+              "nameHi": "कंप्यूटर की मूल बातें",
+              "subtopics": ["CPU, RAM, ROM", "Input/Output Devices", "Storage Devices"]
+            },
+            {
+              "id": "t2",
+              "name": "Number Systems",
+              "nameHi": "संख्या प्रणाली",
+              "subtopics": ["Binary to Decimal", "Decimal to Binary", "Hexadecimal"]
+            },
+            {
+              "id": "t3",
+              "name": "Memory Units",
+              "nameHi": "मेमोरी इकाइयां",
+              "subtopics": ["Bit, Byte, KB, MB, GB, TB, PB"]
+            },
+            {
+              "id": "t4",
+              "name": "Software",
+              "nameHi": "सॉफ्टवेयर",
+              "subtopics": ["System Software", "Application Software", "Open Source vs Proprietary"]
+            }
+          ]
+        },
+        {
+          "id": "ch2",
+          "name": "Internet & Digital Initiatives",
+          "nameHi": "इंटरनेट और डिजिटल पहल",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Internet Basics",
+              "nameHi": "इंटरनेट की मूल बातें",
+              "subtopics": ["Email (CC, BCC)", "Intranet", "Virus/Malware/Phishing", "Video Conferencing"]
+            },
+            {
+              "id": "t2",
+              "name": "Digital Initiatives in Higher Education",
+              "nameHi": "उच्च शिक्षा में डिजिटल पहल",
+              "subtopics": ["SWAYAM", "Swayam Prabha", "NAD", "NDL", "e-Yantra", "e-ShodhSindhu"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unit9",
+      "name": "UNIT IX: People, Development & Environment",
+      "nameHi": "इकाई IX: लोग, विकास और पर्यावरण",
+      "chapters": [
+        {
+          "id": "ch1",
+          "name": "Environment & Development",
+          "nameHi": "पर्यावरण और विकास",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Development Goals",
+              "nameHi": "विकास लक्ष्य",
+              "subtopics": ["MDGs (8 Goals)", "SDGs (17 Goals - Target 2030)"]
+            },
+            {
+              "id": "t2",
+              "name": "Human-Environment Interaction",
+              "nameHi": "मानव-पर्यावरण अंतर्क्रिया",
+              "subtopics": ["Anthropogenic Activities", "Ecological Footprint"]
+            }
+          ]
+        },
+        {
+          "id": "ch2",
+          "name": "Environmental Issues",
+          "nameHi": "पर्यावरणीय मुद्दे",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Pollution",
+              "nameHi": "प्रदूषण",
+              "subtopics": ["Air Pollution (PM2.5, PM10, AQI)", "Water Pollution (BOD, COD, Eutrophication)", "Soil Pollution", "Noise Pollution"]
+            },
+            {
+              "id": "t2",
+              "name": "Waste Management",
+              "nameHi": "अपशिष्ट प्रबंधन",
+              "subtopics": ["Solid Waste", "Biomedical Waste", "E-waste"]
+            },
+            {
+              "id": "t3",
+              "name": "Climate Change",
+              "nameHi": "जलवायु परिवर्तन",
+              "subtopics": ["Global Warming", "Ozone Depletion", "Greenhouse Effect"]
+            }
+          ]
+        },
+        {
+          "id": "ch3",
+          "name": "Resources & Mitigation",
+          "nameHi": "संसाधन और शमन",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Energy Resources",
+              "nameHi": "ऊर्जा संसाधन",
+              "subtopics": ["Solar (ISA)", "Wind", "Hydro", "Geothermal", "Nuclear", "Biomass"]
+            },
+            {
+              "id": "t2",
+              "name": "Natural Hazards",
+              "nameHi": "प्राकृतिक आपदाएं",
+              "subtopics": ["Earthquakes", "Cyclones", "Floods", "Mitigation"]
+            }
+          ]
+        },
+        {
+          "id": "ch4",
+          "name": "Conventions & Protocols",
+          "nameHi": "सम्मेलन और प्रोटोकॉल",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "National",
+              "nameHi": "राष्ट्रीय",
+              "subtopics": ["Environment Protection Act 1986", "NAPCC (8 Missions)"]
+            },
+            {
+              "id": "t2",
+              "name": "International",
+              "nameHi": "अंतर्राष्ट्रीय",
+              "subtopics": ["Montreal Protocol", "Rio Summit 1992", "Kyoto Protocol", "Paris Agreement", "ISA"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unit10",
+      "name": "UNIT X: Higher Education System",
+      "nameHi": "इकाई X: उच्च शिक्षा प्रणाली",
+      "chapters": [
+        {
+          "id": "ch1",
+          "name": "Evolution of Education",
+          "nameHi": "शिक्षा का विकास",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Ancient India",
+              "nameHi": "प्राचीन भारत",
+              "subtopics": ["Gurukul System", "Takshashila", "Nalanda", "Vikramshila", "Vallabhi", "Odantapuri"]
+            },
+            {
+              "id": "t2",
+              "name": "Pre-Independence",
+              "nameHi": "स्वतंत्रता पूर्व",
+              "subtopics": ["Macaulay's Minute", "Wood's Despatch (Magna Carta)", "Hunter Commission"]
+            },
+            {
+              "id": "t3",
+              "name": "Post-Independence",
+              "nameHi": "स्वतंत्रता के बाद",
+              "subtopics": ["Radhakrishnan Commission", "Mudaliar Commission", "Kothari Commission (10+2+3)", "NEP 1986", "NEP 2020 (5+3+3+4)"]
+            }
+          ]
+        },
+        {
+          "id": "ch2",
+          "name": "Institutions & Governance",
+          "nameHi": "संस्थाएं और शासन",
+          "topics": [
+            {
+              "id": "t1",
+              "name": "Regulatory Bodies",
+              "nameHi": "नियामक निकाय",
+              "subtopics": ["UGC", "AICTE", "NCTE", "BCI", "NMC"]
+            },
+            {
+              "id": "t2",
+              "name": "Accreditation",
+              "nameHi": "मान्यता",
+              "subtopics": ["NAAC", "NIRF Rankings", "NBA"]
+            },
+            {
+              "id": "t3",
+              "name": "Types of Universities",
+              "nameHi": "विश्वविद्यालयों के प्रकार",
+              "subtopics": ["Central", "State", "Private", "Deemed"]
+            },
+            {
+              "id": "t4",
+              "name": "Value & Environmental Education",
+              "nameHi": "मूल्य और पर्यावरण शिक्षा",
+              "subtopics": ["Value Education", "Environmental Education"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
