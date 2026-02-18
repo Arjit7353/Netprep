@@ -17,9 +17,10 @@ class SmartParser {
     };
   }
 
-  /**
-   * Detect question type from JSON structure
-   */
+  // ================================================================
+  // TYPE DETECTION
+  // ================================================================
+
   detectQuestionType(questionData) {
     if (questionData.type) return this.normalizeType(questionData.type);
     if (questionData.questionType) return this.normalizeType(questionData.questionType);
@@ -35,21 +36,20 @@ class SmartParser {
     if (questionData.diData) {
       const diData = questionData.diData;
       if (diData.tableData) return 'di_table';
+      if (diData.caseletText) return 'di_caselet';
       if (diData.chartData) {
-        const chartType = diData.chartData.type || diData.diType;
-        if (chartType === 'bar' || chartType === 'bar_chart') return 'di_bar_chart';
+        const chartType = diData.chartData.type || diData.diType || '';
         if (chartType === 'pie' || chartType === 'pie_chart') return 'di_pie_chart';
         if (chartType === 'line' || chartType === 'line_graph') return 'di_line_graph';
         if (chartType === 'mixed') return 'di_mixed';
         return 'di_bar_chart';
       }
-      if (diData.caseletText) return 'di_caselet';
     }
 
     if (keys.includes('tableData')) return 'di_table';
     if (keys.includes('caseletText')) return 'di_caselet';
     if (keys.includes('chartData')) {
-      const chartType = questionData.chartData.type;
+      const chartType = questionData.chartData?.type || '';
       if (chartType === 'pie') return 'di_pie_chart';
       if (chartType === 'line') return 'di_line_graph';
       return 'di_bar_chart';
@@ -58,35 +58,60 @@ class SmartParser {
     return 'mcq';
   }
 
-  /**
-   * Normalize question type string
-   */
   normalizeType(type) {
     const typeMap = {
-      'mcq': 'mcq', 'multiple_choice': 'mcq', 'multiplechoice': 'mcq',
-      'assertion': 'assertion_reason', 'assertion_reason': 'assertion_reason', 
-      'assertionreason': 'assertion_reason', 'a-r': 'assertion_reason', 'ar': 'assertion_reason',
-      'match': 'match_following', 'match_following': 'match_following', 
-      'matchfollowing': 'match_following', 'matching': 'match_following',
-      'sequence': 'sequence_order', 'sequence_order': 'sequence_order', 
-      'sequenceorder': 'sequence_order', 'chronological': 'sequence_order', 'order': 'sequence_order',
-      'statement': 'statement_based', 'statement_based': 'statement_based', 
-      'statementbased': 'statement_based', 'statements': 'statement_based',
-      'passage': 'passage_based', 'passage_based': 'passage_based', 
-      'passagebased': 'passage_based', 'comprehension': 'passage_based',
-      'di_table': 'di_table', 'table': 'di_table', 'ditable': 'di_table',
-      'di_bar': 'di_bar_chart', 'di_bar_chart': 'di_bar_chart', 'bar': 'di_bar_chart', 'barchart': 'di_bar_chart',
-      'di_pie': 'di_pie_chart', 'di_pie_chart': 'di_pie_chart', 'pie': 'di_pie_chart', 'piechart': 'di_pie_chart',
-      'di_line': 'di_line_graph', 'di_line_graph': 'di_line_graph', 'line': 'di_line_graph', 'linegraph': 'di_line_graph',
-      'di_mixed': 'di_mixed', 'mixed': 'di_mixed',
-      'di_caselet': 'di_caselet', 'caselet': 'di_caselet'
+      'mcq': 'mcq',
+      'multiple_choice': 'mcq',
+      'multiplechoice': 'mcq',
+      'assertion': 'assertion_reason',
+      'assertion_reason': 'assertion_reason',
+      'assertionreason': 'assertion_reason',
+      'a-r': 'assertion_reason',
+      'ar': 'assertion_reason',
+      'match': 'match_following',
+      'match_following': 'match_following',
+      'matchfollowing': 'match_following',
+      'matching': 'match_following',
+      'sequence': 'sequence_order',
+      'sequence_order': 'sequence_order',
+      'sequenceorder': 'sequence_order',
+      'chronological': 'sequence_order',
+      'order': 'sequence_order',
+      'statement': 'statement_based',
+      'statement_based': 'statement_based',
+      'statementbased': 'statement_based',
+      'statements': 'statement_based',
+      'passage': 'passage_based',
+      'passage_based': 'passage_based',
+      'passagebased': 'passage_based',
+      'comprehension': 'passage_based',
+      'di_table': 'di_table',
+      'table': 'di_table',
+      'ditable': 'di_table',
+      'di_bar': 'di_bar_chart',
+      'di_bar_chart': 'di_bar_chart',
+      'bar': 'di_bar_chart',
+      'barchart': 'di_bar_chart',
+      'di_pie': 'di_pie_chart',
+      'di_pie_chart': 'di_pie_chart',
+      'pie': 'di_pie_chart',
+      'piechart': 'di_pie_chart',
+      'di_line': 'di_line_graph',
+      'di_line_graph': 'di_line_graph',
+      'line': 'di_line_graph',
+      'linegraph': 'di_line_graph',
+      'di_mixed': 'di_mixed',
+      'mixed': 'di_mixed',
+      'di_caselet': 'di_caselet',
+      'caselet': 'di_caselet'
     };
-    return typeMap[type.toLowerCase()] || 'mcq';
+    return typeMap[type?.toLowerCase()] || 'mcq';
   }
 
-  /**
-   * OPTIMIZED: Parse entire JSON - Collect ALL texts, translate in ONE batch
-   */
+  // ================================================================
+  // MAIN PARSE FUNCTION
+  // ================================================================
+
   async parseJSONImport(jsonData) {
     const results = {
       success: [],
@@ -94,37 +119,46 @@ class SmartParser {
       passages: [],
       diDataItems: [],
       questions: [],
-      stats: { total: 0, successful: 0, failed: 0, byType: {} }
+      stats: {
+        total: 0,
+        successful: 0,
+        failed: 0,
+        byType: {}
+      }
     };
 
     const sourceLanguage = jsonData.language || jsonData.defaultMeta?.language || 'hi';
     const targetLanguage = sourceLanguage === 'hi' ? 'en' : 'hi';
-    const defaultMeta = jsonData.defaultMeta || {
-      paper: jsonData.paper,
-      unit: jsonData.unit,
-      chapter: jsonData.chapter,
-      topic: jsonData.topic,
-      difficulty: jsonData.difficulty,
-      source: jsonData.source
+
+    const defaultMeta = {
+      paper: jsonData.paper || jsonData.defaultMeta?.paper || 'paper1',
+      unit: jsonData.unit || jsonData.defaultMeta?.unit || '',
+      chapter: jsonData.chapter || jsonData.defaultMeta?.chapter || '',
+      topic: jsonData.topic || jsonData.defaultMeta?.topic || '',
+      difficulty: jsonData.difficulty || jsonData.defaultMeta?.difficulty || 'medium',
+      source: jsonData.source || jsonData.defaultMeta?.source || '',
+      year: jsonData.year || jsonData.defaultMeta?.year || ''
     };
 
     const questions = jsonData.questions || [];
     results.stats.total = questions.length;
 
-    console.log(`[SmartParser] Processing ${questions.length} questions...`);
-    const startTime = Date.now();
+    console.log(`[SmartParser] Processing ${questions.length} questions, lang: ${sourceLanguage}`);
 
-    // STEP 1: Collect ALL texts from ALL questions
     const allTexts = [];
     const textRegistry = [];
     const parsedStructures = [];
 
+    // STEP 1: Collect all texts from all questions
     for (let i = 0; i < questions.length; i++) {
       try {
         const rawQuestion = questions[i];
-        const structure = this.collectTexts(rawQuestion, defaultMeta, sourceLanguage, i, allTexts, textRegistry);
+        const structure = this.collectTexts(
+          rawQuestion, defaultMeta, sourceLanguage, i, allTexts, textRegistry
+        );
         parsedStructures.push({ index: i, structure, error: null });
       } catch (error) {
+        console.error(`[SmartParser] Collect error at index ${i}:`, error.message);
         parsedStructures.push({ index: i, structure: null, error: error.message });
         results.stats.failed++;
       }
@@ -132,16 +166,17 @@ class SmartParser {
 
     console.log(`[SmartParser] Collected ${allTexts.length} texts for translation`);
 
-    // STEP 2: Batch translate ALL texts at once
-    let translations = [];
+    // STEP 2: Batch translate all texts at once
+    let translations = [...allTexts];
     if (allTexts.length > 0) {
       try {
-        const translateStart = Date.now();
-        translations = await translateHelper.translateBatch(allTexts, sourceLanguage, targetLanguage);
-        console.log(`[SmartParser] Translation completed in ${Date.now() - translateStart}ms`);
+        translations = await translateHelper.translateBatch(
+          allTexts, sourceLanguage, targetLanguage
+        );
+        console.log(`[SmartParser] Translation done: ${translations.length} texts`);
       } catch (err) {
-        console.error('[SmartParser] Translation failed:', err.message);
-        translations = allTexts.map(t => t); // Fallback to original
+        console.error('[SmartParser] Translation batch failed:', err.message);
+        translations = [...allTexts]; // fallback to original
       }
     }
 
@@ -154,39 +189,109 @@ class SmartParser {
 
       try {
         const { type, data } = item.structure;
-        this.applyTranslations(data, textRegistry, translations, sourceLanguage, targetLanguage, item.index);
+
+        this.applyTranslations(
+          data, textRegistry, translations,
+          sourceLanguage, targetLanguage, item.index
+        );
 
         if (type === 'single') {
-          results.questions.push(data);
-          results.success.push({ index: item.index, type: data.questionType });
-          results.stats.byType[data.questionType] = (results.stats.byType[data.questionType] || 0) + 1;
+          const q = this.cleanQuestion(data);
+          results.questions.push(q);
+          results.success.push({ index: item.index, type: q.questionType });
+          results.stats.byType[q.questionType] =
+            (results.stats.byType[q.questionType] || 0) + 1;
+
         } else if (type === 'passage') {
-          results.passages.push(data.passage);
-          results.questions.push(...data.questions);
-          results.success.push({ index: item.index, type: 'passage_based', questionCount: data.questions.length });
-          results.stats.byType['passage_based'] = (results.stats.byType['passage_based'] || 0) + 1;
+          const groupId = `passage_${item.index}_${Date.now()}`;
+
+          const passageObj = this.cleanPassage(data.passage);
+          passageObj._groupId = groupId;
+          results.passages.push(passageObj);
+
+          for (const q of data.questions) {
+            const cleanQ = this.cleanQuestion(q);
+            cleanQ._passageGroupId = groupId;
+            results.questions.push(cleanQ);
+          }
+
+          results.success.push({
+            index: item.index,
+            type: 'passage_based',
+            questionCount: data.questions.length
+          });
+          results.stats.byType['passage_based'] =
+            (results.stats.byType['passage_based'] || 0) + 1;
+
         } else if (type === 'di') {
-          results.diDataItems.push(data.diData);
-          results.questions.push(...data.questions);
-          results.success.push({ index: item.index, type: data.diData.diType, questionCount: data.questions.length });
-          const diType = `di_${data.diData.diType}`;
-          results.stats.byType[diType] = (results.stats.byType[diType] || 0) + 1;
+          const groupId = `di_${item.index}_${Date.now()}`;
+
+          const diObj = this.cleanDIData(data.diData);
+          diObj._groupId = groupId;
+          results.diDataItems.push(diObj);
+
+          for (const q of data.questions) {
+            const cleanQ = this.cleanQuestion(q);
+            cleanQ._diGroupId = groupId;
+            results.questions.push(cleanQ);
+          }
+
+          results.success.push({
+            index: item.index,
+            type: data.diData.diType,
+            questionCount: data.questions.length
+          });
+          const diTypeKey = `di_${data.diData.diType}`;
+          results.stats.byType[diTypeKey] =
+            (results.stats.byType[diTypeKey] || 0) + 1;
         }
 
         results.stats.successful++;
+
       } catch (error) {
+        console.error(`[SmartParser] Apply error at index ${item.index}:`, error.message);
         results.errors.push({ index: item.index, error: error.message });
         results.stats.failed++;
       }
     }
 
-    console.log(`[SmartParser] Completed in ${Date.now() - startTime}ms`);
+    console.log(
+      `[SmartParser] Done: ${results.questions.length} Q, ` +
+      `${results.passages.length} P, ${results.diDataItems.length} DI`
+    );
+
     return results;
   }
 
-  /**
-   * Collect all texts from a question for batch translation
-   */
+  // ================================================================
+  // CLEAN HELPERS
+  // ================================================================
+
+  cleanQuestion(q) {
+    const clean = { ...q };
+    delete clean._idx;
+    delete clean._src;
+    return clean;
+  }
+
+  cleanPassage(p) {
+    const clean = { ...p };
+    delete clean._idx;
+    delete clean._src;
+    return clean;
+  }
+
+  cleanDIData(d) {
+    const clean = { ...d };
+    delete clean._idx;
+    delete clean._src;
+    return clean;
+  }
+
+  // ================================================================
+  // COLLECT TEXTS (Build registry for batch translation)
+  // ================================================================
+
   collectTexts(rawQuestion, defaultMeta, sourceLanguage, questionIndex, allTexts, registry) {
     const questionType = this.detectQuestionType(rawQuestion);
 
@@ -205,7 +310,7 @@ class SmartParser {
     const registerText = (text, path) => {
       if (text && typeof text === 'string' && text.trim()) {
         const idx = allTexts.length;
-        allTexts.push(text);
+        allTexts.push(text.trim());
         registry.push({ questionIndex, path, textIndex: idx });
         return idx;
       }
@@ -217,7 +322,7 @@ class SmartParser {
       if (arr && Array.isArray(arr)) {
         arr.forEach((item, i) => {
           if (typeof item === 'string' && item.trim()) {
-            indices.push(registerText(item, `${pathPrefix}[${i}]`));
+            indices.push(registerText(item.trim(), `${pathPrefix}[${i}]`));
           } else {
             indices.push(-1);
           }
@@ -241,11 +346,18 @@ class SmartParser {
         return this.collectPassage(rawQuestion, baseMeta, sourceLanguage, registerText, registerArray);
       default:
         if (questionType.startsWith('di_')) {
-          return this.collectDI(rawQuestion, baseMeta, sourceLanguage, questionType, registerText, registerArray);
+          return this.collectDI(
+            rawQuestion, baseMeta, sourceLanguage,
+            questionType, registerText, registerArray
+          );
         }
         return this.collectMCQ(rawQuestion, baseMeta, sourceLanguage, registerText, registerArray);
     }
   }
+
+  // ----------------------------------------------------------------
+  // Individual collectors
+  // ----------------------------------------------------------------
 
   collectMCQ(raw, meta, srcLang, regText, regArray) {
     const question = {
@@ -277,8 +389,11 @@ class SmartParser {
       _src: {}
     };
 
-    const qText = raw.question || raw.instruction || 
-      (srcLang === 'hi' ? 'निम्नलिखित दो कथनों पर विचार कीजिए:' : 'Consider the following two statements:');
+    const qText = raw.question || raw.instruction || (
+      srcLang === 'hi'
+        ? 'निम्नलिखित दो कथनों पर विचार कीजिए:'
+        : 'Consider the following two statements:'
+    );
     const assertion = raw.assertion || '';
     const reason = raw.reason || '';
     const explanation = raw.explanation || '';
@@ -294,7 +409,7 @@ class SmartParser {
       'Assertion (A) is true, but Reason (R) is false',
       'Assertion (A) is false, but Reason (R) is true'
     ];
-    const options = raw.options || defaultOpts;
+    const options = raw.options?.length > 0 ? raw.options : defaultOpts;
 
     question._idx.question = regText(qText, 'question');
     question._idx.assertion = regText(assertion, 'assertion');
@@ -315,8 +430,11 @@ class SmartParser {
       _src: {}
     };
 
-    const qText = raw.question || raw.instruction ||
-      (srcLang === 'hi' ? 'सूची-I को सूची-II से सुमेलित कीजिए:' : 'Match List-I with List-II:');
+    const qText = raw.question || raw.instruction || (
+      srcLang === 'hi'
+        ? 'सूची-I को सूची-II से सुमेलित कीजिए:'
+        : 'Match List-I with List-II:'
+    );
     const listA = raw.listA || raw.list1 || [];
     const listB = raw.listB || raw.list2 || [];
     const correctMatch = raw.correctMatch || raw.match || [];
@@ -342,8 +460,11 @@ class SmartParser {
       _src: {}
     };
 
-    const qText = raw.question || raw.instruction ||
-      (srcLang === 'hi' ? 'निम्नलिखित को कालक्रमानुसार व्यवस्थित कीजिए:' : 'Arrange the following in chronological order:');
+    const qText = raw.question || raw.instruction || (
+      srcLang === 'hi'
+        ? 'निम्नलिखित को कालक्रमानुसार व्यवस्थित कीजिए:'
+        : 'Arrange the following in chronological order:'
+    );
     const items = raw.items || raw.events || [];
     const correctOrder = raw.correctOrder || raw.order || [];
     const options = raw.options || [];
@@ -367,8 +488,11 @@ class SmartParser {
       _src: {}
     };
 
-    const qText = raw.question || raw.instruction ||
-      (srcLang === 'hi' ? 'निम्नलिखित कथनों पर विचार कीजिए:' : 'Consider the following statements:');
+    const qText = raw.question || raw.instruction || (
+      srcLang === 'hi'
+        ? 'निम्नलिखित कथनों पर विचार कीजिए:'
+        : 'Consider the following statements:'
+    );
     const statements = raw.statements || [];
     const correctStatements = raw.correctStatements || [];
     const options = raw.options || [];
@@ -384,9 +508,24 @@ class SmartParser {
   }
 
   collectPassage(raw, meta, srcLang, regText, regArray) {
-    const passageContent = raw.passage?.content || raw.passage || raw.passageContent || '';
-    const passageTitle = raw.passage?.title || raw.title || '';
-    const rawQuestions = raw.questions || raw.passage?.questions || [];
+    let passageContent = '';
+    let passageTitle = '';
+    let rawQuestions = [];
+
+    // Support multiple passage formats
+    if (typeof raw.passage === 'string') {
+      passageContent = raw.passage;
+      passageTitle = raw.title || '';
+      rawQuestions = raw.questions || [];
+    } else if (raw.passage && typeof raw.passage === 'object') {
+      passageContent = raw.passage.content || raw.passage.text || '';
+      passageTitle = raw.passage.title || raw.title || '';
+      rawQuestions = raw.questions || raw.passage.questions || [];
+    } else if (raw.passageContent) {
+      passageContent = raw.passageContent;
+      passageTitle = raw.title || '';
+      rawQuestions = raw.questions || [];
+    }
 
     const passage = {
       title: passageTitle,
@@ -395,12 +534,13 @@ class SmartParser {
       chapter: meta.chapter,
       topic: meta.topic,
       source: meta.source,
+      content: { hi: '', en: '' },
       _idx: {},
       _src: {}
     };
 
     passage._idx.content = regText(passageContent, 'passage.content');
-    passage._src = { content: passageContent };
+    passage._src.content = passageContent;
 
     const questions = [];
     for (let i = 0; i < rawQuestions.length; i++) {
@@ -415,7 +555,7 @@ class SmartParser {
         _src: {}
       };
 
-      const qText = q.question || '';
+      const qText = q.question || q.questionText || '';
       const options = q.options || [];
       const explanation = q.explanation || '';
 
@@ -447,6 +587,8 @@ class SmartParser {
       chapter: meta.chapter,
       topic: meta.topic,
       source: meta.source,
+      title: { hi: '', en: '' },
+      instruction: { hi: '', en: '' },
       _idx: {},
       _src: {}
     };
@@ -460,36 +602,54 @@ class SmartParser {
 
     // Table Data
     if (diRaw.tableData) {
-      diData.tableData = { rows: diRaw.tableData.rows || [] };
-      diData._idx.tableHeaders = regArray(diRaw.tableData.headers || [], 'di.tableHeaders');
-      diData._src.tableHeaders = diRaw.tableData.headers || [];
+      diData.tableData = {
+        rows: diRaw.tableData.rows || [],
+        headers: { hi: [], en: [] },
+        footers: { hi: [], en: [] }
+      };
+      const headers = diRaw.tableData.headers || [];
+      const footers = diRaw.tableData.footers || [];
+      diData._idx.tableHeaders = regArray(headers, 'di.tableHeaders');
+      diData._idx.tableFooters = regArray(footers, 'di.tableFooters');
+      diData._src.tableHeaders = headers;
+      diData._src.tableFooters = footers;
     }
 
     // Chart Data
     if (diRaw.chartData) {
+      const datasets = (diRaw.chartData.datasets || []).map(ds => ({
+        data: ds.data || [],
+        color: ds.color || '#3B82F6',
+        backgroundColor: ds.backgroundColor || ds.color || '#3B82F6',
+        borderColor: ds.borderColor || ds.color || '#3B82F6',
+        type: ds.type || 'bar',
+        label: { hi: '', en: '' }
+      }));
+
       diData.chartData = {
-        datasets: (diRaw.chartData.datasets || []).map(ds => ({
-          data: ds.data || [],
-          color: ds.color || '#3B82F6',
-          backgroundColor: ds.backgroundColor,
-          borderColor: ds.borderColor,
-          type: ds.type || 'bar'
-        })),
+        labels: { hi: [], en: [] },
+        datasets,
+        xAxisLabel: { hi: '', en: '' },
+        yAxisLabel: { hi: '', en: '' },
         colors: diRaw.chartData.colors || []
       };
-      diData._idx.chartLabels = regArray(diRaw.chartData.labels || [], 'di.chartLabels');
-      diData._idx.datasetLabels = [];
-      diData._src.chartLabels = diRaw.chartData.labels || [];
-      diData._src.datasetLabels = [];
 
+      const labels = diRaw.chartData.labels || [];
+      diData._idx.chartLabels = regArray(labels, 'di.chartLabels');
+      diData._src.chartLabels = labels;
+
+      diData._idx.datasetLabels = [];
+      diData._src.datasetLabels = [];
       (diRaw.chartData.datasets || []).forEach((ds, i) => {
         const lbl = typeof ds.label === 'string' ? ds.label : '';
         diData._idx.datasetLabels.push(regText(lbl, `di.datasetLabel[${i}]`));
         diData._src.datasetLabels.push(lbl);
       });
 
-      const xLabel = typeof diRaw.chartData.xAxisLabel === 'string' ? diRaw.chartData.xAxisLabel : '';
-      const yLabel = typeof diRaw.chartData.yAxisLabel === 'string' ? diRaw.chartData.yAxisLabel : '';
+      const xLabel = typeof diRaw.chartData.xAxisLabel === 'string'
+        ? diRaw.chartData.xAxisLabel : '';
+      const yLabel = typeof diRaw.chartData.yAxisLabel === 'string'
+        ? diRaw.chartData.yAxisLabel : '';
       diData._idx.xAxisLabel = regText(xLabel, 'di.xAxisLabel');
       diData._idx.yAxisLabel = regText(yLabel, 'di.yAxisLabel');
       diData._src.xAxisLabel = xLabel;
@@ -499,6 +659,7 @@ class SmartParser {
     // Caselet
     if (diRaw.caseletText) {
       const caseletText = typeof diRaw.caseletText === 'string' ? diRaw.caseletText : '';
+      diData.caseletText = { hi: '', en: '' };
       diData._idx.caseletText = regText(caseletText, 'di.caseletText');
       diData._src.caseletText = caseletText;
     }
@@ -507,7 +668,7 @@ class SmartParser {
       diData.imageUrl = diRaw.imageUrl;
     }
 
-    // Questions
+    // Questions for this DI set
     const rawQuestions = diRaw.questions || [];
     const questions = [];
 
@@ -523,7 +684,7 @@ class SmartParser {
         _src: {}
       };
 
-      const qText = q.question || '';
+      const qText = q.question || q.questionText || '';
       const options = q.options || [];
       const explanation = q.explanation || '';
 
@@ -538,39 +699,53 @@ class SmartParser {
     return { type: 'di', data: { diData, questions } };
   }
 
-  /**
-   * Apply translations from batch result
-   */
+  // ================================================================
+  // APPLY TRANSLATIONS
+  // ================================================================
+
   applyTranslations(data, registry, translations, srcLang, tgtLang, questionIndex) {
-    const getT = (idx) => (idx >= 0 && idx < translations.length) ? translations[idx] : '';
-    
+    const getT = (idx) => {
+      if (idx >= 0 && idx < translations.length && translations[idx]) {
+        return translations[idx];
+      }
+      return '';
+    };
+
     const bilingual = (src, idx) => ({
       [srcLang]: src || '',
-      [tgtLang]: getT(idx)
+      [tgtLang]: getT(idx) || src || ''
     });
 
     const bilingualArr = (srcArr, indices) => ({
       [srcLang]: srcArr || [],
-      [tgtLang]: indices.map(i => getT(i))
+      [tgtLang]: (indices || []).map((i, pos) =>
+        getT(i) || (srcArr && srcArr[pos]) || ''
+      )
     });
 
     if (data.questionType) {
+      // Single question
       this.applyToQuestion(data, bilingual, bilingualArr);
-    } else if (data.passage) {
-      const p = data.passage;
-      if (p._idx?.content >= 0) {
-        p.content = bilingual(p._src.content, p._idx.content);
-      }
-      delete p._idx;
-      delete p._src;
 
-      for (const q of data.questions) {
-        this.applyToQuestion(q, bilingual, bilingualArr);
+    } else if (data.passage !== undefined) {
+      // Passage group
+      const p = data.passage;
+      if (p && p._idx?.content !== undefined) {
+        p.content = bilingual(p._src?.content, p._idx.content);
       }
-    } else if (data.diData) {
+      if (data.questions) {
+        for (const q of data.questions) {
+          this.applyToQuestion(q, bilingual, bilingualArr);
+        }
+      }
+
+    } else if (data.diData !== undefined) {
+      // DI group
       this.applyToDI(data.diData, bilingual, bilingualArr);
-      for (const q of data.questions) {
-        this.applyToQuestion(q, bilingual, bilingualArr);
+      if (data.questions) {
+        for (const q of data.questions) {
+          this.applyToQuestion(q, bilingual, bilingualArr);
+        }
       }
     }
   }
@@ -579,18 +754,35 @@ class SmartParser {
     const idx = q._idx || {};
     const src = q._src || {};
 
-    if (idx.question >= 0) q.question = bilingual(src.question, idx.question);
-    if (idx.options?.length > 0) q.options = bilingualArr(src.options, idx.options);
-    if (idx.explanation >= 0 && src.explanation) q.explanation = bilingual(src.explanation, idx.explanation);
+    // Question text
+    if (idx.question !== undefined && idx.question >= 0) {
+      q.question = bilingual(src.question, idx.question);
+    } else if (src.question) {
+      q.question = { hi: src.question, en: src.question };
+    }
 
-    if (idx.assertion >= 0 || idx.reason >= 0) {
+    // Options
+    if (idx.options && idx.options.length > 0) {
+      q.options = bilingualArr(src.options, idx.options);
+    } else if (src.options && src.options.length > 0) {
+      q.options = { hi: src.options, en: src.options };
+    }
+
+    // Explanation
+    if (idx.explanation !== undefined && idx.explanation >= 0 && src.explanation) {
+      q.explanation = bilingual(src.explanation, idx.explanation);
+    }
+
+    // Assertion-Reason data
+    if (idx.assertion !== undefined || idx.reason !== undefined) {
       q.assertionReasonData = {
         assertion: bilingual(src.assertion, idx.assertion),
         reason: bilingual(src.reason, idx.reason)
       };
     }
 
-    if (idx.listA?.length > 0) {
+    // Match Following data
+    if (idx.listA && idx.listA.length > 0) {
       q.matchData = {
         listA: bilingualArr(src.listA, idx.listA),
         listB: bilingualArr(src.listB, idx.listB),
@@ -598,65 +790,77 @@ class SmartParser {
       };
     }
 
-    if (idx.items?.length > 0) {
+    // Sequence Order data
+    if (idx.items && idx.items.length > 0) {
       q.sequenceData = {
         items: bilingualArr(src.items, idx.items),
         correctOrder: src.correctOrder || []
       };
     }
 
-    if (idx.statements?.length > 0) {
+    // Statement Based data
+    if (idx.statements && idx.statements.length > 0) {
       q.statementData = {
         statements: bilingualArr(src.statements, idx.statements),
         correctStatements: src.correctStatements || []
       };
     }
-
-    delete q._idx;
-    delete q._src;
   }
 
   applyToDI(di, bilingual, bilingualArr) {
     const idx = di._idx || {};
     const src = di._src || {};
 
-    if (idx.title >= 0) di.title = bilingual(src.title, idx.title);
-    if (idx.instruction >= 0) di.instruction = bilingual(src.instruction, idx.instruction);
-    if (idx.caseletText >= 0) di.caseletText = bilingual(src.caseletText, idx.caseletText);
-
-    if (idx.tableHeaders?.length > 0 && di.tableData) {
-      di.tableData.headers = bilingualArr(src.tableHeaders, idx.tableHeaders);
+    if (idx.title !== undefined && idx.title >= 0) {
+      di.title = bilingual(src.title, idx.title);
+    }
+    if (idx.instruction !== undefined && idx.instruction >= 0) {
+      di.instruction = bilingual(src.instruction, idx.instruction);
+    }
+    if (idx.caseletText !== undefined && idx.caseletText >= 0) {
+      di.caseletText = bilingual(src.caseletText, idx.caseletText);
     }
 
-    if (idx.chartLabels?.length > 0 && di.chartData) {
+    if (idx.tableHeaders && idx.tableHeaders.length > 0 && di.tableData) {
+      di.tableData.headers = bilingualArr(src.tableHeaders, idx.tableHeaders);
+    }
+    if (idx.tableFooters && idx.tableFooters.length > 0 && di.tableData) {
+      di.tableData.footers = bilingualArr(src.tableFooters, idx.tableFooters);
+    }
+
+    if (idx.chartLabels && idx.chartLabels.length > 0 && di.chartData) {
       di.chartData.labels = bilingualArr(src.chartLabels, idx.chartLabels);
     }
 
-    if (idx.datasetLabels?.length > 0 && di.chartData?.datasets) {
+    if (idx.datasetLabels && di.chartData?.datasets) {
       idx.datasetLabels.forEach((textIdx, i) => {
-        if (textIdx >= 0 && di.chartData.datasets[i]) {
-          di.chartData.datasets[i].label = bilingual(src.datasetLabels[i], textIdx);
+        if (di.chartData.datasets[i]) {
+          di.chartData.datasets[i].label = bilingual(
+            src.datasetLabels?.[i], textIdx
+          );
         }
       });
     }
 
-    if (idx.xAxisLabel >= 0 && di.chartData) {
+    if (idx.xAxisLabel !== undefined && idx.xAxisLabel >= 0 && di.chartData) {
       di.chartData.xAxisLabel = bilingual(src.xAxisLabel, idx.xAxisLabel);
     }
-    if (idx.yAxisLabel >= 0 && di.chartData) {
+    if (idx.yAxisLabel !== undefined && idx.yAxisLabel >= 0 && di.chartData) {
       di.chartData.yAxisLabel = bilingual(src.yAxisLabel, idx.yAxisLabel);
     }
-
-    delete di._idx;
-    delete di._src;
   }
 
-  /**
-   * Validate JSON structure
-   */
+  // ================================================================
+  // VALIDATE JSON STRUCTURE
+  // ================================================================
+
   validateJSONStructure(jsonData) {
     const errors = [];
     const warnings = [];
+
+    if (!jsonData || typeof jsonData !== 'object') {
+      return { isValid: false, errors: ['Invalid JSON'], warnings: [] };
+    }
 
     if (!jsonData.questions) {
       errors.push('Missing "questions" array');
@@ -680,16 +884,54 @@ class SmartParser {
       errors.push('Invalid paper. Must be "paper1" or "paper2"');
     }
 
-    if (jsonData.questions && Array.isArray(jsonData.questions)) {
+    if (Array.isArray(jsonData.questions)) {
       jsonData.questions.forEach((q, index) => {
-        if (q.correct === undefined && q.correctAnswer === undefined) {
-          if (!q.diData && !q.passage) {
+        if (!q || typeof q !== 'object') {
+          errors.push(`Question ${index + 1}: Invalid question object`);
+          return;
+        }
+
+        const type = this.detectQuestionType(q);
+
+        // Simple questions validation
+        if (!type.startsWith('di_') && type !== 'passage_based') {
+          if (q.correct === undefined && q.correctAnswer === undefined) {
             warnings.push(`Question ${index + 1}: Missing correct answer`);
           }
-        }
-        if (!q.diData && !q.passage && !q.options) {
-          if (!q.assertion && !q.listA && !q.items && !q.statements) {
+          if (!q.options && !q.listA && !q.assertion && !q.items && !q.statements) {
             warnings.push(`Question ${index + 1}: Missing options`);
+          }
+        }
+
+        // Passage validation
+        if (type === 'passage_based') {
+          let pContent = '';
+          let pQuestions = [];
+
+          if (typeof q.passage === 'string') {
+            pContent = q.passage;
+            pQuestions = q.questions || [];
+          } else if (q.passage && typeof q.passage === 'object') {
+            pContent = q.passage.content || q.passage.text || '';
+            pQuestions = q.questions || q.passage.questions || [];
+          } else if (q.passageContent) {
+            pContent = q.passageContent;
+            pQuestions = q.questions || [];
+          }
+
+          if (!pContent) {
+            warnings.push(`Question ${index + 1}: Passage content is empty`);
+          }
+          if (!pQuestions || pQuestions.length === 0) {
+            warnings.push(`Question ${index + 1}: No sub-questions in passage set`);
+          }
+        }
+
+        // DI validation
+        if (type.startsWith('di_')) {
+          const diRaw = q.diData || q;
+          if (!diRaw.questions || diRaw.questions.length === 0) {
+            warnings.push(`Question ${index + 1}: No sub-questions in DI set`);
           }
         }
       });

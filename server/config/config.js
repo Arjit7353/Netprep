@@ -1,9 +1,19 @@
-require('dotenv').config();
+// server/config/config.js
+
+const path = require('path');
+
+// Load .env file - handle both local and production
+try {
+  require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+} catch (e) {
+  // dotenv may not be needed in production (Render sets env vars directly)
+  console.log('[Config] dotenv not loaded, using system env vars');
+}
 
 const config = {
-  // Server configuration
+  // Server
   nodeEnv: process.env.NODE_ENV || 'development',
-  port: process.env.PORT || 5000,
+  port: parseInt(process.env.PORT, 10) || 5000,
 
   // Database
   mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/netprep',
@@ -11,14 +21,14 @@ const config = {
   // Frontend URL
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
 
-  // Microsoft Azure Translator (optional - will fallback to Google if not configured)
+  // Microsoft Azure Translator
   translator: {
     key: process.env.MICROSOFT_TRANSLATOR_KEY || '',
     region: process.env.MICROSOFT_TRANSLATOR_REGION || 'centralindia',
     endpoint: process.env.MICROSOFT_TRANSLATOR_ENDPOINT || 'https://api.cognitive.microsofttranslator.com'
   },
 
-  // Cloudinary (optional)
+  // Cloudinary
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
     apiKey: process.env.CLOUDINARY_API_KEY || '',
@@ -47,7 +57,7 @@ const config = {
   // Difficulty levels
   difficultyLevels: ['easy', 'medium', 'hard'],
 
-  // Test Types with configurations
+  // Test Types
   testTypes: {
     dpp: {
       name: 'Daily Practice Paper',
@@ -104,10 +114,7 @@ const config = {
       defaultQuestions: 50,
       defaultDuration: 60,
       titlePattern: 'Full Mock Paper 1 - {number}',
-      randomGeneration: {
-        enabled: true,
-        questionsPerUnit: 5
-      }
+      randomGeneration: { enabled: true, questionsPerUnit: 5 }
     },
     full_mock_p2: {
       name: 'Full Mock - Paper 2',
@@ -116,10 +123,7 @@ const config = {
       defaultQuestions: 100,
       defaultDuration: 120,
       titlePattern: 'Full Mock Paper 2 - {number}',
-      randomGeneration: {
-        enabled: true,
-        questionsPerUnit: 10
-      }
+      randomGeneration: { enabled: true, questionsPerUnit: 10 }
     },
     full_mock_combined: {
       name: 'Full Mock - Combined',
@@ -131,7 +135,7 @@ const config = {
     }
   },
 
-  // Default instructions
+  // Instructions
   defaultInstructions: {
     en: [
       'Read each question carefully before answering.',
@@ -146,14 +150,14 @@ const config = {
       'उत्तर देने से पहले प्रत्येक प्रश्न को ध्यान से पढ़ें।',
       'सभी प्रश्नों के समान अंक हैं।',
       'जब तक निर्दिष्ट न हो, कोई नकारात्मक अंकन नहीं है।',
-      'आप प्रश्नों को समीक्षा के लिए चिह्नित कर सकते हैं और बाद में वापस आ सकते हैं।',
-      'अगले प्रश्न पर जाने से पहले अपना उत्तर सहेजना सुनिश्चित करें।',
-      'समय समाप्त होने पर टाइमर स्वचालित रूप से परीक्षा जमा कर देगा।',
-      'परीक्षा के दौरान पेज को रिफ्रेश न करें।'
+      'आप प्रश्नों को समीक्षा के लिए चिह्नित कर सकते हैं।',
+      'अगले प्रश्न पर जाने से पहले अपना उत्तर सहेजें।',
+      'समय समाप्त होने पर परीक्षा स्वतः जमा हो जाएगी।',
+      'परीक्षा के दौरान पेज रिफ्रेश न करें।'
     ]
   },
 
-  // NTA Exam specific settings
+  // NTA Settings
   ntaSettings: {
     marksPerQuestion: 2,
     negativeMarks: 0.5,
@@ -163,5 +167,12 @@ const config = {
     paper2Duration: 120
   }
 };
+
+// Log config status
+console.log('[Config] Environment:', config.nodeEnv);
+console.log('[Config] Port:', config.port);
+console.log('[Config] MongoDB:', config.mongoUri ? 'Configured' : 'NOT SET');
+console.log('[Config] Azure Translator:', config.translator.key ? 'Configured' : 'Not configured');
+console.log('[Config] Cloudinary:', config.cloudinary.cloudName ? 'Configured' : 'Not configured');
 
 module.exports = config;
