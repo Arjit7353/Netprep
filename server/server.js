@@ -11,32 +11,47 @@ const app = express();
 
 connectDB();
 
-// ============ YAHAN CHANGE KARO ============
+// ============ UPDATED CORS ============
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://apmock.icu',
+  'https://www.apmock.icu',
+  // Add any other domains you might use
+];
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'https://apmock.icu',
-    'https://www.apmock.icu'
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log('Blocked by CORS:', origin);
+      callback(null, true); // Allow all for now, change to callback(new Error('Not allowed by CORS')) to block
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
+// Handle preflight requests
+app.options('*', cors());
 // ============================================
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-if (config.nodeEnv === 'development') {
-  app.use((req, res, next) => {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${req.method} ${req.path}`);
-    next();
-  });
-}
+// Request logging
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.path} - Origin: ${req.headers.origin || 'No origin'}`);
+  next();
+});
 
-// Health check - Render ko jaagta rakhne ke liye
+// Health check - Keep Render awake
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
@@ -44,6 +59,11 @@ app.get('/api/health', (req, res) => {
     environment: config.nodeEnv,
     timestamp: new Date().toISOString()
   });
+});
+
+// Wake up endpoint
+app.get('/api/wake', (req, res) => {
+  res.json({ success: true, message: 'Server is awake!', time: new Date().toISOString() });
 });
 
 app.get('/api', (req, res) => {
@@ -72,9 +92,12 @@ const PORT = config.port || 5000;
 const server = app.listen(PORT, () => {
   console.log(`NETprep API running on port ${PORT}`);
   console.log(`Environment: ${config.nodeEnv}`);
+  console.log(`Allowed Origins: ${allowedOrigins.join(', ')}`);
 });
 
+// Graceful shutdown
 process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
   server.close(() => process.exit(0));
 });
 
