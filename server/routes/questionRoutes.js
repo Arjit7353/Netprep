@@ -63,6 +63,8 @@ router.get('/di/:diDataId', questionController.getQuestionsByDI);
 
 // Bulk delete
 router.delete('/bulk', questionController.bulkDeleteQuestions);
+router.post('/bulk-delete', questionController.bulkDeleteQuestions);  // ✅ NEW LINE
+
 
 // Main CRUD routes
 router.get('/', questionController.getQuestions);
