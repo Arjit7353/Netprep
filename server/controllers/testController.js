@@ -1,3 +1,5 @@
+// server/controllers/testController.js
+
 const Test = require('../models/Test');
 const Question = require('../models/Question');
 const TestAttempt = require('../models/TestAttempt');
@@ -57,7 +59,6 @@ const getTestStats = async (req, res, next) => {
     const totalTests = await Test.countDocuments({ status: 'active' });
     const totalAttempts = await TestAttempt.countDocuments({ status: 'completed' });
 
-    // Get average scores
     const avgStats = await TestAttempt.aggregate([
       { $match: { status: 'completed' } },
       {
@@ -100,11 +101,16 @@ const getTestTypes = async (req, res, next) => {
   }
 };
 
-// @desc    Get single test by ID
+// @desc    Get single test by ID (with populated questions)
 // @route   GET /api/tests/:id
 const getTestById = async (req, res, next) => {
   try {
-    const test = await Test.findById(req.params.id);
+    // ✅ POPULATE questions to get full question objects
+    const test = await Test.findById(req.params.id)
+      .populate({
+        path: 'questions',
+        model: 'Question'
+      });
 
     if (!test) {
       return res.status(404).json({
@@ -122,11 +128,19 @@ const getTestById = async (req, res, next) => {
   }
 };
 
-// @desc    Get test with all questions populated
+// @desc    Get test with all questions populated (detailed)
 // @route   GET /api/tests/:id/questions
 const getTestWithQuestions = async (req, res, next) => {
   try {
-    const test = await Test.getWithDetails(req.params.id);
+    const test = await Test.findById(req.params.id)
+      .populate({
+        path: 'questions',
+        model: 'Question',
+        populate: [
+          { path: 'passageId', model: 'Passage' },
+          { path: 'diDataId', model: 'DIData' }
+        ]
+      });
 
     if (!test) {
       return res.status(404).json({
@@ -140,7 +154,25 @@ const getTestWithQuestions = async (req, res, next) => {
       data: test
     });
   } catch (error) {
-    next(error);
+    // If populate fails, try without nested populate
+    try {
+      const test = await Test.findById(req.params.id)
+        .populate('questions');
+      
+      if (!test) {
+        return res.status(404).json({
+          success: false,
+          message: 'Test not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: test
+      });
+    } catch (err) {
+      next(err);
+    }
   }
 };
 
@@ -331,7 +363,7 @@ const updateTestStatus = async (req, res, next) => {
   }
 };
 
-// @desc    Delete test
+// @desc    Delete test (soft delete - archive)
 // @route   DELETE /api/tests/:id
 const deleteTest = async (req, res, next) => {
   try {

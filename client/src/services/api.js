@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 
-// Determine API URL
+// ✅ FIX: Determine API URL correctly - no double /api/
 const getApiUrl = () => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
@@ -31,9 +31,6 @@ const flattenParams = (params) => {
     if (value === null || value === undefined || value === '') return;
     
     if (Array.isArray(value)) {
-      // ['paper1'] → 'paper1'
-      // ['paper1', 'paper2'] → 'paper1,paper2' (comma separated)
-      // [] → skip
       const cleaned = value.filter(v => v !== null && v !== undefined && v !== '');
       if (cleaned.length === 0) return;
       if (cleaned.length === 1) {
@@ -64,7 +61,6 @@ let wakeUpPromise = null;
 // Wake up server function
 const wakeUpServer = async () => {
   if (isServerAwake) return true;
-  
   if (wakeUpPromise) return wakeUpPromise;
   
   wakeUpPromise = new Promise(async (resolve) => {
@@ -75,6 +71,8 @@ const wakeUpServer = async () => {
         isServerAwake = true;
         console.log('✅ Server is awake!');
         resolve(true);
+      } else {
+        resolve(false);
       }
     } catch (error) {
       console.log('⏳ Server still waking up, retrying...');
@@ -97,12 +95,12 @@ const wakeUpServer = async () => {
   return result;
 };
 
-// Reset server status after inactivity
+// Reset server status after 10 minutes inactivity
 setInterval(() => {
   isServerAwake = false;
 }, 10 * 60 * 1000);
 
-// Request interceptor
+// ✅ Request interceptor
 api.interceptors.request.use(
   async (config) => {
     // Wake up server before first request
@@ -123,6 +121,12 @@ api.interceptors.request.use(
       };
     }
     
+    // Add auth token if available
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     // Log request in development
     if (import.meta.env.DEV) {
       console.log(`📤 ${config.method?.toUpperCase()} ${config.url}`, config.params || config.data || '');
@@ -136,7 +140,7 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor with retry logic
+// ✅ Response interceptor with retry logic
 api.interceptors.response.use(
   (response) => {
     isServerAwake = true;
@@ -169,6 +173,9 @@ api.interceptors.response.use(
       switch (status) {
         case 400:
           console.error('Bad Request:', data.message || 'Invalid request');
+          break;
+        case 401:
+          console.error('Unauthorized:', data.message || 'Please login again');
           break;
         case 404:
           console.error('Not Found:', data.message || 'Resource not found');
@@ -203,7 +210,7 @@ api.interceptors.response.use(
   }
 );
 
-// API helper methods
+// ✅ API helper methods
 export const apiHelper = {
   get: async (url, params = {}) => {
     const response = await api.get(url, { params });
@@ -241,7 +248,7 @@ export const checkServerHealth = async () => {
   }
 };
 
-// Wake up function
+// Wake up function export
 export const ensureServerAwake = wakeUpServer;
 
 export default api;
