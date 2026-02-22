@@ -1,3 +1,4 @@
+// server/utils/smartParser.js
 const translateHelper = require('./translateHelper');
 
 class SmartParser {
@@ -15,6 +16,45 @@ class SmartParser {
       di_mixed: ['mixedChart'],
       di_caselet: ['caseletText']
     };
+  }
+
+  // ================================================================
+  // 🔧 FIX: NORMALIZATION HELPERS
+  // ================================================================
+
+  normalizePaper(value) {
+    if (!value) return 'paper1';
+    const v = String(value).toLowerCase().trim();
+    // Direct matches
+    if (v === 'paper1' || v === 'p1' || v === '1') return 'paper1';
+    if (v === 'paper2' || v === 'p2' || v === '2') return 'paper2';
+    // Subject-based detection
+    if (v.includes('history') || v.includes('इतिहास') || v.includes('paper 2') || v.includes('paper-2')) return 'paper2';
+    if (v.includes('general') || v.includes('teaching') || v.includes('research') || v.includes('सामान्य') || v.includes('paper 1') || v.includes('paper-1')) return 'paper1';
+    // Already valid
+    if (v === 'paper1' || v === 'paper2') return v;
+    return 'paper1';
+  }
+
+  normalizeDifficulty(value) {
+    if (!value) return 'medium';
+    const v = String(value).toLowerCase().trim();
+    // Direct matches
+    if (v === 'easy' || v === 'सरल' || v === 'simple' || v === 'basic') return 'easy';
+    if (v === 'hard' || v === 'कठिन' || v === 'difficult' || v === 'tough' || v === 'advanced') return 'hard';
+    if (v === 'medium' || v === 'मध्यम' || v === 'moderate' || v === 'normal' || v === 'average') return 'medium';
+    // Compound values like "medium to hard", "easy-medium", etc.
+    if (v.includes('hard') && v.includes('easy')) return 'medium';
+    if (v.includes('hard')) return 'hard';
+    if (v.includes('easy')) return 'easy';
+    if (v.includes('medium') || v.includes('moderate')) return 'medium';
+    return 'medium';
+  }
+
+  safeInt(value, fallback = 0) {
+    if (value === null || value === undefined) return fallback;
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? fallback : parsed;
   }
 
   // ================================================================
@@ -130,12 +170,13 @@ class SmartParser {
     const sourceLanguage = jsonData.language || jsonData.defaultMeta?.language || 'hi';
     const targetLanguage = sourceLanguage === 'hi' ? 'en' : 'hi';
 
+    // 🔧 FIX: Normalize paper and difficulty at top level
     const defaultMeta = {
-      paper: jsonData.paper || jsonData.defaultMeta?.paper || 'paper1',
+      paper: this.normalizePaper(jsonData.paper || jsonData.defaultMeta?.paper),
       unit: jsonData.unit || jsonData.defaultMeta?.unit || '',
       chapter: jsonData.chapter || jsonData.defaultMeta?.chapter || '',
       topic: jsonData.topic || jsonData.defaultMeta?.topic || '',
-      difficulty: jsonData.difficulty || jsonData.defaultMeta?.difficulty || 'medium',
+      difficulty: this.normalizeDifficulty(jsonData.difficulty || jsonData.defaultMeta?.difficulty),
       source: jsonData.source || jsonData.defaultMeta?.source || '',
       year: jsonData.year || jsonData.defaultMeta?.year || ''
     };
@@ -143,7 +184,7 @@ class SmartParser {
     const questions = jsonData.questions || [];
     results.stats.total = questions.length;
 
-    console.log(`[SmartParser] Processing ${questions.length} questions, lang: ${sourceLanguage}`);
+    console.log(`[SmartParser] Processing ${questions.length} questions, lang: ${sourceLanguage}, paper: ${defaultMeta.paper}, difficulty: ${defaultMeta.difficulty}`);
 
     const allTexts = [];
     const textRegistry = [];
@@ -176,7 +217,7 @@ class SmartParser {
         console.log(`[SmartParser] Translation done: ${translations.length} texts`);
       } catch (err) {
         console.error('[SmartParser] Translation batch failed:', err.message);
-        translations = [...allTexts]; // fallback to original
+        translations = [...allTexts];
       }
     }
 
@@ -295,13 +336,18 @@ class SmartParser {
   collectTexts(rawQuestion, defaultMeta, sourceLanguage, questionIndex, allTexts, registry) {
     const questionType = this.detectQuestionType(rawQuestion);
 
+    // 🔧 FIX: Normalize paper and difficulty for each question
     const baseMeta = {
-      paper: rawQuestion.paper || defaultMeta.paper || 'paper1',
+      paper: rawQuestion.paper
+        ? this.normalizePaper(rawQuestion.paper)
+        : defaultMeta.paper,
       unit: rawQuestion.unit || defaultMeta.unit || '',
       chapter: rawQuestion.chapter || defaultMeta.chapter || '',
       topic: rawQuestion.topic || defaultMeta.topic || '',
       subtopic: rawQuestion.subtopic || defaultMeta.subtopic || '',
-      difficulty: rawQuestion.difficulty || defaultMeta.difficulty || 'medium',
+      difficulty: rawQuestion.difficulty
+        ? this.normalizeDifficulty(rawQuestion.difficulty)
+        : defaultMeta.difficulty,
       source: rawQuestion.source || defaultMeta.source || '',
       year: rawQuestion.year || defaultMeta.year || '',
       tags: rawQuestion.tags || defaultMeta.tags || []
@@ -363,7 +409,7 @@ class SmartParser {
     const question = {
       questionType: 'mcq',
       ...meta,
-      correctAnswer: raw.correct ?? raw.correctAnswer ?? 0,
+      correctAnswer: this.safeInt(raw.correct ?? raw.correctAnswer, 0),
       _idx: {},
       _src: {}
     };
@@ -384,7 +430,7 @@ class SmartParser {
     const question = {
       questionType: 'assertion_reason',
       ...meta,
-      correctAnswer: raw.correct ?? raw.correctAnswer ?? 0,
+      correctAnswer: this.safeInt(raw.correct ?? raw.correctAnswer, 0),
       _idx: {},
       _src: {}
     };
@@ -425,7 +471,7 @@ class SmartParser {
     const question = {
       questionType: 'match_following',
       ...meta,
-      correctAnswer: raw.correct ?? raw.correctAnswer ?? 0,
+      correctAnswer: this.safeInt(raw.correct ?? raw.correctAnswer, 0),
       _idx: {},
       _src: {}
     };
@@ -455,7 +501,7 @@ class SmartParser {
     const question = {
       questionType: 'sequence_order',
       ...meta,
-      correctAnswer: raw.correct ?? raw.correctAnswer ?? 0,
+      correctAnswer: this.safeInt(raw.correct ?? raw.correctAnswer, 0),
       _idx: {},
       _src: {}
     };
@@ -483,7 +529,7 @@ class SmartParser {
     const question = {
       questionType: 'statement_based',
       ...meta,
-      correctAnswer: raw.correct ?? raw.correctAnswer ?? 0,
+      correctAnswer: this.safeInt(raw.correct ?? raw.correctAnswer, 0),
       _idx: {},
       _src: {}
     };
@@ -512,7 +558,6 @@ class SmartParser {
     let passageTitle = '';
     let rawQuestions = [];
 
-    // Support multiple passage formats
     if (typeof raw.passage === 'string') {
       passageContent = raw.passage;
       passageTitle = raw.title || '';
@@ -549,8 +594,8 @@ class SmartParser {
         questionType: 'passage_based',
         passageOrder: i + 1,
         ...meta,
-        correctAnswer: q.correct ?? q.correctAnswer ?? 0,
-        difficulty: q.difficulty || meta.difficulty,
+        correctAnswer: this.safeInt(q.correct ?? q.correctAnswer, 0),
+        difficulty: q.difficulty ? this.normalizeDifficulty(q.difficulty) : meta.difficulty,
         _idx: {},
         _src: {}
       };
@@ -678,8 +723,8 @@ class SmartParser {
         questionType: diQuestionType,
         diOrder: i + 1,
         ...meta,
-        correctAnswer: q.correct ?? q.correctAnswer ?? 0,
-        difficulty: q.difficulty || meta.difficulty,
+        correctAnswer: this.safeInt(q.correct ?? q.correctAnswer, 0),
+        difficulty: q.difficulty ? this.normalizeDifficulty(q.difficulty) : meta.difficulty,
         _idx: {},
         _src: {}
       };
@@ -724,11 +769,8 @@ class SmartParser {
     });
 
     if (data.questionType) {
-      // Single question
       this.applyToQuestion(data, bilingual, bilingualArr);
-
     } else if (data.passage !== undefined) {
-      // Passage group
       const p = data.passage;
       if (p && p._idx?.content !== undefined) {
         p.content = bilingual(p._src?.content, p._idx.content);
@@ -738,9 +780,7 @@ class SmartParser {
           this.applyToQuestion(q, bilingual, bilingualArr);
         }
       }
-
     } else if (data.diData !== undefined) {
-      // DI group
       this.applyToDI(data.diData, bilingual, bilingualArr);
       if (data.questions) {
         for (const q of data.questions) {
@@ -754,26 +794,22 @@ class SmartParser {
     const idx = q._idx || {};
     const src = q._src || {};
 
-    // Question text
     if (idx.question !== undefined && idx.question >= 0) {
       q.question = bilingual(src.question, idx.question);
     } else if (src.question) {
       q.question = { hi: src.question, en: src.question };
     }
 
-    // Options
     if (idx.options && idx.options.length > 0) {
       q.options = bilingualArr(src.options, idx.options);
     } else if (src.options && src.options.length > 0) {
       q.options = { hi: src.options, en: src.options };
     }
 
-    // Explanation
     if (idx.explanation !== undefined && idx.explanation >= 0 && src.explanation) {
       q.explanation = bilingual(src.explanation, idx.explanation);
     }
 
-    // Assertion-Reason data
     if (idx.assertion !== undefined || idx.reason !== undefined) {
       q.assertionReasonData = {
         assertion: bilingual(src.assertion, idx.assertion),
@@ -781,7 +817,6 @@ class SmartParser {
       };
     }
 
-    // Match Following data
     if (idx.listA && idx.listA.length > 0) {
       q.matchData = {
         listA: bilingualArr(src.listA, idx.listA),
@@ -790,7 +825,6 @@ class SmartParser {
       };
     }
 
-    // Sequence Order data
     if (idx.items && idx.items.length > 0) {
       q.sequenceData = {
         items: bilingualArr(src.items, idx.items),
@@ -798,7 +832,6 @@ class SmartParser {
       };
     }
 
-    // Statement Based data
     if (idx.statements && idx.statements.length > 0) {
       q.statementData = {
         statements: bilingualArr(src.statements, idx.statements),
@@ -877,11 +910,23 @@ class SmartParser {
       errors.push('Invalid language. Must be "hi" or "en"');
     }
 
-    const paper = jsonData.paper || jsonData.defaultMeta?.paper;
-    if (!paper) {
+    // 🔧 FIX: Don't reject invalid paper/difficulty — just warn and normalize
+    const rawPaper = jsonData.paper || jsonData.defaultMeta?.paper;
+    if (rawPaper) {
+      const normalized = this.normalizePaper(rawPaper);
+      if (rawPaper !== normalized && rawPaper !== 'paper1' && rawPaper !== 'paper2') {
+        warnings.push(`Paper "${rawPaper}" will be mapped to "${normalized}"`);
+      }
+    } else {
       warnings.push('No paper specified, defaulting to "paper1"');
-    } else if (!['paper1', 'paper2'].includes(paper)) {
-      errors.push('Invalid paper. Must be "paper1" or "paper2"');
+    }
+
+    const rawDiff = jsonData.difficulty || jsonData.defaultMeta?.difficulty;
+    if (rawDiff) {
+      const normalized = this.normalizeDifficulty(rawDiff);
+      if (rawDiff !== normalized && !['easy', 'medium', 'hard'].includes(rawDiff)) {
+        warnings.push(`Difficulty "${rawDiff}" will be mapped to "${normalized}"`);
+      }
     }
 
     if (Array.isArray(jsonData.questions)) {
@@ -893,17 +938,15 @@ class SmartParser {
 
         const type = this.detectQuestionType(q);
 
-        // Simple questions validation
         if (!type.startsWith('di_') && type !== 'passage_based') {
           if (q.correct === undefined && q.correctAnswer === undefined) {
-            warnings.push(`Question ${index + 1}: Missing correct answer`);
+            warnings.push(`Question ${index + 1}: Missing correct answer, defaulting to 0`);
           }
           if (!q.options && !q.listA && !q.assertion && !q.items && !q.statements) {
-            warnings.push(`Question ${index + 1}: Missing options`);
+            warnings.push(`Question ${index + 1}: Missing options/data`);
           }
         }
 
-        // Passage validation
         if (type === 'passage_based') {
           let pContent = '';
           let pQuestions = [];
@@ -927,7 +970,6 @@ class SmartParser {
           }
         }
 
-        // DI validation
         if (type.startsWith('di_')) {
           const diRaw = q.diData || q;
           if (!diRaw.questions || diRaw.questions.length === 0) {

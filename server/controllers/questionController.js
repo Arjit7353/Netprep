@@ -37,17 +37,51 @@ const toFilterValue = (val) => {
 };
 
 // ================================================================
-// SMART FLEXIBLE FILTER BUILDER
+// 🔧 FIX: NORMALIZATION HELPERS (safety net before DB save)
 // ================================================================
-// Handles ALL these mismatches:
-//   Syllabus: "UNIT VII: Data Interpretation"  →  DB: "UNIT VII"
-//   Syllabus: "Graphical Representation"       →  DB: "Data Interpretation"
-//   Syllabus: "Types of Charts"                →  DB: "Table Chart"
-//
-// Strategy: Try multiple approaches in order:
-//   1. Exact match
-//   2. Starts-with match (base before colon)
-//   3. Contains any significant word (3+ chars)
+
+const VALID_PAPERS = ['paper1', 'paper2'];
+const VALID_DIFFICULTIES = ['easy', 'medium', 'hard'];
+
+const normalizePaperValue = (value) => {
+  if (!value) return 'paper1';
+  if (VALID_PAPERS.includes(value)) return value;
+  const v = String(value).toLowerCase().trim();
+  if (v === 'paper1' || v === 'p1' || v === '1') return 'paper1';
+  if (v === 'paper2' || v === 'p2' || v === '2') return 'paper2';
+  if (v.includes('history') || v.includes('इतिहास')) return 'paper2';
+  if (v.includes('general') || v.includes('teaching')) return 'paper1';
+  return 'paper1';
+};
+
+const normalizeDifficultyValue = (value) => {
+  if (!value) return 'medium';
+  if (VALID_DIFFICULTIES.includes(value)) return value;
+  const v = String(value).toLowerCase().trim();
+  if (v === 'easy' || v === 'सरल' || v === 'simple') return 'easy';
+  if (v === 'hard' || v === 'कठिन' || v === 'difficult' || v === 'tough') return 'hard';
+  if (v === 'medium' || v === 'मध्यम' || v === 'moderate') return 'medium';
+  if (v.includes('hard')) return 'hard';
+  if (v.includes('easy')) return 'easy';
+  return 'medium';
+};
+
+// 🔧 FIX: Normalize all enum fields before DB save
+const normalizeBeforeSave = (qd) => {
+  qd.paper = normalizePaperValue(qd.paper);
+  qd.difficulty = normalizeDifficultyValue(qd.difficulty);
+  if (qd.correctAnswer === undefined || qd.correctAnswer === null) {
+    qd.correctAnswer = 0;
+  }
+  qd.correctAnswer = parseInt(qd.correctAnswer, 10) || 0;
+  if (!qd.question) qd.question = { hi: '', en: '' };
+  if (!qd.options) qd.options = { hi: [], en: [] };
+  if (!qd.unit) qd.unit = qd.chapter || qd.topic || 'General';
+  return qd;
+};
+
+// ================================================================
+// SMART FLEXIBLE FILTER BUILDER
 // ================================================================
 
 const buildSmartFilter = (fieldName, value) => {
@@ -62,7 +96,6 @@ const buildSmartFilter = (fieldName, value) => {
       return buildSingleSmartFilter(fieldName, value[0]);
     }
 
-    // Multiple values → $or
     const conditions = value.map(v => {
       const f = buildSingleSmartFilter(fieldName, v);
       if (f && f[fieldName]) {
@@ -85,32 +118,22 @@ const buildSingleSmartFilter = (fieldName, value) => {
   const trimmed = value.trim();
   if (!trimmed) return null;
 
-  // Extract base part (before colon)
-  // "UNIT VII: Data Interpretation" → "UNIT VII"
   const basePart = trimmed.split(':')[0].trim();
 
-  // Extract significant words (3+ chars, not common words)
   const stopWords = ['the', 'and', 'for', 'with', 'from', 'that', 'this', 'are', 'was', 'were', 'has', 'have', 'its', 'unit', 'chapter'];
   const allWords = trimmed
     .replace(/[^a-zA-Z0-9\u0900-\u097F\s]/g, ' ')
     .split(/\s+/)
     .filter(w => w.length >= 3 && !stopWords.includes(w.toLowerCase()));
 
-  // Build regex that matches:
-  // - Exact value OR
-  // - Starts with base part OR
-  // - Contains any significant word
   const regexParts = [];
 
-  // 1. Exact match
   regexParts.push(escapeRegex(trimmed));
 
-  // 2. Starts with base (for "UNIT VII: ..." → "UNIT VII")
   if (basePart !== trimmed) {
     regexParts.push('^' + escapeRegex(basePart) + '(\\b|$|:)');
   }
 
-  // 3. Contains significant words (pick top 2 longest words)
   const sortedWords = [...allWords].sort((a, b) => b.length - a.length).slice(0, 2);
   sortedWords.forEach(word => {
     if (word.length >= 4) {
@@ -122,7 +145,6 @@ const buildSingleSmartFilter = (fieldName, value) => {
     return { [fieldName]: trimmed };
   }
 
-  // Combine: match any of these patterns
   const combinedRegex = regexParts.join('|');
 
   return {
@@ -133,7 +155,6 @@ const buildSingleSmartFilter = (fieldName, value) => {
   };
 };
 
-// Build exact match filter (for paper, questionType, etc.)
 const buildExactFilter = (value) => {
   if (!value) return null;
   if (typeof value === 'string') return value;
@@ -145,7 +166,7 @@ const buildExactFilter = (value) => {
 };
 
 // ================================================================
-// DUPLICATE CHECK HELPERS
+// 🔧 FIX: IMPROVED DUPLICATE CHECK HELPERS
 // ================================================================
 
 const extractQuestionText = (questionData) => {
@@ -157,55 +178,116 @@ const extractQuestionText = (questionData) => {
   return '';
 };
 
+// 🔧 FIX: Extract type-specific unique text for duplicate comparison
+const extractUniqueText = (questionData) => {
+  const type = questionData.questionType;
+
+  switch (type) {
+    case 'assertion_reason': {
+      if (questionData.assertionReasonData?.assertion) {
+        const a = questionData.assertionReasonData.assertion;
+        const text = typeof a === 'object' ? (a.hi || a.en || '') : a;
+        if (text && text.length >= 15) return text;
+      }
+      break;
+    }
+
+    case 'match_following': {
+      if (questionData.matchData?.listA) {
+        const listA = questionData.matchData.listA;
+        const items = typeof listA === 'object' && !Array.isArray(listA)
+          ? (listA.hi || listA.en || [])
+          : (Array.isArray(listA) ? listA : []);
+        if (items.length >= 2) {
+          const text = items.slice(0, 3).join(' | ');
+          if (text.length >= 15) return text;
+        }
+      }
+      break;
+    }
+
+    case 'sequence_order': {
+      // 🔧 FIX: Use items instead of generic question text
+      if (questionData.sequenceData?.items) {
+        const items = questionData.sequenceData.items;
+        const hiItems = typeof items === 'object' && !Array.isArray(items)
+          ? (items.hi || items.en || [])
+          : (Array.isArray(items) ? items : []);
+        if (hiItems.length >= 2) {
+          const text = hiItems.slice(0, 3).join(' | ');
+          if (text.length >= 15) return text;
+        }
+      }
+      break;
+    }
+
+    case 'statement_based': {
+      // 🔧 FIX: Use first statement instead of generic question text
+      if (questionData.statementData?.statements) {
+        const stmts = questionData.statementData.statements;
+        const hiStmts = typeof stmts === 'object' && !Array.isArray(stmts)
+          ? (stmts.hi || stmts.en || [])
+          : (Array.isArray(stmts) ? stmts : []);
+        if (hiStmts.length >= 1) {
+          const text = hiStmts.slice(0, 2).join(' | ');
+          if (text.length >= 15) return text;
+        }
+      }
+      break;
+    }
+
+    default:
+      break;
+  }
+
+  // Fallback to question text
+  return extractQuestionText(questionData);
+};
+
 const isDuplicateQuestion = async (questionData) => {
   try {
-    let searchText = '';
-
-    switch (questionData.questionType) {
-      case 'mcq':
-      case 'statement_based':
-      case 'sequence_order':
-      case 'passage_based':
-        searchText = extractQuestionText(questionData);
-        break;
-
-      case 'assertion_reason':
-        if (questionData.assertionReasonData?.assertion) {
-          const a = questionData.assertionReasonData.assertion;
-          searchText = typeof a === 'object' ? (a.hi || a.en || '') : a;
-        }
-        if (!searchText) searchText = extractQuestionText(questionData);
-        break;
-
-      case 'match_following':
-        if (questionData.matchData?.listA) {
-          const listA = questionData.matchData.listA;
-          const items = typeof listA === 'object' && !Array.isArray(listA)
-            ? (listA.hi || listA.en || [])
-            : (Array.isArray(listA) ? listA : []);
-          searchText = items[0] || extractQuestionText(questionData);
-        }
-        if (!searchText) searchText = extractQuestionText(questionData);
-        break;
-
-      default:
-        searchText = extractQuestionText(questionData);
-        break;
-    }
+    // 🔧 FIX: Use type-specific text extraction
+    const searchText = extractUniqueText(questionData);
 
     if (!searchText || searchText.length < 15) return false;
 
-    const searchSnippet = searchText.substring(0, 60);
+    // Use first 80 chars for more precise matching
+    const searchSnippet = searchText.substring(0, 80);
     const escapedSnippet = escapeRegex(searchSnippet);
+
+    // 🔧 FIX: Build search conditions based on question type
+    const searchConditions = [
+      { 'question.hi': { $regex: escapedSnippet, $options: 'i' } },
+      { 'question.en': { $regex: escapedSnippet, $options: 'i' } }
+    ];
+
+    // Add type-specific search fields
+    const type = questionData.questionType;
+    if (type === 'assertion_reason') {
+      searchConditions.push(
+        { 'assertionReasonData.assertion.hi': { $regex: escapedSnippet, $options: 'i' } },
+        { 'assertionReasonData.assertion.en': { $regex: escapedSnippet, $options: 'i' } }
+      );
+    } else if (type === 'sequence_order') {
+      searchConditions.push(
+        { 'sequenceData.items.hi': { $regex: escapedSnippet, $options: 'i' } },
+        { 'sequenceData.items.en': { $regex: escapedSnippet, $options: 'i' } }
+      );
+    } else if (type === 'match_following') {
+      searchConditions.push(
+        { 'matchData.listA.hi': { $regex: escapedSnippet, $options: 'i' } },
+        { 'matchData.listA.en': { $regex: escapedSnippet, $options: 'i' } }
+      );
+    } else if (type === 'statement_based') {
+      searchConditions.push(
+        { 'statementData.statements.hi': { $regex: escapedSnippet, $options: 'i' } },
+        { 'statementData.statements.en': { $regex: escapedSnippet, $options: 'i' } }
+      );
+    }
 
     const existing = await Question.findOne({
       isActive: { $ne: false },
-      $or: [
-        { 'question.hi': { $regex: escapedSnippet, $options: 'i' } },
-        { 'question.en': { $regex: escapedSnippet, $options: 'i' } },
-        { 'assertionReasonData.assertion.hi': { $regex: escapedSnippet, $options: 'i' } },
-        { 'assertionReasonData.assertion.en': { $regex: escapedSnippet, $options: 'i' } }
-      ]
+      $or: searchConditions
     }).select('_id questionNumber').lean();
 
     return !!existing;
@@ -213,6 +295,43 @@ const isDuplicateQuestion = async (questionData) => {
     console.warn('[DuplicateCheck] Error:', err.message);
     return false;
   }
+};
+
+// 🔧 FIX: Extract text for raw JSON (before smart parsing)
+const extractRawUniqueText = (q, type) => {
+  switch (type) {
+    case 'assertion_reason':
+      if (q.assertion && q.assertion.length >= 15) return q.assertion;
+      break;
+
+    case 'match_following':
+      if (q.listA && Array.isArray(q.listA) && q.listA.length >= 2) {
+        const text = q.listA.slice(0, 3).join(' | ');
+        if (text.length >= 15) return text;
+      }
+      break;
+
+    case 'sequence_order':
+      // 🔧 FIX: Use items array for duplicate check
+      if (q.items && Array.isArray(q.items) && q.items.length >= 2) {
+        const text = q.items.slice(0, 3).join(' | ');
+        if (text.length >= 15) return text;
+      }
+      break;
+
+    case 'statement_based':
+      if (q.statements && Array.isArray(q.statements) && q.statements.length >= 1) {
+        const text = q.statements.slice(0, 2).join(' | ');
+        if (text.length >= 15) return text;
+      }
+      break;
+
+    default:
+      break;
+  }
+
+  // Fallback
+  return q.question || q.questionText || '';
 };
 
 const checkDuplicatesForPreview = async (jsonData) => {
@@ -228,37 +347,54 @@ const checkDuplicatesForPreview = async (jsonData) => {
       const type = smartParser.detectQuestionType(q);
       if (type === 'passage_based' || type.startsWith('di_')) continue;
 
-      let searchText = '';
-      switch (type) {
-        case 'assertion_reason':
-          searchText = q.assertion || q.question || '';
-          break;
-        case 'match_following':
-          searchText = (q.listA && q.listA[0]) || q.question || '';
-          break;
-        default:
-          searchText = q.question || q.questionText || '';
-          break;
-      }
+      // 🔧 FIX: Use type-specific text extraction
+      const searchText = extractRawUniqueText(q, type);
 
       if (!searchText || searchText.length < 15) continue;
 
-      const searchSnippet = searchText.substring(0, 60);
+      const searchSnippet = searchText.substring(0, 80);
       const escapedSnippet = escapeRegex(searchSnippet);
+
+      // 🔧 FIX: Search across all relevant fields
+      const searchConditions = [
+        { 'question.hi': { $regex: escapedSnippet, $options: 'i' } },
+        { 'question.en': { $regex: escapedSnippet, $options: 'i' } }
+      ];
+
+      if (type === 'assertion_reason') {
+        searchConditions.push(
+          { 'assertionReasonData.assertion.hi': { $regex: escapedSnippet, $options: 'i' } },
+          { 'assertionReasonData.assertion.en': { $regex: escapedSnippet, $options: 'i' } }
+        );
+      } else if (type === 'sequence_order') {
+        searchConditions.push(
+          { 'sequenceData.items.hi': { $regex: escapedSnippet, $options: 'i' } },
+          { 'sequenceData.items.en': { $regex: escapedSnippet, $options: 'i' } }
+        );
+      } else if (type === 'match_following') {
+        searchConditions.push(
+          { 'matchData.listA.hi': { $regex: escapedSnippet, $options: 'i' } },
+          { 'matchData.listA.en': { $regex: escapedSnippet, $options: 'i' } }
+        );
+      } else if (type === 'statement_based') {
+        searchConditions.push(
+          { 'statementData.statements.hi': { $regex: escapedSnippet, $options: 'i' } },
+          { 'statementData.statements.en': { $regex: escapedSnippet, $options: 'i' } }
+        );
+      }
 
       const existing = await Question.findOne({
         isActive: { $ne: false },
-        $or: [
-          { 'question.hi': { $regex: escapedSnippet, $options: 'i' } },
-          { 'question.en': { $regex: escapedSnippet, $options: 'i' } },
-          { 'assertionReasonData.assertion.hi': { $regex: escapedSnippet, $options: 'i' } },
-          { 'assertionReasonData.assertion.en': { $regex: escapedSnippet, $options: 'i' } }
-        ]
-      }).select('questionNumber question assertionReasonData').lean();
+        $or: searchConditions
+      }).select('questionNumber question assertionReasonData sequenceData matchData statementData').lean();
 
       if (existing) {
         const existingText = existing.question?.hi || existing.question?.en ||
-          existing.assertionReasonData?.assertion?.hi || '';
+          existing.assertionReasonData?.assertion?.hi ||
+          (existing.sequenceData?.items?.hi || []).slice(0, 2).join(', ') ||
+          (existing.matchData?.listA?.hi || []).slice(0, 2).join(', ') ||
+          (existing.statementData?.statements?.hi || []).slice(0, 1).join(', ') ||
+          '';
         duplicates.push({
           inputIndex: i + 1,
           inputQuestion: searchText.substring(0, 100),
@@ -295,14 +431,12 @@ const getQuestions = async (req, res, next) => {
     const filter = { isActive: { $ne: false } };
     const andConditions = [];
 
-    // Paper - exact match
     const paperVal = toFilterValue(paper);
     if (paperVal) {
       const v = buildExactFilter(paperVal);
       if (v) filter.paper = v;
     }
 
-    // Unit - smart flexible match
     const unitVal = toFilterValue(unit);
     if (unitVal) {
       const f = buildSmartFilter('unit', unitVal);
@@ -312,7 +446,6 @@ const getQuestions = async (req, res, next) => {
       }
     }
 
-    // Chapter - smart flexible match
     const chapterVal = toFilterValue(chapter);
     if (chapterVal) {
       const f = buildSmartFilter('chapter', chapterVal);
@@ -322,7 +455,6 @@ const getQuestions = async (req, res, next) => {
       }
     }
 
-    // Topic - smart flexible match
     const topicVal = toFilterValue(topic);
     if (topicVal) {
       const f = buildSmartFilter('topic', topicVal);
@@ -332,34 +464,28 @@ const getQuestions = async (req, res, next) => {
       }
     }
 
-    // QuestionType - exact
     const typeVal = toFilterValue(questionType);
     if (typeVal) {
       const v = buildExactFilter(typeVal);
       if (v) filter.questionType = v;
     }
 
-    // Difficulty - exact
     const diffVal = toFilterValue(difficulty);
     if (diffVal) {
       const v = buildExactFilter(diffVal);
       if (v) filter.difficulty = v;
     }
 
-    // Source - regex
     if (source) filter.source = { $regex: source, $options: 'i' };
 
-    // Year - exact
     const yearVal = toFilterValue(year);
     if (yearVal) {
       const v = buildExactFilter(yearVal);
       if (v) filter.year = v;
     }
 
-    // PYQ flag
     if (isPYQ === 'true') filter.isPYQ = true;
 
-    // Date range
     if (startDate || endDate) {
       filter.createdAt = {};
       if (startDate) filter.createdAt.$gte = new Date(startDate);
@@ -370,7 +496,6 @@ const getQuestions = async (req, res, next) => {
       }
     }
 
-    // Search
     if (search) {
       andConditions.push({
         $or: [
@@ -381,7 +506,6 @@ const getQuestions = async (req, res, next) => {
       });
     }
 
-    // Combine $and
     if (andConditions.length > 0) {
       filter.$and = andConditions;
     }
@@ -487,6 +611,10 @@ const getQuestionById = async (req, res, next) => {
 const createQuestion = async (req, res, next) => {
   try {
     const questionData = req.body;
+
+    // 🔧 FIX: Normalize before save
+    normalizeBeforeSave(questionData);
+
     const srcLang = questionData.language || 'hi';
     try { await translateHelper.translateQuestion(questionData, srcLang); }
     catch (e) { console.warn('Translation failed:', e.message); }
@@ -583,6 +711,8 @@ const importQuestions = async (req, res, next) => {
       try {
         const gid = pd._groupId; delete pd._groupId;
         if (!pd.content) pd.content = { hi: '', en: '' };
+        // 🔧 FIX: Normalize passage fields
+        pd.paper = normalizePaperValue(pd.paper);
         const p = await Passage.create(pd);
         savedPassages.push(p);
         if (gid) gPassage[gid] = p._id;
@@ -594,6 +724,8 @@ const importQuestions = async (req, res, next) => {
       try {
         const gid = dd._groupId; delete dd._groupId;
         if (!dd.title) dd.title = { hi: 'DI', en: 'DI' };
+        // 🔧 FIX: Normalize DI fields
+        dd.paper = normalizePaperValue(dd.paper);
         const d = await DIData.create(dd);
         savedDIData.push(d);
         if (gid) gDI[gid] = d._id;
@@ -609,19 +741,29 @@ const importQuestions = async (req, res, next) => {
         const isSubQ = !!qd.passageId || !!qd.diDataId;
         if (skipDuplicates && !isSubQ) {
           if (await isDuplicateQuestion(qd)) {
-            skippedQuestions.push({ type: qd.questionType, reason: 'duplicate', question: extractQuestionText(qd).substring(0, 100) });
+            const dupText = extractUniqueText(qd);
+            skippedQuestions.push({ type: qd.questionType, reason: 'duplicate', question: dupText.substring(0, 100) });
             continue;
           }
         }
 
-        if (!qd.question) qd.question = { hi: '', en: '' };
-        if (!qd.options) qd.options = { hi: [], en: [] };
-        if (qd.correctAnswer === undefined) qd.correctAnswer = 0;
-        if (!qd.paper) qd.paper = 'paper1';
-        delete qd._idx; delete qd._src;
+        // 🔧 FIX: Normalize ALL fields before save
+        normalizeBeforeSave(qd);
+
+        // Clean internal flags
+        delete qd._idx;
+        delete qd._src;
 
         savedQuestions.push(await Question.create(qd));
-      } catch (e) { saveErrors.push({ type: 'question', error: e.message, question: extractQuestionText(qd).substring(0, 100) }); }
+      } catch (e) {
+        console.error('[Import] Save error:', e.message, '| Type:', qd.questionType, '| Paper:', qd.paper, '| Difficulty:', qd.difficulty);
+        saveErrors.push({
+          type: 'question',
+          questionType: qd.questionType,
+          error: e.message,
+          question: extractQuestionText(qd).substring(0, 100)
+        });
+      }
     }
 
     // Update counts
@@ -629,11 +771,16 @@ const importQuestions = async (req, res, next) => {
     for (const d of savedDIData) { try { const c = await Question.countDocuments({ diDataId: d._id, isActive: { $ne: false } }); await DIData.findByIdAndUpdate(d._id, { questionCount: c }); } catch (e) {} }
 
     const totalErrors = [...parseResult.errors, ...saveErrors];
-    console.log(`[Import] Done: ${savedQuestions.length} saved, ${skippedQuestions.length} skipped`);
+    console.log(`[Import] Done: ${savedQuestions.length} saved, ${skippedQuestions.length} skipped, ${totalErrors.length} errors`);
+
+    // 🔧 FIX: Log errors for debugging
+    if (totalErrors.length > 0) {
+      console.log('[Import] Error details:', totalErrors.slice(0, 5));
+    }
 
     res.status(201).json({
       success: true,
-      message: `Import: ${savedQuestions.length} saved` + (skippedQuestions.length > 0 ? `, ${skippedQuestions.length} skipped` : ''),
+      message: `Import: ${savedQuestions.length} saved` + (skippedQuestions.length > 0 ? `, ${skippedQuestions.length} skipped` : '') + (totalErrors.length > 0 ? `, ${totalErrors.length} errors` : ''),
       data: { questions: savedQuestions.length, passages: savedPassages.length, diData: savedDIData.length, skipped: skippedQuestions.length, errors: totalErrors.length, stats: parseResult.stats },
       skipped: skippedQuestions.length > 0 ? skippedQuestions : undefined,
       errors: totalErrors.length > 0 ? totalErrors : undefined,
@@ -648,6 +795,11 @@ const updateQuestion = async (req, res, next) => {
   try {
     const updates = req.body;
     if (updates.language) { try { await translateHelper.translateQuestion(updates, updates.language); } catch (e) {} }
+
+    // 🔧 FIX: Normalize before update
+    if (updates.paper) updates.paper = normalizePaperValue(updates.paper);
+    if (updates.difficulty) updates.difficulty = normalizeDifficultyValue(updates.difficulty);
+
     const question = await Question.findByIdAndUpdate(req.params.id, { ...updates, updatedAt: new Date() }, { new: true, runValidators: true });
     if (!question) return res.status(404).json({ success: false, message: 'Question not found' });
     res.json({ success: true, message: 'Question updated', data: question });
