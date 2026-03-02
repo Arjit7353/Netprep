@@ -14,6 +14,10 @@ router.get('/stats', testController.getTestStats);
 // @desc    Get test type configurations
 router.get('/types', testController.getTestTypes);
 
+// @route   GET /api/tests/filter-options
+// @desc    Get distinct filter values for dropdowns (cascading)
+router.get('/filter-options', testController.getFilterOptions);
+
 // @route   GET /api/tests/:id
 // @desc    Get single test by ID
 router.get('/:id', testController.getTestById);

@@ -23,6 +23,14 @@ const testService = {
   },
 
   /**
+   * Get filter options for dropdowns (distinct values + counts)
+   * Supports cascading: pass paper/testType/unit to get filtered options
+   */
+  async getFilterOptions(params = {}) {
+    return apiHelper.get('/tests/filter-options', params);
+  },
+
+  /**
    * Get single test by ID
    */
   async getTestById(id) {
