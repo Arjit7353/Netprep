@@ -1,262 +1,126 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Minus,
-  BarChart3,
-  Calendar
-} from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import attemptService from '../../services/attemptService';
+// client/src/components/result/ResultComparison.jsx
+import React, { useMemo } from 'react';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, BarChart, Bar
+} from 'recharts';
+import { TrendingUp, TrendingDown, Minus, Activity, Award, Hash } from 'lucide-react';
 
-const ResultComparison = ({ testId, currentAttemptId, language = 'en' }) => {
-  const [attempts, setAttempts] = useState([]);
-  const [loading, setLoading] = useState(true);
+const ResultComparison = ({ attempts = [], currentAttempt, language = 'hi' }) => {
+  const chartData = useMemo(() => {
+    if (!attempts?.length) return [];
+    return attempts
+      .sort((a, b) => new Date(a.completedAt || a.createdAt) - new Date(b.completedAt || b.createdAt))
+      .map((att, i) => ({
+        name: `#${att.attemptNumber || i + 1}`,
+        score: att.score || 0, accuracy: att.accuracy || 0,
+        correct: att.correctCount || 0, wrong: att.wrongCount || 0, skipped: att.skippedCount || 0,
+        time: att.totalTimeTaken ? Math.round(att.totalTimeTaken / 60) : 0,
+        isCurrent: att._id === currentAttempt?._id,
+        date: att.completedAt ? new Date(att.completedAt).toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' }) : ''
+      }));
+  }, [attempts, currentAttempt, language]);
 
-  useEffect(() => {
-    loadAttemptHistory();
-  }, [testId]);
+  const trend = useMemo(() => {
+    if (chartData.length < 2) return null;
+    const last = chartData[chartData.length - 1], prev = chartData[chartData.length - 2];
+    const sd = last.score - prev.score, ad = last.accuracy - prev.accuracy;
+    const ic = (d) => d > 0 ? TrendingUp : d < 0 ? TrendingDown : Minus;
+    const cl = (d) => d > 0 ? 'text-emerald-600' : d < 0 ? 'text-red-600' : 'text-gray-500';
+    return { score: { diff: sd, icon: ic(sd), color: cl(sd) }, accuracy: { diff: ad, icon: ic(ad), color: cl(ad) } };
+  }, [chartData]);
 
-  const loadAttemptHistory = async () => {
-    setLoading(true);
-    try {
-      const response = await attemptService.getAttempts({ testId, status: 'completed' });
-      setAttempts(response.data || []);
-    } catch (error) {
-      console.error('Failed to load attempt history:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const text = {
-    comparison: { en: 'Attempt Comparison', hi: 'प्रयास तुलना' },
-    attemptNumber: { en: 'Attempt', hi: 'प्रयास' },
-    score: { en: 'Score', hi: 'स्कोर' },
-    accuracy: { en: 'Accuracy', hi: 'सटीकता' },
-    timeTaken: { en: 'Time Taken', hi: 'लिया गया समय' },
-    improvement: { en: 'Improvement', hi: 'सुधार' },
-    decline: { en: 'Decline', hi: 'गिरावट' },
-    noChange: { en: 'No Change', hi: 'कोई परिवर्तन नहीं' },
-    progressChart: { en: 'Progress Chart', hi: 'प्रगति चार्ट' },
-    noHistory: { en: 'No previous attempts to compare', hi: 'तुलना के लिए कोई पिछला प्रयास नहीं' }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
-
-  if (attempts.length <= 1) {
-    return (
-      <div className="text-center py-12">
-        <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-        <p className="text-gray-500">{text.noHistory[language]}</p>
-      </div>
-    );
-  }
-
-  // Sort attempts by date
-  const sortedAttempts = [...attempts].sort((a, b) => 
-    new Date(a.completedAt) - new Date(b.completedAt)
+  if (chartData.length < 2) return (
+    <div className="bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-12 text-center">
+      <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+      <p className="text-gray-500">{language === 'hi' ? 'कम से कम 2 प्रयास आवश्यक' : 'Need 2+ attempts to compare'}</p>
+    </div>
   );
-
-  // Current attempt
-  const currentAttempt = sortedAttempts.find(a => a._id === currentAttemptId);
-  const currentIndex = sortedAttempts.findIndex(a => a._id === currentAttemptId);
-  const previousAttempt = currentIndex > 0 ? sortedAttempts[currentIndex - 1] : null;
-
-  // Calculate improvement
-  const calculateImprovement = (current, previous, field) => {
-    if (!previous) return null;
-    const diff = current[field] - previous[field];
-    return {
-      value: diff,
-      percentage: previous[field] !== 0 ? ((diff / previous[field]) * 100).toFixed(1) : 0,
-      isPositive: diff > 0,
-      isNegative: diff < 0
-    };
-  };
-
-  const scoreImprovement = calculateImprovement(currentAttempt, previousAttempt, 'percentage');
-  const accuracyImprovement = calculateImprovement(currentAttempt, previousAttempt, 'accuracy');
-
-  // Chart data
-  const chartData = sortedAttempts.map((attempt, index) => ({
-    name: `${text.attemptNumber[language]} ${index + 1}`,
-    score: attempt.percentage,
-    accuracy: attempt.accuracy,
-    date: new Date(attempt.completedAt).toLocaleDateString('en-IN', { 
-      day: '2-digit', 
-      month: 'short' 
-    })
-  }));
 
   return (
     <div className="space-y-6">
-      {/* Comparison with Previous Attempt */}
-      {previousAttempt && (
-        <div className="card p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            {text.improvement[language]}
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Score Comparison */}
-            <div className="p-4 rounded-lg bg-gray-50">
-              <div className="text-sm text-gray-600 mb-2">{text.score[language]}</div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">
-                    {currentAttempt.percentage}%
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Previous: {previousAttempt.percentage}%
-                  </div>
-                </div>
-                {scoreImprovement && (
-                  <div className={`
-                    flex items-center gap-1 px-3 py-1.5 rounded-full font-bold
-                    ${scoreImprovement.isPositive ? 'bg-green-100 text-green-700' : 
-                      scoreImprovement.isNegative ? 'bg-red-100 text-red-700' : 
-                      'bg-gray-100 text-gray-700'}
-                  `}>
-                    {scoreImprovement.isPositive && <TrendingUp className="w-4 h-4" />}
-                    {scoreImprovement.isNegative && <TrendingDown className="w-4 h-4" />}
-                    {!scoreImprovement.isPositive && !scoreImprovement.isNegative && <Minus className="w-4 h-4" />}
-                    <span>{scoreImprovement.value > 0 ? '+' : ''}{scoreImprovement.value.toFixed(1)}%</span>
-                  </div>
-                )}
+      {trend && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: language === 'hi' ? 'अंक रुझान' : 'Score Trend', ...trend.score, val: `${trend.score.diff > 0 ? '+' : ''}${trend.score.diff}` },
+            { label: language === 'hi' ? 'सटीकता' : 'Accuracy', ...trend.accuracy, val: `${trend.accuracy.diff > 0 ? '+' : ''}${trend.accuracy.diff}%` },
+            { label: language === 'hi' ? 'सर्वश्रेष्ठ' : 'Best', icon: Award, color: 'text-amber-600', val: `${Math.max(...chartData.map(d => d.score))}` },
+            { label: language === 'hi' ? 'प्रयास' : 'Attempts', icon: Hash, color: 'text-primary-600', val: `${chartData.length}` }
+          ].map((s, i) => (
+            <div key={i} className="bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-500 font-medium">{s.label}</span>
+                {s.icon && <s.icon className={`w-4 h-4 ${s.color}`} />}
               </div>
+              <p className={`text-2xl font-black ${s.color}`}>{s.val}</p>
             </div>
-
-            {/* Accuracy Comparison */}
-            <div className="p-4 rounded-lg bg-gray-50">
-              <div className="text-sm text-gray-600 mb-2">{text.accuracy[language]}</div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">
-                    {currentAttempt.accuracy}%
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Previous: {previousAttempt.accuracy}%
-                  </div>
-                </div>
-                {accuracyImprovement && (
-                  <div className={`
-                    flex items-center gap-1 px-3 py-1.5 rounded-full font-bold
-                    ${accuracyImprovement.isPositive ? 'bg-green-100 text-green-700' : 
-                      accuracyImprovement.isNegative ? 'bg-red-100 text-red-700' : 
-                      'bg-gray-100 text-gray-700'}
-                  `}>
-                    {accuracyImprovement.isPositive && <TrendingUp className="w-4 h-4" />}
-                    {accuracyImprovement.isNegative && <TrendingDown className="w-4 h-4" />}
-                    {!accuracyImprovement.isPositive && !accuracyImprovement.isNegative && <Minus className="w-4 h-4" />}
-                    <span>{accuracyImprovement.value > 0 ? '+' : ''}{accuracyImprovement.value.toFixed(1)}%</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       )}
 
-      {/* Progress Chart */}
-      <div className="card p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-6">
-          {text.progressChart[language]}
-        </h3>
+      <div className="bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-5 shadow-sm">
+        <h4 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <Activity className="w-5 h-5 text-primary-500" />
+          {language === 'hi' ? 'प्रदर्शन रुझान' : 'Performance Trend'}
+        </h4>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis 
-              dataKey="name" 
-              tick={{ fill: '#6b7280', fontSize: 12 }}
-            />
-            <YAxis 
-              tick={{ fill: '#6b7280', fontSize: 12 }}
-              domain={[0, 100]}
-            />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: '#fff', 
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-              }}
-            />
+            <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
+            <XAxis dataKey="name" />
+            <YAxis yAxisId="left" />
+            <YAxis yAxisId="right" orientation="right" domain={[0, 100]} />
+            <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }} />
             <Legend />
-            <Line 
-              type="monotone" 
-              dataKey="score" 
-              stroke="#3b82f6" 
-              strokeWidth={2}
-              name={text.score[language] + ' (%)'}
-              dot={{ fill: '#3b82f6', r: 4 }}
-              activeDot={{ r: 6 }}
-            />
-            <Line 
-              type="monotone" 
-              dataKey="accuracy" 
-              stroke="#10b981" 
-              strokeWidth={2}
-              name={text.accuracy[language] + ' (%)'}
-              dot={{ fill: '#10b981', r: 4 }}
-              activeDot={{ r: 6 }}
-            />
+            <Line yAxisId="left" type="monotone" dataKey="score" stroke="#3B82F6" strokeWidth={3} name={language === 'hi' ? 'अंक' : 'Score'} dot={{ r: 5, fill: '#3B82F6' }} activeDot={{ r: 8 }} />
+            <Line yAxisId="right" type="monotone" dataKey="accuracy" stroke="#10B981" strokeWidth={3} name={language === 'hi' ? 'सटीकता %' : 'Accuracy %'} dot={{ r: 5, fill: '#10B981' }} activeDot={{ r: 8 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
-      {/* All Attempts Table */}
-      <div className="card p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">
-          All Attempts History
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b-2 border-gray-200">
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">#</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">{text.score[language]}</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">{text.accuracy[language]}</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedAttempts.map((attempt, index) => (
-                <tr 
-                  key={attempt._id}
-                  className={`
-                    border-b border-gray-100
-                    ${attempt._id === currentAttemptId ? 'bg-primary-50' : 'hover:bg-gray-50'}
-                  `}
-                >
-                  <td className="py-3 px-4 font-medium">
-                    {index + 1}
-                    {attempt._id === currentAttemptId && (
-                      <span className="ml-2 text-xs bg-primary-600 text-white px-2 py-0.5 rounded">
-                        Current
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 font-bold">{attempt.percentage}%</td>
-                  <td className="py-3 px-4">{attempt.accuracy}%</td>
-                  <td className="py-3 px-4 text-gray-600">
-                    {new Date(attempt.completedAt).toLocaleDateString('en-IN', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric'
-                    })}
-                  </td>
-                </tr>
+      <div className="bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-5 shadow-sm">
+        <h4 className="font-bold text-gray-900 dark:text-white mb-4">{language === 'hi' ? 'प्रयास-वार विवरण' : 'Attempt Breakdown'}</h4>
+        <ResponsiveContainer width="100%" height={250}>
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip contentStyle={{ borderRadius: '16px' }} />
+            <Legend />
+            <Bar dataKey="correct" stackId="a" fill="#10B981" name={language === 'hi' ? 'सही' : 'Correct'} />
+            <Bar dataKey="wrong" stackId="a" fill="#EF4444" name={language === 'hi' ? 'गलत' : 'Wrong'} />
+            <Bar dataKey="skipped" stackId="a" fill="#9CA3AF" name={language === 'hi' ? 'छोड़ा' : 'Skipped'} radius={[0, 4, 4, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-5 shadow-sm overflow-x-auto">
+        <h4 className="font-bold text-gray-900 dark:text-white mb-4">{language === 'hi' ? 'तुलना तालिका' : 'Comparison Table'}</h4>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b-2 border-gray-100 dark:border-secondary-700">
+              {[language === 'hi' ? 'प्रयास' : 'Attempt', language === 'hi' ? 'तिथि' : 'Date', language === 'hi' ? 'अंक' : 'Score', language === 'hi' ? 'सही' : 'Right', language === 'hi' ? 'गलत' : 'Wrong', language === 'hi' ? 'सटीकता' : 'Accuracy', language === 'hi' ? 'समय' : 'Time'].map((h, i) => (
+                <th key={i} className={`py-3 px-2 text-gray-500 font-semibold text-xs uppercase tracking-wider ${i === 0 ? 'text-left' : 'text-center'}`}>{h}</th>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </tr>
+          </thead>
+          <tbody>
+            {chartData.map((r, i) => (
+              <tr key={i} className={`border-b border-gray-50 dark:border-secondary-700/50 ${r.isCurrent ? 'bg-primary-50 dark:bg-primary-900/20' : ''}`}>
+                <td className="py-3 px-2 font-bold text-gray-800 dark:text-secondary-200">
+                  {r.name}{r.isCurrent && <span className="ml-1 text-[10px] text-primary-600 font-semibold">({language === 'hi' ? 'वर्तमान' : 'Current'})</span>}
+                </td>
+                <td className="py-3 px-2 text-center text-gray-500 text-xs">{r.date}</td>
+                <td className="py-3 px-2 text-center font-bold text-gray-800 dark:text-secondary-200">{r.score}</td>
+                <td className="py-3 px-2 text-center text-emerald-600 font-bold">{r.correct}</td>
+                <td className="py-3 px-2 text-center text-red-500 font-bold">{r.wrong}</td>
+                <td className="py-3 px-2 text-center">
+                  <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${r.accuracy >= 70 ? 'bg-emerald-100 text-emerald-700' : r.accuracy >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{r.accuracy}%</span>
+                </td>
+                <td className="py-3 px-2 text-center text-gray-500">{r.time}m</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

@@ -1,318 +1,316 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Layout from '../components/layout/Layout';
-import { 
-  Trophy, 
-  Calendar, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  MinusCircle,
-  Eye,
-  TrendingUp,
-  Target,
-  Award,
-  Filter,
-  Download,
-  RefreshCw
+// client/src/pages/Results.jsx
+// FIXED: Language toggle works on list page + sidebar doesn't reset language
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  Trophy, Clock, Target, Eye, RotateCcw, Calendar, ChevronRight,
+  Search, FileText, TrendingUp, Award, Loader2, AlertCircle,
+  Hash, ArrowUpRight, Flame, Zap
 } from 'lucide-react';
-import attemptService from '../services/attemptService';
+import Layout from '../components/layout/Layout';
+import Button from '../components/common/Button';
+import ResultPage from '../components/result/ResultPage';
+import { apiHelper } from '../services/api';
 
-const Results = ({ language = 'en', setLanguage }) => {
+// FIXED: Get language from a shared source
+const getStoredLanguage = () => {
+  try {
+    return localStorage.getItem('netprep_lang') || 'en';
+  } catch { return 'en'; }
+};
+
+const setStoredLanguage = (lang) => {
+  try {
+    localStorage.setItem('netprep_lang', lang);
+  } catch {}
+};
+
+const Results = () => {
   const navigate = useNavigate();
+  const { attemptId } = useParams();
+
+  // FIXED: Language state from localStorage, NOT defaulting to 'hi'
+  const [language, setLanguage] = useState(getStoredLanguage);
+
   const [attempts, setAttempts] = useState([]);
-  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all | completed | recent
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
+  const [selectedAttempt, setSelectedAttempt] = useState(null);
+  const [selectedTest, setSelectedTest] = useState(null);
+  const [selectedQuestions, setSelectedQuestions] = useState([]);
+  const [previousAttempts, setPreviousAttempts] = useState([]);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  // FIXED: Language change handler that saves to localStorage
+  const handleLanguageChange = useCallback((lang) => {
+    setLanguage(lang);
+    setStoredLanguage(lang);
+    // Dispatch custom event so other components can react
+    window.dispatchEvent(new CustomEvent('netprep-lang-change', { detail: lang }));
+  }, []);
+
+  // FIXED: Listen for language changes from Layout/Sidebar
   useEffect(() => {
-    loadData();
-  }, [filter]);
+    const handler = (e) => {
+      if (e.detail && e.detail !== language) {
+        setLanguage(e.detail);
+      }
+    };
+    window.addEventListener('netprep-lang-change', handler);
+    return () => window.removeEventListener('netprep-lang-change', handler);
+  }, [language]);
 
-  const loadData = async () => {
-    setLoading(true);
+  // FIXED: Sync language from localStorage on mount (in case sidebar changed it)
+  useEffect(() => {
+    const stored = getStoredLanguage();
+    if (stored !== language) {
+      setLanguage(stored);
+    }
+  }, []);
+
+  const fetchAttempts = useCallback(async () => {
     try {
-      const [attemptsData, statsData] = await Promise.all([
-        attemptService.getAttempts({ 
-          status: filter === 'completed' ? 'completed' : undefined,
-          limit: filter === 'recent' ? 10 : 50
-        }),
-        attemptService.getStats()
-      ]);
-
-      setAttempts(attemptsData.data || []);
-      setStats(statsData.data);
-    } catch (error) {
-      console.error('Failed to load results:', error);
+      setLoading(true);
+      const response = await apiHelper.get('/attempts', {
+        limit: 100, sortBy: 'completedAt', sortOrder: 'desc'
+      });
+      setAttempts(response.data || []);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => { fetchAttempts(); }, [fetchAttempts]);
+
+  useEffect(() => {
+    if (attemptId) loadAttemptDetail(attemptId);
+  }, [attemptId]);
+
+  const loadAttemptDetail = async (id) => {
+    try {
+      setDetailLoading(true);
+      const response = await apiHelper.get(`/attempts/${id}`);
+      const data = response.data;
+      setSelectedAttempt(data);
+      setSelectedTest(data.testId || data.test);
+
+      if (data.answers?.length > 0) {
+        const qIds = data.answers.map(a => a.questionId?._id || a.questionId).filter(Boolean);
+        if (qIds.length > 0) {
+          try {
+            const qRes = await apiHelper.post('/questions/bulk', { ids: qIds });
+            const qMap = {};
+            (qRes.data || []).forEach(q => { qMap[q._id] = q; });
+            setSelectedQuestions(data.answers.map(a => {
+              const qId = a.questionId?._id || a.questionId;
+              return qMap[qId] || a.questionId || {};
+            }));
+          } catch { setSelectedQuestions(data.answers.map(a => a.questionId || {})); }
+        }
+      }
+
+      const testId = data.testId?._id || data.testId;
+      if (testId) {
+        try {
+          const prev = await apiHelper.get('/attempts', { testId, limit: 20 });
+          setPreviousAttempts(prev.data || []);
+        } catch { setPreviousAttempts([]); }
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
+  const fmt = (d) => d ? new Date(d).toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  const fmtTime = (s) => s ? `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}` : '0:00';
+
+  const accStyle = (a) => {
+    if (a >= 80) return { color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/30', ring: 'ring-emerald-500/20' };
+    if (a >= 60) return { color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/30', ring: 'ring-blue-500/20' };
+    if (a >= 40) return { color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-900/30', ring: 'ring-amber-500/20' };
+    return { color: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/30', ring: 'ring-red-500/20' };
   };
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
-  };
+  const filtered = attempts.filter(a => !searchTerm || (a.testId?.title || '').toLowerCase().includes(searchTerm.toLowerCase()));
 
-  const getScoreColor = (percentage) => {
-    if (percentage >= 80) return 'text-green-600';
-    if (percentage >= 60) return 'text-blue-600';
-    if (percentage >= 40) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const getScoreBg = (percentage) => {
-    if (percentage >= 80) return 'bg-green-50 border-green-200';
-    if (percentage >= 60) return 'bg-blue-50 border-blue-200';
-    if (percentage >= 40) return 'bg-yellow-50 border-yellow-200';
-    return 'bg-red-50 border-red-200';
-  };
-
-  const text = {
-    title: { en: 'Test Results', hi: 'परीक्षा परिणाम' },
-    subtitle: { en: 'View all your test attempts and performance', hi: 'अपने सभी परीक्षा प्रयास और प्रदर्शन देखें' },
-    stats: { en: 'Overall Statistics', hi: 'समग्र आंकड़े' },
-    totalAttempts: { en: 'Total Attempts', hi: 'कुल प्रयास' },
-    avgScore: { en: 'Average Score', hi: 'औसत स्कोर' },
-    avgAccuracy: { en: 'Average Accuracy', hi: 'औसत सटीकता' },
-    bestPerformance: { en: 'Best Performance', hi: 'सर्वश्रेष्ठ प्रदर्शन' },
-    recentAttempts: { en: 'Recent Attempts', hi: 'हाल के प्रयास' },
-    viewDetails: { en: 'View Details', hi: 'विवरण देखें' },
-    reattempt: { en: 'Reattempt', hi: 'पुनः प्रयास' },
-    score: { en: 'Score', hi: 'अंक' },
-    accuracy: { en: 'Accuracy', hi: 'सटीकता' },
-    timeTaken: { en: 'Time Taken', hi: 'लिया गया समय' },
-    correct: { en: 'Correct', hi: 'सही' },
-    wrong: { en: 'Wrong', hi: 'गलत' },
-    skipped: { en: 'Skipped', hi: 'छोड़े गए' },
-    noAttempts: { en: 'No test attempts yet', hi: 'अभी तक कोई परीक्षा प्रयास नहीं' },
-    startTest: { en: 'Start a Test', hi: 'परीक्षा शुरू करें' }
-  };
-
-  if (loading) {
-    return (
-      <Layout language={language} setLanguage={setLanguage}>
-        <div className="flex items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-        </div>
-      </Layout>
-    );
-  }
-
-  return (
-    <Layout language={language} setLanguage={setLanguage}>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
-              {text.title[language]}
-            </h1>
-            <p className="text-gray-600 dark:text-secondary-400 mt-1">
-              {text.subtitle[language]}
+  // ===== DETAIL VIEW =====
+  if (selectedAttempt || attemptId) {
+    if (detailLoading) {
+      return (
+        <div className="min-h-screen bg-gray-50 dark:bg-secondary-900 flex items-center justify-center">
+          <div className="text-center">
+            <div className="relative w-16 h-16 mx-auto mb-4">
+              <div className="absolute inset-0 rounded-full border-4 border-primary-200 dark:border-primary-800" />
+              <div className="absolute inset-0 rounded-full border-4 border-primary-600 border-t-transparent animate-spin" />
+            </div>
+            <p className="text-gray-500 dark:text-secondary-400 font-medium">
+              {language === 'hi' ? 'लोड हो रहा है...' : 'Loading...'}
             </p>
           </div>
-          <button
-            onClick={loadData}
-            className="btn-secondary px-4 py-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
+        </div>
+      );
+    }
+
+    if (selectedAttempt) {
+      return (
+        <ResultPage
+          attempt={selectedAttempt}
+          test={selectedTest}
+          questions={selectedQuestions}
+          language={language}
+          onLanguageChange={handleLanguageChange}
+          previousAttempts={previousAttempts}
+          onGoBack={() => {
+            setSelectedAttempt(null);
+            setSelectedTest(null);
+            setSelectedQuestions([]);
+            setPreviousAttempts([]);
+            navigate('/results');
+          }}
+          onReattempt={() => {
+            const tid = selectedTest?._id || selectedAttempt?.testId?._id || selectedAttempt?.testId;
+            if (tid) navigate(`/tests/${tid}/take`);
+          }}
+        />
+      );
+    }
+  }
+
+  // ===== LIST VIEW =====
+  return (
+    <Layout language={language} onLanguageChange={handleLanguageChange}>
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 bg-gradient-to-br from-primary-500 to-indigo-600 rounded-xl shadow-lg shadow-primary-500/20">
+              <Trophy className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                {language === 'hi' ? 'परीक्षा परिणाम' : 'Test Results'}
+              </h1>
+              <p className="text-sm text-gray-500 dark:text-secondary-400">
+                {language === 'hi' ? 'आपके सभी परीक्षा प्रयासों का इतिहास' : 'History of all your test attempts'}
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Overall Stats */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Total Attempts */}
-            <div className="card p-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                  <Trophy className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        {/* Stats */}
+        {attempts.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            {[
+              { icon: Hash, value: attempts.length, label: language === 'hi' ? 'कुल प्रयास' : 'Total Attempts', gradient: 'from-violet-500 to-purple-600', shadow: 'shadow-violet-500/20' },
+              { icon: Target, value: `${Math.round(attempts.reduce((s, a) => s + (a.accuracy || 0), 0) / attempts.length)}%`, label: language === 'hi' ? 'औसत सटीकता' : 'Avg Accuracy', gradient: 'from-emerald-500 to-green-600', shadow: 'shadow-emerald-500/20' },
+              { icon: Flame, value: `${Math.max(...attempts.map(a => a.accuracy || 0))}%`, label: language === 'hi' ? 'सर्वश्रेष्ठ' : 'Best Score', gradient: 'from-amber-500 to-orange-600', shadow: 'shadow-amber-500/20' },
+              { icon: Zap, value: attempts.filter(a => (a.accuracy || 0) >= 60).length, label: language === 'hi' ? 'पास (60%+)' : 'Passed (60%+)', gradient: 'from-blue-500 to-cyan-600', shadow: 'shadow-blue-500/20' }
+            ].map((s, i) => (
+              <div key={i} className="relative overflow-hidden bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-4 group hover:shadow-xl transition-all duration-300">
+                <div className={`absolute -top-4 -right-4 w-16 h-16 bg-gradient-to-br ${s.gradient} rounded-full opacity-10 group-hover:opacity-20 transition-opacity`} />
+                <div className={`w-10 h-10 bg-gradient-to-br ${s.gradient} rounded-xl flex items-center justify-center mb-3 shadow-lg ${s.shadow}`}>
+                  <s.icon className="w-5 h-5 text-white" />
                 </div>
+                <p className="text-2xl font-black text-gray-900 dark:text-white">{s.value}</p>
+                <p className="text-xs text-gray-500 dark:text-secondary-400 mt-0.5">{s.label}</p>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {stats.totalAttempts}
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-secondary-400 mt-1">
-                {text.totalAttempts[language]}
-              </p>
-            </div>
+            ))}
+          </div>
+        )}
 
-            {/* Average Score */}
-            <div className="card p-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                  <Target className="w-6 h-6 text-green-600 dark:text-green-400" />
-                </div>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {Math.round(stats.averageScore)}%
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-secondary-400 mt-1">
-                {text.avgScore[language]}
-              </p>
-            </div>
+        {/* Search */}
+        <div className="mb-5 relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={language === 'hi' ? 'परीक्षा खोजें...' : 'Search tests...'}
+            className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-secondary-800 border border-gray-200 dark:border-secondary-700 rounded-2xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all shadow-sm"
+          />
+        </div>
 
-            {/* Average Accuracy */}
-            <div className="card p-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                </div>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {Math.round(stats.averageAccuracy)}%
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-secondary-400 mt-1">
-                {text.avgAccuracy[language]}
-              </p>
-            </div>
-
-            {/* Best Performance */}
-            <div className="card p-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
-                  <Award className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-                </div>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {stats.bestAttempt?.percentage || 0}%
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-secondary-400 mt-1 truncate">
-                {stats.bestAttempt?.testTitle || text.bestPerformance[language]}
-              </p>
+        {/* Loading */}
+        {loading && (
+          <div className="flex items-center justify-center py-20">
+            <div className="relative w-12 h-12">
+              <div className="absolute inset-0 rounded-full border-4 border-primary-200 dark:border-primary-800" />
+              <div className="absolute inset-0 rounded-full border-4 border-primary-600 border-t-transparent animate-spin" />
             </div>
           </div>
         )}
 
-        {/* Attempts List */}
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-gray-900">
-              {text.recentAttempts[language]}
-            </h2>
-            
-            {/* Filter */}
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="input text-sm w-auto"
-            >
-              <option value="all">All Attempts</option>
-              <option value="completed">Completed Only</option>
-              <option value="recent">Recent (10)</option>
-            </select>
+        {/* Error */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <p className="text-red-700 dark:text-red-400">{error}</p>
           </div>
+        )}
 
-          {attempts.length === 0 ? (
-            <div className="text-center py-12">
-              <Trophy className="w-16 h-16 text-gray-300 dark:text-secondary-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                {text.noAttempts[language]}
-              </h3>
-              <button
-                onClick={() => navigate('/tests')}
-                className="btn-primary px-6 py-2 mt-4"
-              >
-                {text.startTest[language]}
-              </button>
+        {/* Empty */}
+        {!loading && attempts.length === 0 && (
+          <div className="bg-white dark:bg-secondary-800 rounded-2xl border border-gray-200 dark:border-secondary-700 p-16 text-center">
+            <div className="w-20 h-20 bg-gray-100 dark:bg-secondary-700 rounded-full flex items-center justify-center mx-auto mb-5">
+              <Trophy className="w-10 h-10 text-gray-300 dark:text-secondary-500" />
             </div>
-          ) : (
-            <div className="space-y-4">
-              {attempts.map((attempt) => (
-                <div
-                  key={attempt._id}
-                  className={`
-                    border-2 rounded-lg p-4 transition-all
-                    ${getScoreBg(attempt.percentage)} dark:bg-secondary-700 dark:border-secondary-600
-                    hover:shadow-md dark:hover:shadow-lg
-                  `}
+            <h3 className="text-lg font-bold text-gray-700 dark:text-secondary-300 mb-2">
+              {language === 'hi' ? 'कोई परिणाम नहीं' : 'No Results Yet'}
+            </h3>
+            <p className="text-gray-500 dark:text-secondary-400 mb-6 max-w-sm mx-auto">
+              {language === 'hi' ? 'परीक्षा देने के बाद परिणाम यहाँ दिखेंगे' : 'Results will appear here after you take a test'}
+            </p>
+            <Button variant="primary" onClick={() => navigate('/tests')}>
+              {language === 'hi' ? 'परीक्षा दें' : 'Take a Test'}
+            </Button>
+          </div>
+        )}
+
+        {/* List */}
+        {!loading && filtered.length > 0 && (
+          <div className="space-y-3">
+            {filtered.map((att) => {
+              const acc = att.accuracy || 0;
+              const st = accStyle(acc);
+              const title = att.testId?.title || (language === 'hi' ? 'परीक्षा' : 'Test');
+
+              return (
+                <div key={att._id} onClick={() => { navigate(`/results/${att._id}`); loadAttemptDetail(att._id); }}
+                  className="bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-4 sm:p-5 hover:shadow-xl hover:border-primary-200 dark:hover:border-primary-700 transition-all duration-300 cursor-pointer group"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    {/* Left: Test Info */}
-                    <div className="flex-1">
-                      <h3 className="font-bold text-gray-900 dark:text-white mb-1">
-                        {attempt.testId?.title}
-                      </h3>
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-secondary-400">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          {formatDate(attempt.completedAt)}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          {formatTime(attempt.totalTimeTaken)}
-                        </span>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center flex-shrink-0 ring-4 ${st.ring} ${st.bg}`}>
+                      <span className={`text-xl font-black ${st.color}`}>{acc}%</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors truncate text-[15px]">{title}</h3>
+                      <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-500 dark:text-secondary-400">
+                        <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-secondary-700/50 px-2 py-1 rounded-lg"><Calendar className="w-3.5 h-3.5" />{fmt(att.completedAt)}</span>
+                        <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-secondary-700/50 px-2 py-1 rounded-lg"><Clock className="w-3.5 h-3.5" />{fmtTime(att.totalTimeTaken)}</span>
+                        <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-secondary-700/50 px-2 py-1 rounded-lg"><FileText className="w-3.5 h-3.5" />{att.answers?.length || 0} Q</span>
+                        {att.attemptNumber > 1 && (
+                          <span className="flex items-center gap-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-2 py-1 rounded-lg font-medium"><RotateCcw className="w-3 h-3" />#{att.attemptNumber}</span>
+                        )}
                       </div>
                     </div>
-
-                    {/* Right: Score */}
-                    <div className="text-right">
-                      <div className={`text-3xl font-bold ${getScoreColor(attempt.percentage)}`}>
-                        {attempt.percentage}%
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-secondary-400">
-                        {attempt.score}/{attempt.totalMarks}
-                      </div>
+                    <div className="hidden sm:flex items-center gap-5">
+                      <div className="text-center"><p className="text-lg font-black text-emerald-600">{att.correctCount || 0}</p><p className="text-[10px] text-gray-400 uppercase tracking-wider">{language === 'hi' ? 'सही' : 'Right'}</p></div>
+                      <div className="text-center"><p className="text-lg font-black text-red-500">{att.wrongCount || 0}</p><p className="text-[10px] text-gray-400 uppercase tracking-wider">{language === 'hi' ? 'गलत' : 'Wrong'}</p></div>
+                      <div className="text-center"><p className="text-lg font-black text-gray-800 dark:text-secondary-200">{att.score || 0}</p><p className="text-[10px] text-gray-400 uppercase tracking-wider">{language === 'hi' ? 'अंक' : 'Score'}</p></div>
                     </div>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-secondary-600">
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-green-600 dark:text-green-400 mb-1">
-                        <CheckCircle className="w-4 h-4" />
-                        <span className="font-bold">{attempt.correctCount}</span>
-                      </div>
-                      <div className="text-xs text-gray-600 dark:text-secondary-400">{text.correct[language]}</div>
+                    <div className="w-8 h-8 rounded-full bg-gray-50 dark:bg-secondary-700 flex items-center justify-center group-hover:bg-primary-50 dark:group-hover:bg-primary-900/30 transition-colors flex-shrink-0">
+                      <ArrowUpRight className="w-4 h-4 text-gray-400 group-hover:text-primary-600 transition-colors" />
                     </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-red-600 dark:text-red-400 mb-1">
-                        <XCircle className="w-4 h-4" />
-                        <span className="font-bold">{attempt.wrongCount}</span>
-                      </div>
-                      <div className="text-xs text-gray-600 dark:text-secondary-400">{text.wrong[language]}</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-gray-600 dark:text-secondary-400 mb-1">
-                        <MinusCircle className="w-4 h-4" />
-                        <span className="font-bold">{attempt.skippedCount}</span>
-                      </div>
-                      <div className="text-xs text-gray-600 dark:text-secondary-400">{text.skipped[language]}</div>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-3 mt-4">
-                    <button
-                      onClick={() => navigate(`/results/${attempt._id}`)}
-                      className="btn-primary flex-1 px-4 py-2 text-sm"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>{text.viewDetails[language]}</span>
-                    </button>
-                    <button
-                      onClick={() => navigate(`/test/${attempt.testId._id}`)}
-                      className="btn-secondary flex-1 px-4 py-2 text-sm"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      <span>{text.reattempt[language]}</span>
-                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </Layout>
   );

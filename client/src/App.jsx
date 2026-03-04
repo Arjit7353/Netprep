@@ -140,6 +140,8 @@ function App() {
         <div className="font-sans antialiased">
           <ServerStatusBar status={serverStatus} onDismiss={dismissBar} />
           <Routes>
+            <Route path="/results/:attemptId" element={<Results />} />
+            <Route path="/results" element={<Results />} />
             <Route path="/" element={<Dashboard language={language} setLanguage={setLanguage} />} />
             <Route path="/questions" element={<QuestionBank language={language} setLanguage={setLanguage} />} />
             <Route path="/import" element={<ImportQuestions language={language} setLanguage={setLanguage} />} />
