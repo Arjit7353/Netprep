@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import testService from '../services/testService';
 import { TEST_TYPE_CONFIG, PAPER_LABELS } from '../utils/constants';
+import PDFExportButton from '../components/common/PDFExportButton';
 
 // ═══════════════════════════════════════════════════════
 //           TYPE THEMES
@@ -76,7 +77,6 @@ const TYPE_THEMES = {
 
 const DEFAULT_THEME = TYPE_THEMES.dpp;
 
-// Paper configs
 const PAPER_CONFIGS = {
   paper1: {
     title: { en: 'Paper 1', hi: 'पेपर 1' },
@@ -85,7 +85,7 @@ const PAPER_CONFIGS = {
     gradient: 'from-sky-500 via-blue-500 to-indigo-600',
     lightBg: 'from-sky-50 to-blue-50 dark:from-sky-950/40 dark:to-blue-950/40',
     border: 'border-sky-300 dark:border-sky-700',
-    icon: GraduationCap, color: 'sky', emoji: '📘',
+    icon: GraduationCap, color: 'sky',
     pattern: 'radial-gradient(circle at 80% 20%, rgba(56,189,248,0.15) 0%, transparent 50%)',
   },
   paper2: {
@@ -95,7 +95,7 @@ const PAPER_CONFIGS = {
     gradient: 'from-amber-500 via-orange-500 to-red-500',
     lightBg: 'from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40',
     border: 'border-amber-300 dark:border-amber-700',
-    icon: BookOpen, color: 'amber', emoji: '📙',
+    icon: BookOpen, color: 'amber',
     pattern: 'radial-gradient(circle at 80% 20%, rgba(251,191,36,0.15) 0%, transparent 50%)',
   },
   combined: {
@@ -105,12 +105,11 @@ const PAPER_CONFIGS = {
     gradient: 'from-violet-500 via-purple-500 to-fuchsia-600',
     lightBg: 'from-violet-50 to-purple-50 dark:from-violet-950/40 dark:to-purple-950/40',
     border: 'border-violet-300 dark:border-violet-700',
-    icon: Trophy, color: 'violet', emoji: '🏆',
+    icon: Trophy, color: 'violet',
     pattern: 'radial-gradient(circle at 80% 20%, rgba(139,92,246,0.15) 0%, transparent 50%)',
   },
 };
 
-// Unit colors cycling
 const UNIT_COLORS = [
   { bg: 'from-blue-500 to-cyan-500', light: 'from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20', border: 'border-blue-200 dark:border-blue-800', text: 'text-blue-600 dark:text-blue-400', ring: 'ring-blue-400/30' },
   { bg: 'from-emerald-500 to-green-500', light: 'from-emerald-50 to-green-50 dark:from-emerald-950/20 dark:to-green-950/20', border: 'border-emerald-200 dark:border-emerald-800', text: 'text-emerald-600 dark:text-emerald-400', ring: 'ring-emerald-400/30' },
@@ -123,6 +122,101 @@ const UNIT_COLORS = [
   { bg: 'from-yellow-500 to-amber-500', light: 'from-yellow-50 to-amber-50 dark:from-yellow-950/20 dark:to-amber-950/20', border: 'border-yellow-200 dark:border-yellow-800', text: 'text-yellow-600 dark:text-yellow-400', ring: 'ring-yellow-400/30' },
   { bg: 'from-cyan-500 to-sky-500', light: 'from-cyan-50 to-sky-50 dark:from-cyan-950/20 dark:to-sky-950/20', border: 'border-cyan-200 dark:border-cyan-800', text: 'text-cyan-600 dark:text-cyan-400', ring: 'ring-cyan-400/30' },
 ];
+
+// ═══════════════════════════════════════════════════════
+//       PDF QUESTIONS FETCHER HELPER
+// ═══════════════════════════════════════════════════════
+const getBaseUrl = () => {
+  const url = import.meta.env.VITE_API_URL || '';
+  return url.replace(/\/api\/?$/, '');
+};
+
+const usePDFQuestions = (testId) => {
+  const [pdfQuestions, setPdfQuestions] = React.useState([]);
+  const [loadingPdf, setLoadingPdf] = React.useState(false);
+  const fetchedRef = React.useRef(false);
+
+  const fetchQuestions = React.useCallback(async () => {
+    // Already fetched or currently loading
+    if (pdfQuestions.length > 0 || loadingPdf || fetchedRef.current) {
+      return pdfQuestions;
+    }
+    
+    fetchedRef.current = true;
+    setLoadingPdf(true);
+    const BASE = getBaseUrl();
+    
+    try {
+      // Method 1: Get populated test
+      const res = await fetch(`${BASE}/api/tests/${testId}`, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        const td = data.data || data;
+        
+        // Check if questions are already populated
+        if (td.questions && td.questions.length > 0) {
+          const firstQ = td.questions[0];
+          
+          // If populated (has question text or options)
+          if (typeof firstQ === 'object' && firstQ !== null && (firstQ.question || firstQ.options || firstQ.questionText)) {
+            console.log('[PDF] Questions already populated:', td.questions.length);
+            setPdfQuestions(td.questions);
+            setLoadingPdf(false);
+            return td.questions;
+          }
+          
+          // Not populated - need to bulk fetch
+          const ids = td.questions.map(q => typeof q === 'string' ? q : (q._id || String(q)));
+          console.log('[PDF] Fetching questions by IDs:', ids.length);
+          
+          if (ids.length > 0) {
+            const bulkRes = await fetch(`${BASE}/api/questions/bulk`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ids })
+            });
+            
+            if (bulkRes.ok) {
+              const bulkData = await bulkRes.json();
+              const questions = bulkData.data || bulkData.questions || [];
+              console.log('[PDF] Bulk fetched:', questions.length);
+              setPdfQuestions(questions);
+              setLoadingPdf(false);
+              return questions;
+            }
+          }
+        }
+      }
+      
+      console.warn('[PDF] Could not fetch questions for test:', testId);
+      setLoadingPdf(false);
+      return [];
+      
+    } catch (err) {
+      console.error('[PDF] Fetch error:', err);
+      setLoadingPdf(false);
+      fetchedRef.current = false; // Allow retry on error
+      return [];
+    }
+  }, [testId, pdfQuestions.length, loadingPdf]);
+
+  // Auto-fetch on mount
+  React.useEffect(() => {
+    if (testId && !fetchedRef.current && pdfQuestions.length === 0) {
+      // Delay to avoid too many simultaneous requests
+      const timer = setTimeout(() => {
+        fetchQuestions();
+      }, 100 + Math.random() * 200); // Random delay to stagger requests
+      
+      return () => clearTimeout(timer);
+    }
+  }, [testId]);
+
+  return { pdfQuestions, loadingPdf, fetchQuestions };
+};
 
 // ═══════════════════════════════════════════════════════
 //            MAIN COMPONENT
@@ -187,7 +281,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
 
   useEffect(() => { loadTests(); }, [loadTests]);
 
-  // Close context menu on outside click
+  // Close context menu
   useEffect(() => {
     const handler = () => setContextMenu(null);
     window.addEventListener('click', handler);
@@ -261,7 +355,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
     explore: { en: 'Explore', hi: 'एक्स्प्लोर' },
   };
 
-  // ─── Breadcrumb ───
+  // Breadcrumb
   const Breadcrumb = () => (
     <nav className="flex items-center gap-1.5 text-sm flex-wrap mb-1">
       <button onClick={goHome} className="flex items-center gap-1 text-gray-400 hover:text-primary-600 transition-colors">
@@ -299,7 +393,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
       {() => (
         <div className="space-y-6">
 
-          {/* ═══ HEADER ═══ */}
+          {/* HEADER */}
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="flex-1">
               {view !== 'home' && <Breadcrumb />}
@@ -330,31 +424,22 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
             </div>
           </div>
 
-          {/* ═══════════════════════════════════════════ */}
-          {/*                HOME VIEW                   */}
-          {/* ═══════════════════════════════════════════ */}
+          {/* HOME VIEW */}
           {view === 'home' && (
             <div className="space-y-8 animate-fade-in">
-
-              {/* ─── Hero Search ─── */}
+              {/* Hero Search */}
               <div className="relative max-w-2xl mx-auto">
                 <div className="absolute inset-0 bg-gradient-to-r from-primary-500/20 to-purple-500/20 rounded-2xl blur-xl -z-10" />
                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  ref={searchRef}
-                  type="text"
-                  value={searchQuery}
+                <input ref={searchRef} type="text" value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); if (e.target.value) setView('search'); }}
                   onFocus={() => { if (searchQuery) setView('search'); }}
                   placeholder={T.search[language]}
-                  className="w-full pl-14 pr-12 py-4 text-base border-2 border-gray-200 dark:border-secondary-600 rounded-2xl bg-white dark:bg-secondary-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 shadow-lg transition-all"
-                />
-                <kbd className="absolute right-4 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center px-2 py-1 text-xs text-gray-400 bg-gray-100 dark:bg-secondary-700 rounded-md border border-gray-200 dark:border-secondary-600">
-                  ⌘K
-                </kbd>
+                  className="w-full pl-14 pr-12 py-4 text-base border-2 border-gray-200 dark:border-secondary-600 rounded-2xl bg-white dark:bg-secondary-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 shadow-lg transition-all" />
+                <kbd className="absolute right-4 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center px-2 py-1 text-xs text-gray-400 bg-gray-100 dark:bg-secondary-700 rounded-md border border-gray-200 dark:border-secondary-600">⌘K</kbd>
               </div>
 
-              {/* ─── Paper Selection ─── */}
+              {/* Paper Selection */}
               <div>
                 <SectionHeader icon={FolderOpen} title={T.browseBy[language]} />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-4">
@@ -362,38 +447,22 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
                     const count = countsByPaper[paperKey] || 0;
                     const Icon = config.icon;
                     return (
-                      <button
-                        key={paperKey}
-                        onClick={() => selectPaper(paperKey)}
+                      <button key={paperKey} onClick={() => selectPaper(paperKey)}
                         className="relative overflow-hidden p-6 rounded-2xl border-2 text-left transition-all duration-500 bg-white dark:bg-secondary-800 border-gray-200 dark:border-secondary-700 hover:shadow-2xl hover:-translate-y-1.5 group"
-                        style={{ backgroundImage: config.pattern }}
-                      >
-                        {/* Animated gradient border on hover */}
+                        style={{ backgroundImage: config.pattern }}>
                         <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${config.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10`} />
                         <div className="absolute inset-[2px] rounded-[14px] bg-white dark:bg-secondary-800 -z-[5]" />
-
-                        {/* Floating decoration */}
                         <div className={`absolute -top-6 -right-6 w-28 h-28 rounded-full bg-gradient-to-br ${config.gradient} opacity-[0.08] group-hover:opacity-[0.15] group-hover:scale-125 transition-all duration-500`} />
                         <div className={`absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r ${config.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-b-2xl`} />
-
-                        {/* Icon */}
                         <div className={`w-16 h-16 bg-gradient-to-br ${config.gradient} rounded-2xl flex items-center justify-center mb-5 shadow-xl group-hover:shadow-2xl group-hover:scale-110 transition-all duration-300`}>
                           <Icon className="w-8 h-8 text-white" />
                         </div>
-
-                        {/* Title */}
-                        <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-1 flex items-center gap-2">
-                          {config.title[language]}
-                        </h3>
+                        <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-1 flex items-center gap-2">{config.title[language]}</h3>
                         <p className="text-sm text-gray-500 dark:text-secondary-400 mb-1">{config.subtitle[language]}</p>
                         <p className="text-xs text-gray-400 dark:text-secondary-500 mb-5">{config.description[language]}</p>
-
-                        {/* Bottom */}
                         <div className="flex items-end justify-between">
                           <div>
-                            <span className={`text-4xl font-black bg-gradient-to-r ${config.gradient} bg-clip-text text-transparent`}>
-                              {count}
-                            </span>
+                            <span className={`text-4xl font-black bg-gradient-to-r ${config.gradient} bg-clip-text text-transparent`}>{count}</span>
                             <span className="text-sm text-gray-500 dark:text-secondary-400 ml-2">{T.tests[language]}</span>
                           </div>
                           <div className={`w-12 h-12 rounded-2xl bg-gray-100 dark:bg-secondary-700 flex items-center justify-center group-hover:bg-gradient-to-r group-hover:${config.gradient} transition-all duration-300`}>
@@ -406,33 +475,31 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
                 </div>
               </div>
 
-              {/* ─── Type Quick Access ─── */}
+              {/* Type Quick Access */}
               {Object.keys(countsByType).length > 0 && (
                 <div>
                   <SectionHeader icon={Sparkles} title={T.byType[language]} />
                   <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3 mt-4">
-                    {Object.entries(countsByType)
-                      .sort((a, b) => b[1] - a[1])
-                      .map(([type, count]) => {
-                        const t = th(type);
-                        const c = tcfg(type);
-                        const Icon = t.icon;
-                        return (
-                          <button key={type} onClick={() => { setTestTypeFilter(type); setView('search'); }}
-                            className={`p-3 rounded-xl border-2 text-center transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${t.border} bg-white dark:bg-secondary-800 group`}>
-                            <div className={`w-11 h-11 ${t.iconBg} rounded-xl flex items-center justify-center mx-auto mb-2 shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-all`}>
-                              <Icon className="w-5 h-5 text-white" />
-                            </div>
-                            <div className="text-xl font-black text-gray-900 dark:text-white">{count}</div>
-                            <div className="text-2xs text-gray-500 font-bold mt-0.5">{c.shortCode}</div>
-                          </button>
-                        );
-                      })}
+                    {Object.entries(countsByType).sort((a, b) => b[1] - a[1]).map(([type, count]) => {
+                      const t = th(type);
+                      const c = tcfg(type);
+                      const Icon = t.icon;
+                      return (
+                        <button key={type} onClick={() => { setTestTypeFilter(type); setView('search'); }}
+                          className={`p-3 rounded-xl border-2 text-center transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${t.border} bg-white dark:bg-secondary-800 group`}>
+                          <div className={`w-11 h-11 ${t.iconBg} rounded-xl flex items-center justify-center mx-auto mb-2 shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-all`}>
+                            <Icon className="w-5 h-5 text-white" />
+                          </div>
+                          <div className="text-xl font-black text-gray-900 dark:text-white">{count}</div>
+                          <div className="text-2xs text-gray-500 font-bold mt-0.5">{c.shortCode}</div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
-              {/* ─── View All Button ─── */}
+              {/* View All */}
               <button onClick={() => setView('search')}
                 className="w-full card p-5 flex items-center justify-between hover:shadow-xl transition-all group rounded-2xl border-2 border-dashed border-gray-300 dark:border-secondary-600 hover:border-primary-400 dark:hover:border-primary-600">
                 <div className="flex items-center gap-4">
@@ -449,15 +516,10 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
             </div>
           )}
 
-          {/* ═══════════════════════════════════════════ */}
-          {/*              PAPER VIEW                    */}
-          {/* ═══════════════════════════════════════════ */}
+          {/* PAPER VIEW */}
           {view === 'paper' && selectedPaper && (
             <div className="space-y-6 animate-fade-in">
-              {/* Paper header */}
               <PaperHeader config={PAPER_CONFIGS[selectedPaper]} count={countsByPaper[selectedPaper] || 0} language={language} />
-
-              {/* View all for paper */}
               <button onClick={() => { setView('search'); }}
                 className="w-full card p-4 flex items-center justify-between hover:shadow-lg transition-all group rounded-xl">
                 <div className="flex items-center gap-3">
@@ -472,7 +534,6 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
                 <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-primary-600 group-hover:translate-x-1 transition-all" />
               </button>
 
-              {/* Units */}
               <SectionHeader icon={Layers} title={T.units[language]} count={unitsForPaper.length} />
 
               {loading ? <LoadingSpinner /> : unitsForPaper.length === 0 ? (
@@ -485,12 +546,9 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
                     return (
                       <button key={idx} onClick={() => selectUnit(item.unit)}
                         className={`relative overflow-hidden p-5 rounded-2xl border-2 text-left transition-all duration-300 bg-gradient-to-br ${cl.light} ${cl.border} hover:shadow-xl hover:-translate-y-1 group`}>
-                        {/* Decoration */}
                         <div className={`absolute -top-4 -right-4 w-24 h-24 rounded-full bg-gradient-to-br ${cl.bg} opacity-[0.08] group-hover:opacity-[0.15] group-hover:scale-150 transition-all duration-500`} />
-
                         <div className="flex items-start justify-between gap-3 relative">
                           <div className="flex-1 min-w-0">
-                            {/* Unit number pill */}
                             <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r ${cl.bg} text-white text-xs font-black mb-3 shadow-md`}>
                               <Hash className="w-3 h-3" /> UNIT {unitNum}
                             </div>
@@ -512,19 +570,15 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
             </div>
           )}
 
-          {/* ═══════════════════════════════════════════ */}
-          {/*              UNIT VIEW                     */}
-          {/* ═══════════════════════════════════════════ */}
+          {/* UNIT VIEW */}
           {view === 'unit' && (
             <div className="space-y-6 animate-fade-in">
-              {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={language === 'hi' ? 'इस इकाई में खोजें...' : 'Search in this unit...'} className="input pl-10 rounded-xl" />
               </div>
 
-              {/* Chapters */}
               {chaptersForUnit.length > 0 && (
                 <>
                   <SectionHeader icon={BookCopy} title={T.chapters[language]} count={chaptersForUnit.length} />
@@ -536,9 +590,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
                         <button key={idx} onClick={() => selectChapter(ch)}
                           className="card p-4 text-left hover:shadow-xl transition-all duration-300 group rounded-xl hover:-translate-y-0.5 border-2 border-transparent hover:border-primary-200 dark:hover:border-primary-800">
                           <div className="flex items-start gap-3">
-                            <div className={`w-9 h-9 bg-gradient-to-br ${cl.bg} rounded-xl flex items-center justify-center flex-shrink-0 shadow-md text-white text-xs font-black`}>
-                              {idx + 1}
-                            </div>
+                            <div className={`w-9 h-9 bg-gradient-to-br ${cl.bg} rounded-xl flex items-center justify-center flex-shrink-0 shadow-md text-white text-xs font-black`}>{idx + 1}</div>
                             <div className="flex-1 min-w-0">
                               <h4 className="font-bold text-gray-900 dark:text-white text-sm leading-snug mb-1 line-clamp-2">{ch}</h4>
                               <p className="text-xs text-gray-500">{chTests.length} {T.tests[language]}</p>
@@ -552,16 +604,13 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
                 </>
               )}
 
-              {/* Tests by type */}
               <TestSectionList testsByType={testsByType} language={language} navigate={navigate} handleDelete={handleDelete}
                 formatDate={formatDate} loading={loading} T={T} expandedTypes={expandedTypes} toggleTypeExpand={toggleTypeExpand}
                 contextMenu={contextMenu} setContextMenu={setContextMenu} />
             </div>
           )}
 
-          {/* ═══════════════════════════════════════════ */}
-          {/*             TESTS VIEW (Chapter)           */}
-          {/* ═══════════════════════════════════════════ */}
+          {/* TESTS VIEW (Chapter) */}
           {view === 'tests' && (
             <div className="space-y-4 animate-fade-in">
               <TestSectionList testsByType={testsByType} language={language} navigate={navigate} handleDelete={handleDelete}
@@ -570,12 +619,9 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
             </div>
           )}
 
-          {/* ═══════════════════════════════════════════ */}
-          {/*             SEARCH / ALL VIEW              */}
-          {/* ═══════════════════════════════════════════ */}
+          {/* SEARCH / ALL VIEW */}
           {view === 'search' && (
             <div className="space-y-4 animate-fade-in">
-              {/* Toolbar */}
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -604,7 +650,6 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
                 </div>
               </div>
 
-              {/* Results */}
               {loading ? <LoadingSpinner /> : tests.length === 0 ? (
                 <EmptyBox text={T.noTests[language]} />
               ) : viewMode === 'grid' ? (
@@ -619,7 +664,6 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
                 </div>
               )}
 
-              {/* Pagination */}
               {pagination.pages > 1 && <Pagination pagination={pagination} loadTests={loadTests} language={language} />}
             </div>
           )}
@@ -700,7 +744,7 @@ const Pagination = ({ pagination, loadTests, language }) => (
   </div>
 );
 
-// ─── Tests grouped by type with collapsible sections ───
+// ─── Tests grouped by type ───
 const TestSectionList = ({ testsByType, language, navigate, handleDelete, formatDate, loading, T, expandedTypes, toggleTypeExpand, contextMenu, setContextMenu }) => {
   if (loading) return <LoadingSpinner />;
   const order = ['dpp', 'topic_test', 'chapter_test', 'unit_test', 'pyq_year', 'practice', 'full_mock_p1', 'full_mock_p2', 'full_mock_combined'];
@@ -713,14 +757,12 @@ const TestSectionList = ({ testsByType, language, navigate, handleDelete, format
         const t = TYPE_THEMES[type] || DEFAULT_THEME;
         const c = TEST_TYPE_CONFIG[type] || {};
         const Icon = t.icon;
-        const isExpanded = expandedTypes[type] !== false; // default expanded
+        const isExpanded = expandedTypes[type] !== false;
         const showTests = isExpanded ? typeTests : typeTests.slice(0, 4);
 
         return (
           <div key={type} className="space-y-3">
-            {/* Section header */}
-            <button onClick={() => toggleTypeExpand(type)}
-              className="w-full flex items-center gap-3 group">
+            <button onClick={() => toggleTypeExpand(type)} className="w-full flex items-center gap-3 group">
               <div className={`w-9 h-9 ${t.iconBg} rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow`}>
                 <Icon className="w-4.5 h-4.5 text-white" />
               </div>
@@ -733,7 +775,6 @@ const TestSectionList = ({ testsByType, language, navigate, handleDelete, format
               </div>
             </button>
 
-            {/* Tests */}
             {isExpanded && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-slide-down">
                 {showTests.map(test => (
@@ -744,8 +785,7 @@ const TestSectionList = ({ testsByType, language, navigate, handleDelete, format
             )}
 
             {isExpanded && typeTests.length > 4 && expandedTypes[type] === undefined && (
-              <button onClick={() => toggleTypeExpand(type)}
-                className={`text-sm font-semibold ${t.accent} hover:underline`}>
+              <button onClick={() => toggleTypeExpand(type)} className={`text-sm font-semibold ${t.accent} hover:underline`}>
                 {language === 'hi' ? `सभी ${typeTests.length} देखें` : `View all ${typeTests.length}`}
               </button>
             )}
@@ -756,7 +796,9 @@ const TestSectionList = ({ testsByType, language, navigate, handleDelete, format
   );
 };
 
-// ─── Grid Card ───
+// ═══════════════════════════════════════════════════════
+//        GRID CARD (WITH PDF BUTTON)
+// ═══════════════════════════════════════════════════════
 const TestCardGrid = ({ test, language, navigate, handleDelete, formatDate, contextMenu, setContextMenu, T }) => {
   const t = TYPE_THEMES[test.testType] || DEFAULT_THEME;
   const c = TEST_TYPE_CONFIG[test.testType] || {};
@@ -764,10 +806,12 @@ const TestCardGrid = ({ test, language, navigate, handleDelete, formatDate, cont
   const best = test.totalMarks > 0 && test.highestScore > 0 ? Math.round((test.highestScore / test.totalMarks) * 100) : null;
   const isMenuOpen = contextMenu === test._id;
 
+  // PDF questions state
+  const { pdfQuestions, fetchQuestions } = usePDFQuestions(test._id);
+
   return (
-    <div className={`relative overflow-hidden rounded-2xl border-2 transition-all duration-300 group ${t.lightBg} ${t.border} hover:shadow-2xl ${t.glowHover} hover:-translate-y-1`}>
-      <div className={`absolute top-0 left-0 right-0 h-1 ${t.strip}`} />
-      {/* Glow decoration */}
+    <div className={`relative overflow-visible rounded-2xl border-2 transition-all duration-300 group ${t.lightBg} ${t.border} hover:shadow-2xl ${t.glowHover} hover:-translate-y-1`}>
+      <div className={`absolute top-0 left-0 right-0 h-1 ${t.strip} rounded-t-2xl`} />
       <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br ${t.gradient} opacity-[0.05] group-hover:opacity-[0.12] transition-opacity duration-500`} />
 
       <div className="p-4 relative">
@@ -806,6 +850,16 @@ const TestCardGrid = ({ test, language, navigate, handleDelete, formatDate, cont
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200/40 dark:border-secondary-700/40">
           <span className="text-2xs text-gray-400">{formatDate(test.createdAt)}</span>
           <div className="flex items-center gap-1.5">
+            {/* PDF Export */}
+            <PDFExportButton
+              type="test"
+              test={test}
+              questions={pdfQuestions}
+              language={language}
+              variant="compact"
+              onExportStart={fetchQuestions}
+            />
+
             {/* Context menu */}
             <div className="relative">
               <button onClick={(e) => { e.stopPropagation(); setContextMenu(isMenuOpen ? null : test._id); }}
@@ -830,6 +884,7 @@ const TestCardGrid = ({ test, language, navigate, handleDelete, formatDate, cont
                 </div>
               )}
             </div>
+
             {/* Start */}
             <button onClick={() => navigate(`/test/${test._id}`)}
               className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md hover:shadow-xl transition-all hover:scale-105 bg-gradient-to-r ${t.gradient}`}>
@@ -846,16 +901,21 @@ const TestCardGrid = ({ test, language, navigate, handleDelete, formatDate, cont
   );
 };
 
-// ─── Row Card ───
+// ═══════════════════════════════════════════════════════
+//        ROW CARD (WITH PDF BUTTON)
+// ═══════════════════════════════════════════════════════
 const TestCardRow = ({ test, language, navigate, handleDelete, formatDate, T }) => {
   const t = TYPE_THEMES[test.testType] || DEFAULT_THEME;
   const c = TEST_TYPE_CONFIG[test.testType] || {};
   const Icon = t.icon;
   const best = test.totalMarks > 0 && test.highestScore > 0 ? Math.round((test.highestScore / test.totalMarks) * 100) : null;
 
+  // PDF questions state
+  const { pdfQuestions, fetchQuestions } = usePDFQuestions(test._id);
+
   return (
-    <div className={`relative overflow-hidden rounded-xl border-2 transition-all duration-200 group bg-white dark:bg-secondary-800 ${t.border} hover:shadow-lg`}>
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${t.strip}`} />
+    <div className={`relative overflow-visible rounded-xl border-2 transition-all duration-200 group bg-white dark:bg-secondary-800 ${t.border} hover:shadow-lg`}>
+      <div className={`absolute left-0 top-0 bottom-0 w-1 ${t.strip} rounded-l-xl`} />
       <div className="p-3.5 pl-5 flex items-center gap-3">
         <div className={`hidden sm:flex w-9 h-9 ${t.iconBg} rounded-xl items-center justify-center flex-shrink-0 shadow-md`}>
           <Icon className="w-4 h-4 text-white" />
@@ -868,15 +928,38 @@ const TestCardRow = ({ test, language, navigate, handleDelete, formatDate, T }) 
           <h4 className="font-bold text-gray-900 dark:text-white text-sm leading-snug truncate">{test.title}</h4>
           <div className="flex items-center gap-3 mt-0.5 text-2xs text-gray-500">{test.totalQuestions} Qs • {test.duration}m • {formatDate(test.createdAt)}</div>
         </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          {best !== null && <span className={`text-sm font-black ${best >= 60 ? 'text-green-600' : best >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>{best}%</span>}
-          <button onClick={(e) => handleDelete(test._id, e)}
-            className="p-1.5 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" /></button>
-          <button onClick={() => navigate(`/test/${test._id}`)}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md bg-gradient-to-r ${t.gradient}`}>
-            <Play className="w-3.5 h-3.5" /> {T.start[language]}
-          </button>
-        </div>
+
+<div className="flex items-center gap-2 flex-shrink-0">
+  {best !== null && (
+    <span className={`text-sm font-black ${best >= 60 ? 'text-green-600' : best >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>
+      {best}%
+    </span>
+  )}
+
+  {/* PDF Export - Use 'icon' variant for row cards */}
+  <PDFExportButton
+    type="test"
+    test={test}
+    questions={pdfQuestions}
+    language={language}
+    variant="icon"
+    onExportStart={fetchQuestions}
+  />
+
+  <button 
+    onClick={(e) => handleDelete(test._id, e)}
+    className="p-1.5 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+  >
+    <Trash2 className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
+  </button>
+  
+  <button 
+    onClick={() => navigate(`/test/${test._id}`)}
+    className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md bg-gradient-to-r ${t.gradient}`}
+  >
+    <Play className="w-3.5 h-3.5" /> {T.start[language]}
+  </button>
+</div>
       </div>
     </div>
   );
