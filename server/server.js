@@ -105,5 +105,23 @@ process.on('unhandledRejection', (err) => {
   console.error('Unhandled Rejection:', err);
   server.close(() => process.exit(1));
 });
+// ─── Keep Alive: Self-ping every 14 min to prevent Render cold starts ───
+if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+  const SELF_URL = 'https://netprep-api.onrender.com';
+  
+  // Pehla ping 30 sec baad (server fully ready hone ke baad)
+  setTimeout(() => {
+    setInterval(() => {
+      require('https').get(`${SELF_URL}/api/health`, (res) => {
+        console.log(`[Keep-Alive] ${new Date().toISOString()} - Status: ${res.statusCode}`);
+      }).on('error', (err) => {
+        console.error(`[Keep-Alive] Failed: ${err.message}`);
+      });
+    }, 14 * 60 * 1000); // Har 14 minute
+    
+    console.log('[Keep-Alive] Self-ping scheduled every 14 minutes');
+  }, 30000);
+}
+
 
 module.exports = app;
