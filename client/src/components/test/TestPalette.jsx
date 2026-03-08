@@ -1,170 +1,199 @@
-import React from 'react';
-import { PALETTE_COLORS } from '../../utils/constants';
+import React, { useMemo, useRef, useEffect } from 'react';
+import { Flag, CheckCircle, Eye, EyeOff, ArrowUp, Send } from 'lucide-react';
+import { QUESTION_TYPE_LABELS } from '../../utils/constants';
+
+const STATUS_CONFIG = {
+  NOT_VISITED: {
+    bg: 'bg-slate-200 dark:bg-slate-700',
+    text: 'text-slate-600 dark:text-slate-300',
+    ring: '',
+    dot: 'bg-slate-400',
+    label: { hi: 'देखा नहीं गया', en: 'Not Visited' },
+  },
+  NOT_ANSWERED: {
+    bg: 'bg-red-500',
+    text: 'text-white',
+    ring: '',
+    dot: 'bg-red-500',
+    label: { hi: 'उत्तर नहीं दिया', en: 'Not Answered' },
+  },
+  ANSWERED: {
+    bg: 'bg-emerald-500',
+    text: 'text-white',
+    ring: '',
+    dot: 'bg-emerald-500',
+    label: { hi: 'उत्तर दिया गया', en: 'Answered' },
+  },
+  MARKED_FOR_REVIEW: {
+    bg: 'bg-violet-500',
+    text: 'text-white',
+    ring: '',
+    dot: 'bg-violet-500',
+    label: { hi: 'समीक्षा हेतु चिह्नित', en: 'Marked for Review' },
+  },
+  ANSWERED_AND_MARKED: {
+    bg: 'bg-violet-500',
+    text: 'text-white',
+    ring: 'ring-[3px] ring-emerald-400 ring-offset-1 ring-offset-white dark:ring-offset-slate-900',
+    dot: 'bg-violet-500',
+    label: { hi: 'उत्तर + चिह्नित', en: 'Answered & Marked' },
+  },
+};
+
+const getStatus = (answer) => {
+  if (!answer?.visited) return 'NOT_VISITED';
+  if (answer.selectedAnswer !== -1 && answer.markedForReview) return 'ANSWERED_AND_MARKED';
+  if (answer.markedForReview) return 'MARKED_FOR_REVIEW';
+  if (answer.selectedAnswer !== -1) return 'ANSWERED';
+  return 'NOT_ANSWERED';
+};
 
 const TestPalette = ({
   answers = [],
+  questions = [],
   currentIndex = 0,
   onQuestionClick,
-  language = 'hi'
+  onSubmit,
+  isSubmitting = false,
+  language = 'hi',
 }) => {
-  // Get status for each question
-  const getQuestionStatus = (answer) => {
-    if (!answer.visited) {
-      return 'NOT_VISITED';
-    }
-    if (answer.selectedAnswer !== -1 && answer.markedForReview) {
-      return 'ANSWERED_AND_MARKED';
-    }
-    if (answer.markedForReview) {
-      return 'MARKED_FOR_REVIEW';
-    }
-    if (answer.selectedAnswer !== -1) {
-      return 'ANSWERED';
-    }
-    return 'NOT_ANSWERED';
-  };
+  const activeRef = useRef(null);
 
-  // Get style classes for a question button
-  const getButtonStyle = (answer, index) => {
-    const status = getQuestionStatus(answer);
-    const colors = PALETTE_COLORS[status];
-    const isActive = index === currentIndex;
+  useEffect(() => {
+    if (activeRef.current) {
+      activeRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [currentIndex]);
 
-    return `
-      w-10 h-10 rounded-lg font-medium text-sm
-      flex items-center justify-center
-      transition-all duration-200
-      ${colors.bg} ${colors.text}
-      ${isActive ? 'ring-2 ring-offset-2 ring-primary-500 scale-110' : ''}
-      ${status === 'ANSWERED_AND_MARKED' ? 'ring-2 ring-green-500' : ''}
-      hover:opacity-80 cursor-pointer
-    `;
-  };
-
-  // Calculate summary counts
-  const getSummary = () => {
-    const summary = {
-      answered: 0,
-      notAnswered: 0,
-      markedForReview: 0,
-      answeredAndMarked: 0,
-      notVisited: 0
-    };
-
-    answers.forEach(answer => {
-      const status = getQuestionStatus(answer);
-      switch (status) {
-        case 'ANSWERED':
-          summary.answered++;
-          break;
-        case 'NOT_ANSWERED':
-          summary.notAnswered++;
-          break;
-        case 'MARKED_FOR_REVIEW':
-          summary.markedForReview++;
-          break;
-        case 'ANSWERED_AND_MARKED':
-          summary.answeredAndMarked++;
-          break;
-        case 'NOT_VISITED':
-          summary.notVisited++;
-          break;
-      }
+  const summary = useMemo(() => {
+    const s = { answered: 0, notAnswered: 0, marked: 0, answeredMarked: 0, notVisited: 0 };
+    answers.forEach((a) => {
+      const st = getStatus(a);
+      if (st === 'ANSWERED') s.answered++;
+      else if (st === 'NOT_ANSWERED') s.notAnswered++;
+      else if (st === 'MARKED_FOR_REVIEW') s.marked++;
+      else if (st === 'ANSWERED_AND_MARKED') s.answeredMarked++;
+      else s.notVisited++;
     });
+    return s;
+  }, [answers]);
 
-    return summary;
-  };
-
-  const summary = getSummary();
+  const totalAttempted = summary.answered + summary.answeredMarked;
+  const progress = answers.length > 0 ? Math.round((totalAttempted / answers.length) * 100) : 0;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-4">
+    <div className="h-full flex flex-col bg-white dark:bg-slate-900">
+      {/* Progress Ring */}
+      <div className="px-4 pt-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-4">
+          <div className="relative w-14 h-14 flex-shrink-0">
+            <svg className="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
+              <circle cx="28" cy="28" r="24" fill="none" stroke="currentColor"
+                className="text-slate-100 dark:text-slate-800" strokeWidth="4" />
+              <circle cx="28" cy="28" r="24" fill="none" stroke="currentColor"
+                className="text-emerald-500" strokeWidth="4" strokeLinecap="round"
+                strokeDasharray={`${2 * Math.PI * 24}`}
+                strokeDashoffset={`${2 * Math.PI * 24 * (1 - progress / 100)}`}
+                style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{progress}%</span>
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold text-slate-800 dark:text-white">
+              {totalAttempted}/{answers.length}
+            </div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400">
+              {language === 'hi' ? 'प्रश्न हल किए' : 'questions attempted'}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Legend */}
-      <div className="mb-4 space-y-2">
-        <h3 className="font-medium text-gray-900 mb-3">
-          {language === 'hi' ? 'प्रश्न पैलेट' : 'Question Palette'}
-        </h3>
-        
-        <div className="grid grid-cols-1 gap-2 text-xs">
-          {/* Not Visited */}
-          <div className="flex items-center gap-2">
-            <div className={`w-6 h-6 rounded ${PALETTE_COLORS.NOT_VISITED.bg} ${PALETTE_COLORS.NOT_VISITED.border} border`} />
-            <span className="text-gray-600">
-              {summary.notVisited} {language === 'hi' 
-                ? PALETTE_COLORS.NOT_VISITED.label.hi 
-                : PALETTE_COLORS.NOT_VISITED.label.en}
-            </span>
-          </div>
-
-          {/* Not Answered */}
-          <div className="flex items-center gap-2">
-            <div className={`w-6 h-6 rounded ${PALETTE_COLORS.NOT_ANSWERED.bg}`} />
-            <span className="text-gray-600">
-              {summary.notAnswered} {language === 'hi' 
-                ? PALETTE_COLORS.NOT_ANSWERED.label.hi 
-                : PALETTE_COLORS.NOT_ANSWERED.label.en}
-            </span>
-          </div>
-
-          {/* Answered */}
-          <div className="flex items-center gap-2">
-            <div className={`w-6 h-6 rounded ${PALETTE_COLORS.ANSWERED.bg}`} />
-            <span className="text-gray-600">
-              {summary.answered} {language === 'hi' 
-                ? PALETTE_COLORS.ANSWERED.label.hi 
-                : PALETTE_COLORS.ANSWERED.label.en}
-            </span>
-          </div>
-
-          {/* Marked for Review */}
-          <div className="flex items-center gap-2">
-            <div className={`w-6 h-6 rounded ${PALETTE_COLORS.MARKED_FOR_REVIEW.bg}`} />
-            <span className="text-gray-600">
-              {summary.markedForReview} {language === 'hi' 
-                ? PALETTE_COLORS.MARKED_FOR_REVIEW.label.hi 
-                : PALETTE_COLORS.MARKED_FOR_REVIEW.label.en}
-            </span>
-          </div>
-
-          {/* Answered & Marked */}
-          <div className="flex items-center gap-2">
-            <div className={`w-6 h-6 rounded ${PALETTE_COLORS.ANSWERED_AND_MARKED.bg} ring-2 ring-green-500`} />
-            <span className="text-gray-600">
-              {summary.answeredAndMarked} {language === 'hi' 
-                ? PALETTE_COLORS.ANSWERED_AND_MARKED.label.hi 
-                : PALETTE_COLORS.ANSWERED_AND_MARKED.label.en}
-            </span>
-          </div>
+      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="grid grid-cols-1 gap-1.5">
+          {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
+            const count = key === 'ANSWERED' ? summary.answered
+              : key === 'NOT_ANSWERED' ? summary.notAnswered
+              : key === 'MARKED_FOR_REVIEW' ? summary.marked
+              : key === 'ANSWERED_AND_MARKED' ? summary.answeredMarked
+              : summary.notVisited;
+            return (
+              <div key={key} className="flex items-center gap-2.5">
+                <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold ${cfg.bg} ${cfg.text} ${cfg.ring}`}>
+                  1
+                </div>
+                <span className="text-[11px] text-slate-600 dark:text-slate-400 flex-1 truncate">
+                  {language === 'hi' ? cfg.label.hi : cfg.label.en}
+                </span>
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 tabular-nums">
+                  {count}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="border-t my-4" />
+      {/* Grid */}
+      <div className="flex-1 overflow-y-auto px-3 py-3 scrollbar-thin">
+        <div className="grid grid-cols-7 gap-1.5">
+          {answers.map((answer, index) => {
+            const st = getStatus(answer);
+            const cfg = STATUS_CONFIG[st];
+            const isCurrent = index === currentIndex;
 
-      {/* Question Grid */}
-      <div className="grid grid-cols-5 gap-2">
-        {answers.map((answer, index) => (
+            return (
+              <button
+                key={index}
+                ref={isCurrent ? activeRef : null}
+                onClick={() => onQuestionClick(index)}
+                title={`Q${index + 1}`}
+                className={`
+                  w-full aspect-square rounded-lg text-xs font-bold
+                  flex items-center justify-center
+                  transition-all duration-150 active:scale-90
+                  ${cfg.bg} ${cfg.text} ${cfg.ring}
+                  ${isCurrent
+                    ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 scale-110 shadow-lg z-10'
+                    : 'hover:opacity-80 hover:shadow'}
+                `}
+              >
+                {index + 1}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Jump to first unanswered */}
+      {summary.notVisited > 0 && (
+        <div className="px-3 pb-2">
           <button
-            key={index}
-            onClick={() => onQuestionClick(index)}
-            className={getButtonStyle(answer, index)}
-            title={`Question ${index + 1}`}
+            onClick={() => {
+              const idx = answers.findIndex(a => !a?.visited);
+              if (idx >= 0) onQuestionClick(idx);
+            }}
+            className="w-full py-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center justify-center gap-1"
           >
-            {index + 1}
+            <ArrowUp className="w-3 h-3" />
+            {language === 'hi' ? 'पहला अनदेखा प्रश्न' : 'Jump to first unvisited'}
           </button>
-        ))}
-      </div>
-
-      {/* Summary Stats */}
-      <div className="mt-4 pt-4 border-t">
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div className="text-gray-600">
-            {language === 'hi' ? 'कुल प्रश्न:' : 'Total:'} <strong>{answers.length}</strong>
-          </div>
-          <div className="text-green-600">
-            {language === 'hi' ? 'उत्तर दिए:' : 'Answered:'} <strong>{summary.answered + summary.answeredAndMarked}</strong>
-          </div>
         </div>
+      )}
+
+      {/* Submit */}
+      <div className="p-3 border-t border-slate-100 dark:border-slate-800">
+        <button
+          onClick={onSubmit}
+          disabled={isSubmitting}
+          className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white font-semibold text-sm flex items-center justify-center gap-2 hover:from-emerald-700 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-all"
+        >
+          <Send className="w-4 h-4" />
+          {language === 'hi' ? 'परीक्षा जमा करें' : 'Submit Test'}
+        </button>
       </div>
     </div>
   );

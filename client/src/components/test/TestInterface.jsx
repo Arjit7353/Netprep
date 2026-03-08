@@ -1,207 +1,273 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ChevronLeft,
-  ChevronRight,
-  Flag,
-  RotateCcw,
-  Send,
-  Menu,
-  X,
-  Globe,
-  AlertTriangle
+  ChevronLeft, ChevronRight, Flag, RotateCcw, Send, Menu, X,
+  Globe, AlertTriangle, Calculator, FileText, ZoomIn, ZoomOut,
+  Maximize2, Minimize2, Keyboard, Wifi, WifiOff, Clock,
+  LayoutGrid, Eye, Bookmark, Check, Info, ChevronDown,
+  Save, Star, HelpCircle, Settings, Hash, Monitor
 } from 'lucide-react';
 import { useTestContext } from '../../context/TestContext';
 import TestTimer from './TestTimer';
 import TestPalette from './TestPalette';
 import TestSubmitModal from './TestSubmitModal';
 import QuestionDisplay from './QuestionDisplay';
+import ExamCalculator from './ExamCalculator';
+import ExamNotepad from './ExamNotepad';
 import Loader from '../common/Loader';
-import { TEST_TYPE_CONFIG, PAPER_LABELS } from '../../utils/constants';
+import { TEST_TYPE_CONFIG, PAPER_LABELS, QUESTION_TYPE_LABELS } from '../../utils/constants';
 
-/**
- * TestInterface - Main NTA Pattern Test UI
- */
+/* ─── Keyboard Shortcuts Overlay ─── */
+const ShortcutsOverlay = ({ onClose, language }) => {
+  const shortcuts = [
+    { keys: ['←'], label: { hi: 'पिछला प्रश्न', en: 'Previous Question' } },
+    { keys: ['→'], label: { hi: 'अगला प्रश्न', en: 'Next Question' } },
+    { keys: ['1', '2', '3', '4'], label: { hi: 'विकल्प चुनें', en: 'Select Option' } },
+    { keys: ['M'], label: { hi: 'समीक्षा हेतु चिह्नित', en: 'Mark for Review' } },
+    { keys: ['C'], label: { hi: 'उत्तर हटाएं', en: 'Clear Response' } },
+    { keys: ['F'], label: { hi: 'फुलस्क्रीन', en: 'Toggle Fullscreen' } },
+    { keys: ['Ctrl', '+'], label: { hi: 'ज़ूम इन', en: 'Zoom In' } },
+    { keys: ['Ctrl', '−'], label: { hi: 'ज़ूम आउट', en: 'Zoom Out' } },
+    { keys: ['?'], label: { hi: 'शॉर्टकट दिखाएं/छुपाएं', en: 'Toggle Shortcuts' } },
+    { keys: ['Esc'], label: { hi: 'पैनल बंद करें', en: 'Close Panels' } },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-scale-in">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+              <Keyboard className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              {language === 'hi' ? 'कीबोर्ड शॉर्टकट' : 'Keyboard Shortcuts'}
+            </h3>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+            <X className="w-5 h-5 text-slate-500" />
+          </button>
+        </div>
+        <div className="space-y-2">
+          {shortcuts.map((s, i) => (
+            <div key={i} className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50">
+              <span className="text-sm text-slate-700 dark:text-slate-300">
+                {language === 'hi' ? s.label.hi : s.label.en}
+              </span>
+              <div className="flex items-center gap-1">
+                {s.keys.map((k, j) => (
+                  <React.Fragment key={j}>
+                    {j > 0 && <span className="text-slate-400 text-xs">+</span>}
+                    <kbd className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded-md text-xs font-mono font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 shadow-sm min-w-[28px] text-center">
+                      {k}
+                    </kbd>
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Toolbar Button ─── */
+const ToolBtn = ({ icon: Icon, label, active, onClick, badge, className = '' }) => (
+  <button
+    onClick={onClick}
+    title={label}
+    className={`
+      relative p-2 rounded-xl transition-all duration-150
+      ${active
+        ? 'bg-white/20 text-white shadow-inner'
+        : 'text-slate-300 hover:bg-white/10 hover:text-white'}
+      ${className}
+    `}
+  >
+    <Icon className="w-[18px] h-[18px]" />
+    {badge && (
+      <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full flex items-center justify-center text-[7px] font-bold text-slate-900">
+        {badge}
+      </span>
+    )}
+  </button>
+);
+
+/* ─── Main TestInterface ─── */
 const TestInterface = () => {
   const navigate = useNavigate();
   const {
-    test,
-    attempt,
-    questions,
-    answers,
-    currentIndex,
-    currentQuestion,
-    currentAnswer,
-    remainingTime,
-    language,
-    status,
-    isSubmitting,
-    showSubmitModal,
-    
-    goToQuestion,
-    selectAnswer,
-    toggleMarkForReview,
-    clearResponse,
-    saveAndNext,
-    previousQuestion,
-    openSubmitModal,
-    closeSubmitModal,
-    submitTest,
-    setLanguage,
-    updateRemainingTime,
-    getStatusSummary
+    test, attempt, questions, answers,
+    currentIndex, currentQuestion, currentAnswer,
+    remainingTime, language, status, isSubmitting, showSubmitModal,
+    goToQuestion, selectAnswer, toggleMarkForReview, clearResponse,
+    saveAndNext, previousQuestion, openSubmitModal, closeSubmitModal,
+    submitTest, setLanguage, updateRemainingTime, getStatusSummary,
   } = useTestContext();
 
+  // ── UI State ──
   const [showPalette, setShowPalette] = useState(true);
-  const [isMobilePaletteOpen, setIsMobilePaletteOpen] = useState(false);
+  const [mobilePalette, setMobilePalette] = useState(false);
+  const [showCalc, setShowCalc] = useState(false);
+  const [showNotepad, setShowNotepad] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fontSize, setFontSize] = useState(16);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [lastSaved, setLastSaved] = useState(null);
   const [submitError, setSubmitError] = useState(null);
+  const [qElapsed, setQElapsed] = useState(0);
+  const [showTools, setShowTools] = useState(false);
 
-  // Debug log
-  useEffect(() => {
-    console.log('TestInterface mounted/updated:', {
-      testTitle: test?.title,
-      attemptId: attempt?._id,
-      questionsCount: questions?.length,
-      answersCount: answers?.length,
-      currentIndex,
-      status
-    });
-  }, [test, attempt, questions, answers, currentIndex, status]);
+  const qStartRef = useRef(Date.now());
+  const questionAreaRef = useRef(null);
 
-  // Handle keyboard navigation
+  // ── Per-question timer ──
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Don't handle if modal is open, submitting, or in input field
+    qStartRef.current = Date.now();
+    setQElapsed(0);
+    const iv = setInterval(() => {
+      setQElapsed(Math.floor((Date.now() - qStartRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [currentIndex]);
+
+  // ── Online/Offline ──
+  useEffect(() => {
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
+
+  // ── Fullscreen ──
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+  }, []);
+
+  useEffect(() => {
+    const h = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', h);
+    return () => document.removeEventListener('fullscreenchange', h);
+  }, []);
+
+  // ── Zoom ──
+  const zoomIn = useCallback(() => setFontSize(p => Math.min(p + 2, 24)), []);
+  const zoomOut = useCallback(() => setFontSize(p => Math.max(p - 2, 12)), []);
+
+  // ── Auto-save indicator ──
+  useEffect(() => {
+    if (currentAnswer?.selectedAnswer !== undefined && currentAnswer.selectedAnswer !== -1) {
+      setLastSaved(new Date());
+    }
+  }, [currentAnswer?.selectedAnswer]);
+
+  // ── Scroll to top on question change ──
+  useEffect(() => {
+    questionAreaRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentIndex]);
+
+  // ── Keyboard shortcuts ──
+  useEffect(() => {
+    const handle = (e) => {
       if (showSubmitModal || isSubmitting) return;
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
       switch (e.key) {
-        case 'ArrowLeft':
-          e.preventDefault();
-          previousQuestion();
+        case 'ArrowLeft': e.preventDefault(); previousQuestion(); break;
+        case 'ArrowRight': e.preventDefault(); saveAndNext(); break;
+        case '1': case '2': case '3': case '4':
+          e.preventDefault(); selectAnswer(parseInt(e.key) - 1); break;
+        case 'm': case 'M': e.preventDefault(); toggleMarkForReview(); break;
+        case 'c': case 'C': e.preventDefault(); clearResponse(); break;
+        case 'f': case 'F':
+          if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); toggleFullscreen(); }
           break;
-        case 'ArrowRight':
-          e.preventDefault();
-          saveAndNext();
+        case '=': case '+':
+          if (e.ctrlKey || e.metaKey) { e.preventDefault(); zoomIn(); }
           break;
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-          e.preventDefault();
-          const optionIndex = parseInt(e.key) - 1;
-          selectAnswer(optionIndex);
+        case '-':
+          if (e.ctrlKey || e.metaKey) { e.preventDefault(); zoomOut(); }
           break;
-        case 'm':
-        case 'M':
-          e.preventDefault();
-          toggleMarkForReview();
+        case '?': e.preventDefault(); setShowShortcuts(p => !p); break;
+        case 'Escape':
+          setShowCalc(false); setShowNotepad(false); setShowShortcuts(false);
+          setMobilePalette(false); setShowTools(false);
           break;
-        case 'c':
-        case 'C':
-          e.preventDefault();
-          clearResponse();
-          break;
-        default:
-          break;
+        default: break;
       }
     };
+    window.addEventListener('keydown', handle);
+    return () => window.removeEventListener('keydown', handle);
+  }, [showSubmitModal, isSubmitting, previousQuestion, saveAndNext, selectAnswer,
+      toggleMarkForReview, clearResponse, toggleFullscreen, zoomIn, zoomOut]);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showSubmitModal, isSubmitting, previousQuestion, saveAndNext, selectAnswer, toggleMarkForReview, clearResponse]);
-
-  // Handle time up - auto submit
+  // ── Time up ──
   const handleTimeUp = useCallback(() => {
-    console.log('Time up! Auto-submitting...');
     openSubmitModal();
-    // Auto submit after showing modal briefly
-    setTimeout(() => {
-      handleSubmit();
-    }, 2000);
+    setTimeout(() => handleSubmit(), 3000);
   }, [openSubmitModal]);
 
-  // Handle timer tick
-  const handleTimerTick = useCallback((seconds) => {
-    updateRemainingTime(seconds);
-  }, [updateRemainingTime]);
+  const handleTimerTick = useCallback((s) => updateRemainingTime(s), [updateRemainingTime]);
 
-  // Handle submit - MAIN FUNCTION
+  // ── Submit ──
   const handleSubmit = async () => {
     setSubmitError(null);
-    
-    console.log('=== SUBMIT PROCESS STARTED ===');
-    console.log('Attempt ID:', attempt?._id);
-    
-    if (!attempt?._id) {
-      setSubmitError('No attempt found. Please refresh and try again.');
-      console.error('No attempt ID available');
-      return;
-    }
-
+    if (!attempt?._id) { setSubmitError('No attempt found'); return; }
     try {
       const result = await submitTest();
-      
-      console.log('Submit result:', result);
-      
-      if (result && result.success) {
-        const attemptId = result.attemptId || attempt._id;
-        console.log('SUCCESS! Navigating to results:', attemptId);
-        
-        // Clear any cached test data
+      if (result?.success) {
         sessionStorage.removeItem('currentTest');
-        
-        // Navigate to result page
-        navigate(`/results/${attemptId}`, { 
-          replace: true,
-          state: { 
-            fromTest: true,
-            justSubmitted: true 
-          }
+        navigate(`/results/${result.attemptId || attempt._id}`, {
+          replace: true, state: { fromTest: true, justSubmitted: true },
         });
       } else {
-        const errorMsg = result?.error || 'Failed to submit test';
-        console.error('Submit failed:', errorMsg);
-        setSubmitError(errorMsg);
+        setSubmitError(result?.error || 'Submit failed');
       }
-    } catch (error) {
-      console.error('Submit exception:', error);
-      setSubmitError(error.message || 'An error occurred while submitting');
+    } catch (err) {
+      setSubmitError(err.message || 'Submit error');
     }
   };
 
-  // Get type config
+  // ── Derived ──
   const typeConfig = test?.testType ? (TEST_TYPE_CONFIG[test.testType] || {}) : {};
   const paperLabel = test?.paper ? (PAPER_LABELS[test.paper] || {}) : {};
+  const qTypeLabel = currentQuestion?.questionType
+    ? (QUESTION_TYPE_LABELS[currentQuestion.questionType] || {})
+    : {};
+  const progressPercent = questions.length > 0 ? Math.round(((currentIndex + 1) / questions.length) * 100) : 0;
 
-  // Show loader while test data is being set up
-  if (status === 'loading' || !test || !questions || questions.length === 0) {
+  const formatQTime = (s) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return m > 0 ? `${m}:${String(sec).padStart(2, '0')}` : `0:${String(sec).padStart(2, '0')}`;
+  };
+
+  // ── Loading ──
+  if (status === 'loading' || !test || !questions?.length) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <Loader 
-          size="lg" 
-          text={language === 'hi' ? 'परीक्षा लोड हो रही है...' : 'Loading test...'} 
-        />
+      <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950">
+        <Loader size="lg" text={language === 'hi' ? 'परीक्षा लोड हो रही है...' : 'Loading test...'} />
       </div>
     );
   }
 
-  // Show error if status is error
   if (status === 'error') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+      <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950 p-4">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
-            {language === 'hi' ? 'त्रुटि' : 'Error'}
-          </h2>
-          <p className="text-gray-600 mb-6">
-            {language === 'hi' ? 'कुछ गलत हो गया' : 'Something went wrong'}
-          </p>
-          <button
-            onClick={() => navigate('/tests')}
-            className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-          >
+          <h2 className="text-xl font-bold mb-2">{language === 'hi' ? 'त्रुटि' : 'Error'}</h2>
+          <p className="text-slate-500 mb-6">{language === 'hi' ? 'कुछ गलत हो गया' : 'Something went wrong'}</p>
+          <button onClick={() => navigate('/tests')}
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium">
             {language === 'hi' ? 'वापस जाएं' : 'Go Back'}
           </button>
         </div>
@@ -210,289 +276,348 @@ const TestInterface = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      {/* Top Header */}
-      <header className="bg-white border-b shadow-sm sticky top-0 z-40">
-        <div className="flex items-center justify-between px-4 py-3">
-          {/* Left - Test Info */}
-          <div className="flex items-center gap-3">
-            {typeConfig.shortCode && (
-              <span className="hidden sm:inline-block px-2 py-1 bg-primary-100 text-primary-700 text-xs font-medium rounded">
-                {typeConfig.shortCode}
+    <div className="h-screen flex flex-col bg-slate-100 dark:bg-slate-950 overflow-hidden select-none">
+
+      {/* ════════════ HEADER ════════════ */}
+      <header className="flex-shrink-0 bg-gradient-to-r from-slate-900 via-[#0f1a2e] to-slate-900 text-white shadow-xl z-30">
+        {/* Row 1: Main bar */}
+        <div className="flex items-center justify-between h-14 px-3 lg:px-5">
+          {/* Left: Title */}
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 flex-shrink-0">
+              <span className="text-[10px] font-bold tracking-wider text-blue-300">
+                {typeConfig.shortCode || 'TEST'}
               </span>
-            )}
-            <div>
-              <h1 className="font-semibold text-gray-900 text-sm sm:text-base line-clamp-1">
-                {test.title}
-              </h1>
-              <p className="text-xs text-gray-500 hidden sm:block">
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-sm font-semibold truncate">{test.title}</h1>
+              <p className="text-[10px] text-slate-400 truncate hidden sm:block">
                 {language === 'hi' ? paperLabel.hi : paperLabel.en}
               </p>
             </div>
           </div>
 
-          {/* Center - Timer */}
-          <TestTimer
-            initialSeconds={remainingTime || test.duration * 60}
-            onTimeUp={handleTimeUp}
-            onTick={handleTimerTick}
-            autoStart={true}
-            language={language}
-          />
+          {/* Center: Timer */}
+          <div className="flex-shrink-0 mx-4">
+            <TestTimer
+              initialSeconds={remainingTime || test.duration * 60}
+              onTimeUp={handleTimeUp}
+              onTick={handleTimerTick}
+              autoStart language={language}
+            />
+          </div>
 
-          {/* Right - Language & Palette Toggle */}
-          <div className="flex items-center gap-2">
-            {/* Language Toggle - Desktop */}
-            <div className="hidden sm:flex items-center bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setLanguage('hi')}
-                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                  language === 'hi' 
-                    ? 'bg-white text-primary-700 shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
+          {/* Right: Controls */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {/* Connection indicator */}
+            <div className="hidden sm:flex items-center mr-2" title={isOnline ? 'Online' : 'Offline'}>
+              {isOnline
+                ? <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+                : <WifiOff className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+              }
+            </div>
+
+            {/* Auto-save indicator */}
+            {lastSaved && (
+              <div className="hidden sm:flex items-center gap-1 mr-2 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
+                <Check className="w-3 h-3" />
+                <span className="text-[9px] font-medium">
+                  {language === 'hi' ? 'सहेजा' : 'Saved'}
+                </span>
+              </div>
+            )}
+
+            {/* Language Toggle */}
+            <div className="hidden md:flex items-center bg-white/10 rounded-xl p-0.5 gap-0.5">
+              <button onClick={() => setLanguage('hi')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${language === 'hi' ? 'bg-white text-slate-900 shadow' : 'text-slate-300 hover:text-white'}`}>
                 हिंदी
               </button>
-              <button
-                onClick={() => setLanguage('en')}
-                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                  language === 'en' 
-                    ? 'bg-white text-primary-700 shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                English
+              <button onClick={() => setLanguage('en')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${language === 'en' ? 'bg-white text-slate-900 shadow' : 'text-slate-300 hover:text-white'}`}>
+                Eng
               </button>
             </div>
 
-            {/* Mobile Language Toggle */}
-            <button
-              onClick={() => setLanguage(language === 'hi' ? 'en' : 'hi')}
-              className="sm:hidden p-2 hover:bg-gray-100 rounded-lg"
-              title="Toggle Language"
-            >
-              <Globe className="w-5 h-5 text-gray-600" />
+            {/* Mobile language */}
+            <button onClick={() => setLanguage(language === 'hi' ? 'en' : 'hi')}
+              className="md:hidden p-2 rounded-xl text-slate-300 hover:bg-white/10">
+              <Globe className="w-[18px] h-[18px]" />
             </button>
 
-            {/* Mobile Palette Toggle */}
-            <button
-              onClick={() => setIsMobilePaletteOpen(true)}
-              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
-            >
-              <Menu className="w-5 h-5 text-gray-600" />
+            {/* Tools (desktop) */}
+            <div className="hidden lg:flex items-center gap-0.5 ml-1 pl-2 border-l border-white/10">
+              <ToolBtn icon={Calculator} label="Calculator" active={showCalc}
+                onClick={() => { setShowCalc(p => !p); setShowNotepad(false); }} />
+              <ToolBtn icon={FileText} label="Notepad" active={showNotepad}
+                onClick={() => { setShowNotepad(p => !p); setShowCalc(false); }} />
+              <ToolBtn icon={ZoomIn} label="Zoom In" onClick={zoomIn} />
+              <ToolBtn icon={ZoomOut} label="Zoom Out" onClick={zoomOut} />
+              <ToolBtn icon={isFullscreen ? Minimize2 : Maximize2}
+                label="Fullscreen" active={isFullscreen} onClick={toggleFullscreen} />
+              <ToolBtn icon={Keyboard} label="Shortcuts" onClick={() => setShowShortcuts(p => !p)} />
+            </div>
+
+            {/* Tools (mobile) */}
+            <div className="relative lg:hidden">
+              <button onClick={() => setShowTools(p => !p)}
+                className="p-2 rounded-xl text-slate-300 hover:bg-white/10">
+                <Settings className="w-[18px] h-[18px]" />
+              </button>
+              {showTools && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowTools(false)} />
+                  <div className="absolute right-0 top-12 z-50 bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 py-2 min-w-[180px] animate-scale-in">
+                    {[
+                      { icon: Calculator, label: language === 'hi' ? 'कैलकुलेटर' : 'Calculator', fn: () => { setShowCalc(p => !p); setShowNotepad(false); setShowTools(false); }},
+                      { icon: FileText, label: language === 'hi' ? 'नोटपैड' : 'Notepad', fn: () => { setShowNotepad(p => !p); setShowCalc(false); setShowTools(false); }},
+                      { icon: ZoomIn, label: language === 'hi' ? 'ज़ूम इन' : 'Zoom In', fn: () => { zoomIn(); setShowTools(false); }},
+                      { icon: ZoomOut, label: language === 'hi' ? 'ज़ूम आउट' : 'Zoom Out', fn: () => { zoomOut(); setShowTools(false); }},
+                      { icon: isFullscreen ? Minimize2 : Maximize2, label: language === 'hi' ? 'फुलस्क्रीन' : 'Fullscreen', fn: () => { toggleFullscreen(); setShowTools(false); }},
+                      { icon: Keyboard, label: language === 'hi' ? 'शॉर्टकट' : 'Shortcuts', fn: () => { setShowShortcuts(true); setShowTools(false); }},
+                    ].map(({ icon: Ic, label, fn }, i) => (
+                      <button key={i} onClick={fn}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors">
+                        <Ic className="w-4 h-4" /> {label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Palette toggle (desktop) */}
+            <button onClick={() => setShowPalette(p => !p)}
+              className="hidden lg:flex p-2 rounded-xl text-slate-300 hover:bg-white/10 ml-1">
+              {showPalette ? <X className="w-[18px] h-[18px]" /> : <LayoutGrid className="w-[18px] h-[18px]" />}
             </button>
 
-            {/* Desktop Palette Toggle */}
-            <button
-              onClick={() => setShowPalette(!showPalette)}
-              className="hidden lg:flex p-2 hover:bg-gray-100 rounded-lg"
-              title={showPalette ? 'Hide Palette' : 'Show Palette'}
-            >
-              {showPalette ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {/* Mobile palette */}
+            <button onClick={() => setMobilePalette(true)}
+              className="lg:hidden p-2 rounded-xl text-slate-300 hover:bg-white/10">
+              <Menu className="w-[18px] h-[18px]" />
             </button>
           </div>
         </div>
 
-        {/* Question Progress Bar */}
-        <div className="h-1 bg-gray-200">
-          <div 
-            className="h-full bg-primary-600 transition-all duration-300"
-            style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
-          />
+        {/* Row 2: Progress */}
+        <div className="h-8 px-3 lg:px-5 flex items-center gap-4 bg-black/20 border-t border-white/5">
+          <div className="flex-1 flex items-center gap-3">
+            {/* Progress bar */}
+            <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden max-w-sm">
+              <div className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-500"
+                style={{ width: `${progressPercent}%` }} />
+            </div>
+            <span className="text-[11px] text-slate-400 font-medium tabular-nums flex-shrink-0">
+              {language === 'hi' ? 'प्रश्न' : 'Q'} {currentIndex + 1} / {questions.length}
+              <span className="hidden sm:inline text-slate-500 ml-1">({progressPercent}%)</span>
+            </span>
+          </div>
+          {/* Font size indicator */}
+          {fontSize !== 16 && (
+            <button onClick={() => setFontSize(16)} className="text-[10px] text-slate-500 hover:text-slate-300 flex items-center gap-1">
+              <span className="tabular-nums">{fontSize}px</span>
+              <RotateCcw className="w-3 h-3" />
+            </button>
+          )}
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="flex-1 flex">
-        {/* Question Area */}
-        <main className={`flex-1 transition-all duration-300 ${showPalette ? 'lg:mr-80' : ''}`}>
-          <div className="max-w-4xl mx-auto p-4 sm:p-6">
+      {/* ════════════ MAIN CONTENT ════════════ */}
+      <div className="flex-1 flex overflow-hidden">
+
+        {/* ── Question Area ── */}
+        <main
+          ref={questionAreaRef}
+          className={`flex-1 overflow-y-auto transition-all duration-300 ${showPalette ? 'lg:mr-0' : ''}`}
+        >
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 py-5">
+
             {/* Question Card */}
-            <div className="bg-white rounded-xl shadow-sm border p-6">
-              {/* Question Header */}
-              <div className="flex items-center justify-between mb-4 pb-4 border-b">
-                <span className="text-sm text-gray-500">
-                  {language === 'hi' ? 'प्रश्न' : 'Question'} {currentIndex + 1} / {questions.length}
-                </span>
-                {currentAnswer?.markedForReview && (
-                  <span className="flex items-center gap-1 text-purple-600 text-sm font-medium">
-                    <Flag className="w-4 h-4" />
-                    {language === 'hi' ? 'समीक्षा के लिए चिह्नित' : 'Marked for Review'}
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+
+              {/* Question Header Bar */}
+              <div className="flex items-center justify-between px-5 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-blue-600 text-white text-sm font-bold shadow-sm">
+                    {currentIndex + 1}
                   </span>
-                )}
+                  <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[11px] font-semibold">
+                    {language === 'hi' ? qTypeLabel.hi : qTypeLabel.en || 'MCQ'}
+                  </span>
+                  {currentAnswer?.markedForReview && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-[11px] font-semibold">
+                      <Flag className="w-3 h-3" />
+                      {language === 'hi' ? 'समीक्षा' : 'Review'}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-slate-400">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span className="text-xs font-mono tabular-nums">
+                    {formatQTime(qElapsed)}
+                  </span>
+                </div>
               </div>
 
-              {/* Question Display */}
-              {currentQuestion ? (
-                <QuestionDisplay
-                  question={currentQuestion}
-                  language={language}
-                  selectedAnswer={currentAnswer?.selectedAnswer ?? -1}
-                  onAnswerSelect={selectAnswer}
-                  showQuestionNumber={false}
-                  questionNumber={currentIndex + 1}
-                />
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Loader size="md" />
-                  <p className="mt-4">
-                    {language === 'hi' ? 'प्रश्न लोड हो रहा है...' : 'Loading question...'}
-                  </p>
-                </div>
-              )}
+              {/* Question Body */}
+              <div className="p-5 sm:p-7" style={{ fontSize: `${fontSize}px` }}>
+                {currentQuestion ? (
+                  <QuestionDisplay
+                    question={currentQuestion}
+                    language={language}
+                    selectedAnswer={currentAnswer?.selectedAnswer ?? -1}
+                    onAnswerSelect={selectAnswer}
+                    showQuestionNumber={false}
+                    questionNumber={currentIndex + 1}
+                  />
+                ) : (
+                  <div className="text-center py-10 text-slate-400">
+                    <Loader size="md" />
+                    <p className="mt-4 text-sm">
+                      {language === 'hi' ? 'प्रश्न लोड हो रहा है...' : 'Loading...'}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-              {/* Left Actions */}
+            <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              {/* Left actions */}
               <div className="flex items-center gap-2">
-                <button
-                  onClick={toggleMarkForReview}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-                    currentAnswer?.markedForReview
-                      ? 'bg-purple-100 border-purple-300 text-purple-700'
-                      : 'border-gray-300 hover:bg-gray-50 text-gray-700'
-                  }`}
-                >
+                <button onClick={toggleMarkForReview}
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all active:scale-95
+                    ${currentAnswer?.markedForReview
+                      ? 'bg-violet-50 dark:bg-violet-900/30 border-violet-400 text-violet-700 dark:text-violet-300'
+                      : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    }`}>
                   <Flag className="w-4 h-4" />
                   <span className="hidden sm:inline">
-                    {language === 'hi' ? 'समीक्षा के लिए चिह्नित' : 'Mark for Review'}
+                    {language === 'hi' ? 'समीक्षा' : 'Review'}
                   </span>
                 </button>
-
-                <button
-                  onClick={clearResponse}
+                <button onClick={clearResponse}
                   disabled={currentAnswer?.selectedAnswer === -1}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-700"
-                >
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95">
                   <RotateCcw className="w-4 h-4" />
                   <span className="hidden sm:inline">
-                    {language === 'hi' ? 'उत्तर हटाएं' : 'Clear'}
+                    {language === 'hi' ? 'हटाएं' : 'Clear'}
                   </span>
                 </button>
               </div>
 
-              {/* Right Actions */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={previousQuestion}
-                  disabled={currentIndex === 0}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-gray-700"
-                >
+              {/* Right actions */}
+              <div className="flex items-center gap-2 justify-end">
+                <button onClick={previousQuestion} disabled={currentIndex === 0}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95">
                   <ChevronLeft className="w-4 h-4" />
                   <span className="hidden sm:inline">
-                    {language === 'hi' ? 'पिछला' : 'Previous'}
+                    {language === 'hi' ? 'पिछला' : 'Prev'}
                   </span>
                 </button>
 
                 {currentIndex < questions.length - 1 ? (
-                  <button
-                    onClick={saveAndNext}
-                    className="inline-flex items-center gap-2 px-6 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors font-medium"
-                  >
-                    <span>
-                      {language === 'hi' ? 'सेव करें और अगला' : 'Save & Next'}
-                    </span>
+                  <button onClick={saveAndNext}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95">
+                    <span>{language === 'hi' ? 'सेव और अगला' : 'Save & Next'}</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 ) : (
-                  <button
-                    onClick={openSubmitModal}
-                    className="inline-flex items-center gap-2 px-6 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors font-medium"
-                  >
+                  <button onClick={openSubmitModal}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white text-sm font-semibold hover:from-emerald-700 hover:to-green-700 shadow-lg shadow-emerald-500/20 transition-all active:scale-95">
                     <Send className="w-4 h-4" />
-                    <span>
-                      {language === 'hi' ? 'जमा करें' : 'Submit'}
-                    </span>
+                    <span>{language === 'hi' ? 'जमा करें' : 'Submit'}</span>
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Keyboard Shortcuts Hint - Desktop Only */}
-            <div className="mt-6 text-center text-xs text-gray-400 hidden lg:block">
-              {language === 'hi' 
-                ? 'कीबोर्ड: ← पिछला | → अगला | 1-4 विकल्प | M समीक्षा | C हटाएं'
-                : 'Keyboard: ← Previous | → Next | 1-4 Options | M Review | C Clear'
-              }
+            {/* Keyboard hint (desktop) */}
+            <div className="mt-4 text-center hidden lg:block">
+              <p className="text-[11px] text-slate-400 dark:text-slate-600">
+                <span className="inline-flex items-center gap-1">
+                  <kbd className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[10px] font-mono">←</kbd>
+                  <kbd className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[10px] font-mono">→</kbd>
+                  {language === 'hi' ? ' नेविगेट' : ' Navigate'}
+                </span>
+                <span className="mx-2 text-slate-300 dark:text-slate-700">|</span>
+                <span className="inline-flex items-center gap-1">
+                  <kbd className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[10px] font-mono">1-4</kbd>
+                  {language === 'hi' ? ' विकल्प' : ' Options'}
+                </span>
+                <span className="mx-2 text-slate-300 dark:text-slate-700">|</span>
+                <span className="inline-flex items-center gap-1">
+                  <kbd className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[10px] font-mono">M</kbd>
+                  {language === 'hi' ? ' समीक्षा' : ' Review'}
+                </span>
+                <span className="mx-2 text-slate-300 dark:text-slate-700">|</span>
+                <span className="inline-flex items-center gap-1">
+                  <kbd className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[10px] font-mono">?</kbd>
+                  {language === 'hi' ? ' सभी शॉर्टकट' : ' All Shortcuts'}
+                </span>
+              </p>
             </div>
           </div>
         </main>
 
-        {/* Desktop Question Palette */}
+        {/* ── Desktop Palette ── */}
         {showPalette && (
-          <aside className="hidden lg:block fixed right-0 top-[73px] bottom-0 w-80 bg-gray-50 border-l overflow-y-auto">
-            <div className="p-4">
-              <TestPalette
-                answers={answers}
-                currentIndex={currentIndex}
-                onQuestionClick={goToQuestion}
-                language={language}
-              />
-
-              {/* Submit Button in Palette */}
-              <button
-                onClick={openSubmitModal}
-                disabled={isSubmitting}
-                className="w-full mt-4 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-              >
-                <Send className="w-5 h-5" />
-                {language === 'hi' ? 'परीक्षा जमा करें' : 'Submit Test'}
-              </button>
-            </div>
+          <aside className="hidden lg:flex flex-col w-[300px] flex-shrink-0 border-l border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 overflow-hidden">
+            <TestPalette
+              answers={answers}
+              questions={questions}
+              currentIndex={currentIndex}
+              onQuestionClick={goToQuestion}
+              onSubmit={openSubmitModal}
+              isSubmitting={isSubmitting}
+              language={language}
+            />
           </aside>
         )}
 
-        {/* Mobile Question Palette (Drawer) */}
-        {isMobilePaletteOpen && (
+        {/* ── Mobile Palette Drawer ── */}
+        {mobilePalette && (
           <>
-            <div 
-              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-              onClick={() => setIsMobilePaletteOpen(false)}
-            />
-            <aside className="fixed right-0 top-0 bottom-0 w-80 bg-white z-50 lg:hidden overflow-y-auto shadow-xl animate-slide-left">
-              <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900">
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+              onClick={() => setMobilePalette(false)} />
+            <aside className="fixed right-0 top-0 bottom-0 w-[300px] z-50 lg:hidden shadow-2xl animate-slide-left flex flex-col overflow-hidden bg-white dark:bg-slate-900">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800">
+                <h3 className="font-bold text-sm text-slate-900 dark:text-white">
                   {language === 'hi' ? 'प्रश्न पैलेट' : 'Question Palette'}
                 </h3>
-                <button
-                  onClick={() => setIsMobilePaletteOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <X className="w-5 h-5" />
+                <button onClick={() => setMobilePalette(false)}
+                  className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800">
+                  <X className="w-5 h-5 text-slate-500" />
                 </button>
               </div>
-              <div className="p-4">
-                <TestPalette
-                  answers={answers}
-                  currentIndex={currentIndex}
-                  onQuestionClick={(index) => {
-                    goToQuestion(index);
-                    setIsMobilePaletteOpen(false);
-                  }}
-                  language={language}
-                />
-
-                {/* Submit Button */}
-                <button
-                  onClick={() => {
-                    setIsMobilePaletteOpen(false);
-                    openSubmitModal();
-                  }}
-                  disabled={isSubmitting}
-                  className="w-full mt-4 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                >
-                  <Send className="w-5 h-5" />
-                  {language === 'hi' ? 'परीक्षा जमा करें' : 'Submit Test'}
-                </button>
-              </div>
+              <TestPalette
+                answers={answers}
+                questions={questions}
+                currentIndex={currentIndex}
+                onQuestionClick={(i) => { goToQuestion(i); setMobilePalette(false); }}
+                onSubmit={() => { setMobilePalette(false); openSubmitModal(); }}
+                isSubmitting={isSubmitting}
+                language={language}
+              />
             </aside>
           </>
         )}
       </div>
 
-      {/* Submit Modal */}
+      {/* ════════════ FLOATING PANELS ════════════ */}
+      {showCalc && (
+        <ExamCalculator onClose={() => setShowCalc(false)} language={language} />
+      )}
+      {showNotepad && (
+        <ExamNotepad onClose={() => setShowNotepad(false)} testId={test?._id} language={language} />
+      )}
+
+      {/* ════════════ OVERLAYS ════════════ */}
+      {showShortcuts && (
+        <ShortcutsOverlay onClose={() => setShowShortcuts(false)} language={language} />
+      )}
+
       <TestSubmitModal
         isOpen={showSubmitModal}
         onClose={closeSubmitModal}
