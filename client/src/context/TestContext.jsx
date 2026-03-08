@@ -11,6 +11,7 @@ const initialState = {
   // Current State
   currentIndex: 0,
   selectedAnswer: -1,
+  questionStartTime: Date.now(),
   
   // Answer tracking
   answers: [],
@@ -24,7 +25,7 @@ const initialState = {
   showSubmitModal: false,
   
   // Status
-  status: 'idle', // idle | loading | active | paused | submitted | error
+  status: 'idle',
   error: null
 };
 
@@ -61,14 +62,19 @@ const testReducer = (state, action) => {
         attempt: action.payload,
         answers: action.payload?.answers || [],
         remainingTime: action.payload?.remainingTime || 0,
-        currentIndex: action.payload?.currentQuestionIndex || 0
+        currentIndex: action.payload?.currentQuestionIndex || 0,
+        questionStartTime: Date.now()
       };
     
     case ACTIONS.SET_QUESTIONS:
       return { ...state, questions: action.payload };
     
     case ACTIONS.SET_CURRENT_INDEX:
-      return { ...state, currentIndex: action.payload };
+      return { 
+        ...state, 
+        currentIndex: action.payload, 
+        questionStartTime: Date.now() 
+      };
     
     case ACTIONS.SET_ANSWER: {
       const newAnswers = [...state.answers];
@@ -77,6 +83,7 @@ const testReducer = (state, action) => {
         newAnswers[index] = {
           ...newAnswers[index],
           selectedAnswer: action.payload.answer,
+          timeTaken: action.payload.timeTaken || newAnswers[index].timeTaken || 0,
           visited: true,
           answeredAt: new Date()
         };
@@ -155,7 +162,7 @@ const testReducer = (state, action) => {
     }
     
     case ACTIONS.RESET:
-      return initialState;
+      return { ...initialState, questionStartTime: Date.now() };
     
     default:
       return state;
@@ -177,6 +184,9 @@ export const TestProvider = ({ children }) => {
     dispatch({ type: ACTIONS.SET_QUESTIONS, payload: test?.questions || [] });
     dispatch({ type: ACTIONS.SET_ATTEMPT, payload: attempt });
     dispatch({ type: ACTIONS.SET_STATUS, payload: 'active' });
+    
+    // Reset to first question with fresh start time
+    dispatch({ type: ACTIONS.SET_CURRENT_INDEX, payload: 0 });
     
     // Set initial remaining time
     if (attempt?.remainingTime) {
@@ -200,7 +210,7 @@ export const TestProvider = ({ children }) => {
     }
   }, [state.questions, state.attempt]);
 
-  // Select answer
+  // Select answer — NOW WITH REAL TIME TRACKING
   const selectAnswer = useCallback(async (answer) => {
     const currentQuestion = state.questions[state.currentIndex];
     if (!currentQuestion || !state.attempt) {
@@ -208,24 +218,34 @@ export const TestProvider = ({ children }) => {
       return;
     }
 
-    // Update local state immediately
+    // Calculate actual time spent on this question
+    const timeSpentOnQuestion = Math.max(
+      1, 
+      Math.round((Date.now() - state.questionStartTime) / 1000)
+    );
+
+    // Update local state immediately (include timeTaken)
     dispatch({ 
       type: ACTIONS.SET_ANSWER, 
-      payload: { index: state.currentIndex, answer } 
+      payload: { 
+        index: state.currentIndex, 
+        answer,
+        timeTaken: timeSpentOnQuestion
+      } 
     });
 
-    // Save to server
+    // Save to server with actual elapsed time
     try {
       await attemptService.saveAnswer(
         state.attempt._id,
         currentQuestion._id,
         answer,
-        0
+        timeSpentOnQuestion
       );
     } catch (error) {
       console.error('Failed to save answer:', error);
     }
-  }, [state.currentIndex, state.questions, state.attempt]);
+  }, [state.currentIndex, state.questions, state.attempt, state.questionStartTime]);
 
   // Toggle mark for review
   const toggleMarkForReview = useCallback(async () => {
@@ -291,7 +311,7 @@ export const TestProvider = ({ children }) => {
     dispatch({ type: ACTIONS.HIDE_SUBMIT_MODAL });
   }, []);
 
-  // Submit test - FIXED VERSION
+  // Submit test
   const submitTest = useCallback(async () => {
     if (!state.attempt) {
       console.error('Cannot submit - no attempt found');
@@ -314,7 +334,6 @@ export const TestProvider = ({ children }) => {
       dispatch({ type: ACTIONS.SET_STATUS, payload: 'submitted' });
       dispatch({ type: ACTIONS.HIDE_SUBMIT_MODAL });
       
-      // Return success with attemptId
       return {
         success: true,
         attemptId: attemptId,

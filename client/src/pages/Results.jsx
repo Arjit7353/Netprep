@@ -1,5 +1,5 @@
 // client/src/pages/Results.jsx
-// FIXED: Language toggle works on list page + sidebar doesn't reset language
+// FIXED: Reattempt route + Language toggle works on list page
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -13,7 +13,6 @@ import Button from '../components/common/Button';
 import ResultPage from '../components/result/ResultPage';
 import { apiHelper } from '../services/api';
 
-// FIXED: Get language from a shared source
 const getStoredLanguage = () => {
   try {
     return localStorage.getItem('netprep_lang') || 'en';
@@ -30,7 +29,6 @@ const Results = () => {
   const navigate = useNavigate();
   const { attemptId } = useParams();
 
-  // FIXED: Language state from localStorage, NOT defaulting to 'hi'
   const [language, setLanguage] = useState(getStoredLanguage);
 
   const [attempts, setAttempts] = useState([]);
@@ -44,15 +42,12 @@ const Results = () => {
   const [previousAttempts, setPreviousAttempts] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  // FIXED: Language change handler that saves to localStorage
   const handleLanguageChange = useCallback((lang) => {
     setLanguage(lang);
     setStoredLanguage(lang);
-    // Dispatch custom event so other components can react
     window.dispatchEvent(new CustomEvent('netprep-lang-change', { detail: lang }));
   }, []);
 
-  // FIXED: Listen for language changes from Layout/Sidebar
   useEffect(() => {
     const handler = (e) => {
       if (e.detail && e.detail !== language) {
@@ -63,7 +58,6 @@ const Results = () => {
     return () => window.removeEventListener('netprep-lang-change', handler);
   }, [language]);
 
-  // FIXED: Sync language from localStorage on mount (in case sidebar changed it)
   useEffect(() => {
     const stored = getStoredLanguage();
     if (stored !== language) {
@@ -176,7 +170,7 @@ const Results = () => {
           }}
           onReattempt={() => {
             const tid = selectedTest?._id || selectedAttempt?.testId?._id || selectedAttempt?.testId;
-            if (tid) navigate(`/tests/${tid}/take`);
+            if (tid) navigate(`/test/${tid}`);
           }}
         />
       );
