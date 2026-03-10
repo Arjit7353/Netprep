@@ -604,7 +604,8 @@ const GoalTracker = ({ goals, completionPct, todayActivity, customTargets, updat
 };
 
 // ════════════════════════════════════════════════════════════
-//  🆕 SYLLABUS COVERAGE HEATMAP
+//  🆕 SYLLABUS COVERAGE HEATMAP (FIXED)
+//  Replace the old SyllabusCoverageMap in Dashboard.jsx
 // ════════════════════════════════════════════════════════════
 const SyllabusCoverageMap = ({ coverage, language }) => {
   const l = language;
@@ -614,11 +615,29 @@ const SyllabusCoverageMap = ({ coverage, language }) => {
   const summary = activeTab === 'paper1' ? coverage.paper1Summary : coverage.paper2Summary;
 
   const levelLabels = {
-    mastered: { en: 'Mastered', hi: 'माहिर', color: 'bg-emerald-500', textColor: 'text-emerald-700 dark:text-emerald-400' },
-    learning: { en: 'Learning', hi: 'सीख रहे', color: 'bg-blue-500', textColor: 'text-blue-700 dark:text-blue-400' },
-    weak: { en: 'Weak', hi: 'कमजोर', color: 'bg-red-500', textColor: 'text-red-700 dark:text-red-400' },
-    has_questions: { en: 'Has Qs', hi: 'प्रश्न हैं', color: 'bg-amber-500', textColor: 'text-amber-700 dark:text-amber-400' },
-    not_started: { en: 'Not Started', hi: 'शुरू नहीं', color: 'bg-gray-300 dark:bg-gray-600', textColor: 'text-gray-500' },
+    mastered: { en: 'Mastered', hi: 'माहिर', color: 'bg-emerald-500', textColor: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/10' },
+    learning: { en: 'Learning', hi: 'सीख रहे', color: 'bg-blue-500', textColor: 'text-blue-700 dark:text-blue-400', border: 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/10' },
+    in_progress: { en: 'In Progress', hi: 'प्रगति में', color: 'bg-amber-500', textColor: 'text-amber-700 dark:text-amber-400', border: 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/10' },
+    weak: { en: 'Weak', hi: 'कमजोर', color: 'bg-red-500', textColor: 'text-red-700 dark:text-red-400', border: 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-900/10' },
+    not_started: { en: 'Not Started', hi: 'शुरू नहीं', color: 'bg-gray-400 dark:bg-gray-500', textColor: 'text-gray-500 dark:text-gray-400', border: 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-700/20' },
+    no_tests: { en: 'No Tests', hi: 'कोई टेस्ट नहीं', color: 'bg-gray-300 dark:bg-gray-600', textColor: 'text-gray-400 dark:text-gray-500', border: 'border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/30' },
+  };
+
+  // Map summary keys to levelLabels keys
+  const summaryKeyMap = {
+    mastered: 'mastered',
+    learning: 'learning',
+    in_progress: 'inProgress',
+    weak: 'weak',
+    not_started: 'notStarted',
+    no_tests: 'noTests',
+  };
+
+  // Test type display labels
+  const testTypeLabels = {
+    dpp: 'DPP', topic_test: 'Topic', chapter_test: 'Chapter',
+    unit_test: 'Unit', practice: 'Practice', pyq_year: 'PYQ',
+    full_mock_p1: 'Mock P1', full_mock_p2: 'Mock P2', full_mock_combined: 'Mock',
   };
 
   return (
@@ -634,7 +653,9 @@ const SyllabusCoverageMap = ({ coverage, language }) => {
               <h3 className="text-sm font-bold text-gray-900 dark:text-white">
                 {l === 'hi' ? 'सिलेबस कवरेज' : 'Syllabus Coverage'}
               </h3>
-              <p className="text-[9px] text-gray-500">{l === 'hi' ? 'इकाई-वार प्रगति' : 'Unit-wise progress'}</p>
+              <p className="text-[9px] text-gray-500">
+                {l === 'hi' ? 'टेस्ट आधारित प्रगति' : 'Test-based progress'}
+              </p>
             </div>
           </div>
           <Ring pct={coverage.overallPct} size={40} sw={3.5} color="#14b8a6">
@@ -644,65 +665,141 @@ const SyllabusCoverageMap = ({ coverage, language }) => {
 
         {/* Paper tabs */}
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
-          {['paper1', 'paper2'].map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`flex-1 px-3 py-1.5 rounded-md text-[10px] font-bold transition-all
-                ${activeTab === tab ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              {tab === 'paper1' ? 'Paper 1' : 'Paper 2'}
-              <span className={`ml-1 text-[8px] px-1 rounded-full ${activeTab === tab ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' : 'bg-gray-200 dark:bg-gray-600'}`}>
-                {(activeTab === tab ? summary : (tab === 'paper1' ? coverage.paper1Summary : coverage.paper2Summary)).overallPct}%
-              </span>
-            </button>
-          ))}
+          {['paper1', 'paper2'].map(tab => {
+            const tabSummary = tab === 'paper1' ? coverage.paper1Summary : coverage.paper2Summary;
+            return (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                className={`flex-1 px-3 py-1.5 rounded-md text-[10px] font-bold transition-all
+                  ${activeTab === tab ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                {tab === 'paper1' ? 'Paper 1' : 'Paper 2'}
+                <span className={`ml-1 text-[8px] px-1 rounded-full ${activeTab === tab ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' : 'bg-gray-200 dark:bg-gray-600'}`}>
+                  {tabSummary.overallPct}%
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Summary strip */}
-      <div className="px-4 py-2 bg-gray-50/50 dark:bg-gray-700/20 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
-        {Object.entries(levelLabels).map(([key, val]) => {
-          const count = summary[key === 'has_questions' ? 'hasQ' : key] || 0;
-          return (
-            <div key={key} className="flex items-center gap-1">
-              <div className={`w-2 h-2 rounded-sm ${val.color}`} />
-              <span className="text-[8px] text-gray-500">{val[l] || val.en}: {count}</span>
-            </div>
-          );
-        })}
+      <div className="px-4 py-2 bg-gray-50/50 dark:bg-gray-700/20 border-b border-gray-100 dark:border-gray-700">
+        <div className="flex items-center gap-2 flex-wrap">
+          {Object.entries(levelLabels).map(([key, val]) => {
+            const summaryField = summaryKeyMap[key];
+            const count = summaryField ? (summary[summaryField] || 0) : 0;
+            return (
+              <div key={key} className="flex items-center gap-1">
+                <div className={`w-2 h-2 rounded-sm ${val.color}`} />
+                <span className="text-[8px] text-gray-500">{val[l] || val.en}: {count}</span>
+              </div>
+            );
+          })}
+        </div>
+        {/* Test counts */}
+        <div className="flex items-center gap-3 mt-1 text-[8px] text-gray-400">
+          <span>{l === 'hi' ? 'बनाए' : 'Created'}: {summary.totalTestsCreated || 0}</span>
+          <span>{l === 'hi' ? 'दिए' : 'Attempted'}: {summary.totalTestsAttempted || 0}</span>
+          <span>{l === 'hi' ? 'बाकी' : 'Pending'}: {summary.totalTestsPending || 0}</span>
+        </div>
       </div>
 
       {/* Heatmap Grid */}
       <div className="p-3">
         <div className="grid grid-cols-2 gap-2">
           {data.map((unit, i) => {
-            const ll = levelLabels[unit.level];
+            const ll = levelLabels[unit.level] || levelLabels.not_started;
+            const borderClass = ll.border || 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-700/20';
+
             return (
               <div key={i} className="relative group">
-                <div className={`p-2.5 rounded-xl border-2 transition-all hover:shadow-lg cursor-pointer
-                  ${unit.level === 'mastered' ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/10' :
-                  unit.level === 'learning' ? 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/10' :
-                  unit.level === 'weak' ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-900/10' :
-                  unit.level === 'has_questions' ? 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/10' :
-                  'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-700/20'}`}>
+                <div className={`p-2.5 rounded-xl border-2 transition-all hover:shadow-lg cursor-pointer ${borderClass}`}>
+                  {/* Unit header */}
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[8px] font-bold text-gray-500 uppercase">{unit.unit}</span>
-                    <span className={`text-[7px] font-bold px-1 py-0.5 rounded-full ${ll.color} text-white`}>
-                      {unit.accuracy}%
+                    <div className="flex items-center gap-1">
+                      {unit.accuracy > 0 && (
+                        <span className={`text-[7px] font-bold px-1 py-0.5 rounded-full ${ll.color} text-white`}>
+                          {unit.accuracy}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Unit name */}
+                  <p className="text-[10px] font-semibold text-gray-800 dark:text-gray-200 truncate mb-1.5">
+                    {unit.name}
+                  </p>
+
+                  {/* Test stats */}
+                  <div className="flex items-center gap-1.5 text-[8px] text-gray-500 mb-1">
+                    <span className="flex items-center gap-0.5">
+                      <ClipboardList className="w-2.5 h-2.5" />
+                      {unit.attemptedCount}/{unit.totalTests}
                     </span>
+                    {unit.questionsAttempted > 0 && (
+                      <span className="flex items-center gap-0.5">
+                        <FileQuestion className="w-2.5 h-2.5" />
+                        {unit.questionsAttempted}Q
+                      </span>
+                    )}
+                    {unit.bestScore > 0 && (
+                      <span className="flex items-center gap-0.5">
+                        <Trophy className="w-2.5 h-2.5 text-amber-500" />
+                        {unit.bestScore}%
+                      </span>
+                    )}
                   </div>
-                  <p className="text-[10px] font-semibold text-gray-800 dark:text-gray-200 truncate mb-1">{unit.name}</p>
-                  <div className="flex items-center gap-2 text-[8px] text-gray-500">
-                    <span>{unit.questions} Qs</span>
-                    <span>{unit.attempted} att</span>
+
+                  {/* Test type badges */}
+                  {unit.testTypeBreakdown && Object.keys(unit.testTypeBreakdown).length > 0 && (
+                    <div className="flex flex-wrap gap-0.5 mb-1.5">
+                      {Object.entries(unit.testTypeBreakdown).map(([type, td]) => (
+                        <span key={type} className={`text-[6px] font-bold px-1 py-0.5 rounded
+                          ${td.attempted >= td.total
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                            : td.attempted > 0
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                            : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                          }`}>
+                          {testTypeLabels[type] || type}: {td.attempted}/{td.total}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Coverage progress bar */}
+                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-1000"
+                      style={{
+                        width: `${unit.totalTests > 0 ? Math.round((unit.attemptedCount / unit.totalTests) * 100) : 0}%`,
+                        backgroundColor: unit.color || '#d1d5db'
+                      }} />
                   </div>
-                  {/* Mini progress bar */}
-                  <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full mt-1.5 overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${unit.accuracy}%`, backgroundColor: unit.color }} />
+
+                  {/* Level label */}
+                  <div className="flex items-center justify-between mt-1">
+                    <span className={`text-[7px] font-bold ${ll.textColor}`}>
+                      {ll[l] || ll.en}
+                    </span>
+                    {unit.totalTests > 0 && (
+                      <span className="text-[7px] text-gray-400">
+                        {Math.round((unit.attemptedCount / unit.totalTests) * 100)}%
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
             );
           })}
         </div>
+
+        {/* No data message */}
+        {data.length === 0 && (
+          <div className="text-center py-8">
+            <Grid3X3 className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
+            <p className="text-xs text-gray-400">{l === 'hi' ? 'कोई डेटा नहीं' : 'No data available'}</p>
+          </div>
+        )}
       </div>
     </div>
   );
