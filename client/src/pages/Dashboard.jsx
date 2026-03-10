@@ -479,44 +479,94 @@ const ExamCountdown = ({ examDate, setExamDate, daysUntilExam, notAttemptedCount
 };
 
 // ════════════════════════════════════════════════════════════
-//   🆕 DYNAMIC GOAL TRACKER
+//   🆕 ADVANCED GOAL TRACKER (Fully Working + Pressure)
+//   Replace the old GoalTracker in Dashboard.jsx
 // ════════════════════════════════════════════════════════════
-const GoalTracker = ({ goals, completionPct, todayActivity, customTargets, updateCustomTargets, language }) => {
+const GoalTracker = ({
+  goals, completionPct, todayActivity, todayDetailed, yesterdayActivity,
+  customTargets, updateCustomTargets, dayProgress, goalStreak,
+  goalsCompleted, totalGoals, pressureMessage, todayXP, streak,
+  language, navigate
+}) => {
   const l = language;
   const [showSettings, setShowSettings] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
+
+  // Celebration effect when all goals done
+  useEffect(() => {
+    if (completionPct === 100 && todayDetailed?.count > 0 && !celebrating) {
+      setCelebrating(true);
+      const t = setTimeout(() => setCelebrating(false), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [completionPct, todayDetailed]);
 
   const iconMap = {
     ClipboardList, Target, TrendingUp, Clock, RefreshCw, Flame,
+    Timer, BarChart2, Hash, Zap,
   };
 
   const colorMap = {
-    blue: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400', bar: 'bg-blue-500', ring: '#3b82f6' },
-    emerald: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400', bar: 'bg-emerald-500', ring: '#22c55e' },
-    purple: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400', bar: 'bg-purple-500', ring: '#8b5cf6' },
-    amber: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-600 dark:text-amber-400', bar: 'bg-amber-500', ring: '#f59e0b' },
-    red: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400', bar: 'bg-red-500', ring: '#ef4444' },
-    orange: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-600 dark:text-orange-400', bar: 'bg-orange-500', ring: '#f97316' },
+    blue: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400', bar: 'bg-blue-500', ring: '#3b82f6', glow: 'shadow-blue-500/20' },
+    emerald: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400', bar: 'bg-emerald-500', ring: '#22c55e', glow: 'shadow-emerald-500/20' },
+    purple: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400', bar: 'bg-purple-500', ring: '#8b5cf6', glow: 'shadow-purple-500/20' },
+    amber: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-600 dark:text-amber-400', bar: 'bg-amber-500', ring: '#f59e0b', glow: 'shadow-amber-500/20' },
+    red: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400', bar: 'bg-red-500', ring: '#ef4444', glow: 'shadow-red-500/20' },
+    orange: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-600 dark:text-orange-400', bar: 'bg-orange-500', ring: '#f97316', glow: 'shadow-orange-500/20' },
+    cyan: { bg: 'bg-cyan-100 dark:bg-cyan-900/30', text: 'text-cyan-600 dark:text-cyan-400', bar: 'bg-cyan-500', ring: '#06b6d4', glow: 'shadow-cyan-500/20' },
+    indigo: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-600 dark:text-indigo-400', bar: 'bg-indigo-500', ring: '#6366f1', glow: 'shadow-indigo-500/20' },
+    teal: { bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-600 dark:text-teal-400', bar: 'bg-teal-500', ring: '#14b8a6', glow: 'shadow-teal-500/20' },
   };
 
+  const urgencyColors = {
+    critical: 'bg-red-500 animate-pulse',
+    high: 'bg-orange-500',
+    medium: 'bg-amber-400',
+    normal: 'bg-gray-300 dark:bg-gray-600',
+  };
+
+  const pressureColors = {
+    celebration: { bg: 'bg-emerald-50 dark:bg-emerald-900/10', border: 'border-emerald-300 dark:border-emerald-800', text: 'text-emerald-700 dark:text-emerald-400', icon: Trophy },
+    critical: { bg: 'bg-red-50 dark:bg-red-900/10', border: 'border-red-300 dark:border-red-800', text: 'text-red-700 dark:text-red-400', icon: AlertTriangle },
+    warning: { bg: 'bg-amber-50 dark:bg-amber-900/10', border: 'border-amber-300 dark:border-amber-800', text: 'text-amber-700 dark:text-amber-400', icon: AlertCircle },
+    positive: { bg: 'bg-blue-50 dark:bg-blue-900/10', border: 'border-blue-300 dark:border-blue-800', text: 'text-blue-700 dark:text-blue-400', icon: Sparkles },
+    info: { bg: 'bg-gray-50 dark:bg-gray-700/30', border: 'border-gray-200 dark:border-gray-700', text: 'text-gray-600 dark:text-gray-400', icon: Info },
+  };
+
+  const dp = dayProgress || { pct: 0, remainingHours: 0, remainingMins: 0, isAlmostOver: false, isPastHalf: false };
+  const pm = pressureMessage || { type: 'info', en: '', hi: '' };
+  const pmStyle = pressureColors[pm.type] || pressureColors.info;
+  const PMIcon = pmStyle.icon;
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      {/* Header */}
+    <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden ${celebrating ? 'ring-2 ring-emerald-400 shadow-lg shadow-emerald-500/20' : ''}`}>
+
+      {/* ── HEADER ── */}
       <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/10 dark:to-purple-900/10 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow">
+            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow ${celebrating ? 'animate-bounce' : ''}`}>
               <Crosshair className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
                 {l === 'hi' ? 'आज के लक्ष्य' : "Today's Goals"}
+                {celebrating && <Sparkles className="w-3.5 h-3.5 text-yellow-500 animate-spin" />}
               </h3>
-              <p className="text-[9px] text-gray-500">{l === 'hi' ? 'स्वचालित रूप से जेनरेट' : 'Auto-generated daily'}</p>
+              <p className="text-[9px] text-gray-500">
+                {goalsCompleted}/{totalGoals} {l === 'hi' ? 'पूरे' : 'done'}
+                {goalStreak > 0 && <span className="ml-1 text-amber-600 dark:text-amber-400 font-bold"> | {goalStreak}d {l === 'hi' ? 'गोल स्ट्रीक' : 'goal streak'}</span>}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* XP Badge */}
+            <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800">
+              <Zap className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+              <span className="text-[9px] font-black text-amber-700 dark:text-amber-400">{todayXP} XP</span>
+            </div>
             <Ring pct={completionPct} size={36} sw={3}
-              color={completionPct >= 80 ? '#22c55e' : completionPct >= 50 ? '#f59e0b' : '#ef4444'}>
+              color={completionPct === 100 ? '#22c55e' : completionPct >= 50 ? '#f59e0b' : '#ef4444'}>
               <span className="text-[7px] font-bold text-gray-600 dark:text-gray-300">{completionPct}%</span>
             </Ring>
             <button onClick={() => setShowSettings(!showSettings)}
@@ -526,26 +576,80 @@ const GoalTracker = ({ goals, completionPct, todayActivity, customTargets, updat
           </div>
         </div>
 
-        {/* Today's summary strip */}
-        <div className="flex items-center gap-3 text-[9px]">
-          <span className="flex items-center gap-1 text-gray-500">
-            <ClipboardList className="w-3 h-3" />
-            {l === 'hi' ? 'आज' : 'Today'}: {todayActivity.count} {l === 'hi' ? 'टेस्ट' : 'tests'}
+        {/* ── DAY PROGRESS BAR ── */}
+        <div className="mb-2">
+          <div className="flex items-center justify-between mb-0.5">
+            <span className="text-[8px] text-gray-500 flex items-center gap-1">
+              <Clock className="w-2.5 h-2.5" />
+              {l === 'hi' ? 'दिन की प्रगति' : 'Day Progress'}
+            </span>
+            <span className={`text-[8px] font-bold ${dp.isAlmostOver ? 'text-red-600 dark:text-red-400 animate-pulse' : dp.isPastHalf ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500'}`}>
+              {dp.remainingHours}h {dp.remainingMins}m {l === 'hi' ? 'बाकी' : 'left'}
+            </span>
+          </div>
+          <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
+            <div className="h-full rounded-full transition-all duration-1000"
+              style={{
+                width: `${dp.pct}%`,
+                background: dp.isAlmostOver ? 'linear-gradient(90deg, #ef4444, #f97316)' : dp.isPastHalf ? 'linear-gradient(90deg, #f59e0b, #eab308)' : 'linear-gradient(90deg, #3b82f6, #6366f1)',
+              }} />
+            {/* Goal completion overlay */}
+            <div className="absolute top-0 h-full rounded-full bg-emerald-500/30"
+              style={{ width: `${completionPct}%` }} />
+          </div>
+          <div className="flex items-center justify-between mt-0.5">
+            <span className="text-[7px] text-gray-400">{dp.pct}% {l === 'hi' ? 'बीत चुका' : 'elapsed'}</span>
+            <span className="text-[7px] text-gray-400">{completionPct}% {l === 'hi' ? 'लक्ष्य' : 'goals'}</span>
+          </div>
+        </div>
+
+        {/* ── TODAY'S STATS STRIP ── */}
+        <div className="flex items-center gap-2 text-[8px] flex-wrap">
+          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold">
+            <ClipboardList className="w-2.5 h-2.5" />{todayDetailed?.count || 0} {l === 'hi' ? 'टेस्ट' : 'tests'}
           </span>
-          {todayActivity.count > 0 && (
+          {(todayDetailed?.count || 0) > 0 && (
             <>
-              <span className="flex items-center gap-1 text-gray-500">
-                <Target className="w-3 h-3" />{todayActivity.avgAccuracy}%
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-bold">
+                <Target className="w-2.5 h-2.5" />{todayDetailed?.accuracy || 0}%
               </span>
-              <span className="flex items-center gap-1 text-gray-500">
-                <BarChart3 className="w-3 h-3" />{todayActivity.avgScore}%
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-bold">
+                <BarChart3 className="w-2.5 h-2.5" />{todayDetailed?.avgScore || 0}% avg
+              </span>
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-bold">
+                <Timer className="w-2.5 h-2.5" />{Math.round((todayDetailed?.timeSpent || 0) / 60)}m
               </span>
             </>
+          )}
+          {/* Yesterday comparison */}
+          {(yesterdayActivity?.count || 0) > 0 && (
+            <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded font-bold
+              ${(todayDetailed?.count || 0) > yesterdayActivity.count
+                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                : (todayDetailed?.count || 0) < yesterdayActivity.count
+                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+              }`}>
+              {(todayDetailed?.count || 0) >= yesterdayActivity.count
+                ? <ArrowUp className="w-2.5 h-2.5" />
+                : <ArrowDown className="w-2.5 h-2.5" />}
+              vs {l === 'hi' ? 'कल' : 'yday'}: {yesterdayActivity.count}
+            </span>
           )}
         </div>
       </div>
 
-      {/* Settings Panel */}
+      {/* ── PRESSURE MESSAGE ── */}
+      <div className={`px-4 py-2 border-b border-gray-100 dark:border-gray-700 ${pmStyle.bg} border-l-4 ${pmStyle.border}`}>
+        <div className="flex items-center gap-2">
+          <PMIcon className={`w-3.5 h-3.5 flex-shrink-0 ${pmStyle.text} ${pm.type === 'critical' ? 'animate-pulse' : ''}`} />
+          <p className={`text-[10px] font-semibold ${pmStyle.text}`}>
+            {l === 'hi' ? pm.hi : pm.en}
+          </p>
+        </div>
+      </div>
+
+      {/* ── SETTINGS PANEL ── */}
       {showSettings && (
         <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700">
           <p className="text-[10px] font-bold text-gray-600 dark:text-gray-300 mb-2">{l === 'hi' ? 'लक्ष्य सेटिंग्स' : 'Goal Settings'}</p>
@@ -553,6 +657,7 @@ const GoalTracker = ({ goals, completionPct, todayActivity, customTargets, updat
             {[
               { key: 'dailyTests', label: l === 'hi' ? 'दैनिक टेस्ट' : 'Daily Tests', min: 1, max: 20 },
               { key: 'dailyAccuracy', label: l === 'hi' ? 'सटीकता %' : 'Accuracy %', min: 30, max: 100 },
+              { key: 'targetScore', label: l === 'hi' ? 'लक्ष्य स्कोर %' : 'Target Score %', min: 40, max: 100 },
             ].map(s => (
               <div key={s.key}>
                 <label className="text-[9px] text-gray-500">{s.label}</label>
@@ -565,44 +670,114 @@ const GoalTracker = ({ goals, completionPct, todayActivity, customTargets, updat
         </div>
       )}
 
-      {/* Goals List */}
-      <div className="p-3 space-y-2">
+      {/* ── GOALS LIST ── */}
+      <div className="p-3 space-y-1.5 max-h-[400px] overflow-y-auto">
         {goals.map((goal, i) => {
           const Icon = iconMap[goal.icon] || Target;
           const cc = colorMap[goal.color] || colorMap.blue;
-          const pct = goal.type === 'count'
-            ? Math.min(100, Math.round((goal.current / Math.max(goal.target, 1)) * 100))
-            : Math.min(100, Math.round((goal.current / Math.max(goal.target, 1)) * 100));
-          const done = pct >= 100;
+          const pct = Math.min(100, Math.round((goal.current / Math.max(goal.target, 1)) * 100));
+          const done = goal.current >= goal.target;
+          const isOverAchieved = goal.current > goal.target;
+          const urgDot = urgencyColors[goal.urgency] || urgencyColors.normal;
 
           return (
-            <div key={goal.id || i} className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all
-              ${done ? 'bg-emerald-50/50 border-emerald-200 dark:bg-emerald-900/10 dark:border-emerald-800/30' : 'bg-gray-50/50 border-gray-100 dark:bg-gray-700/20 dark:border-gray-700/50'}`}>
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${done ? 'bg-emerald-100 dark:bg-emerald-900/30' : cc.bg}`}>
-                {done ? <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Icon className={`w-4 h-4 ${cc.text}`} />}
+            <div key={goal.id || i}
+              className={`relative flex items-start gap-2.5 p-2.5 rounded-xl border transition-all
+                ${done
+                  ? `bg-emerald-50/50 border-emerald-200 dark:bg-emerald-900/10 dark:border-emerald-800/30 ${isOverAchieved ? 'ring-1 ring-emerald-300 dark:ring-emerald-700' : ''}`
+                  : goal.urgency === 'critical'
+                  ? 'bg-red-50/30 border-red-200 dark:bg-red-900/5 dark:border-red-900/30'
+                  : goal.urgency === 'high'
+                  ? 'bg-orange-50/30 border-orange-200 dark:bg-orange-900/5 dark:border-orange-900/30'
+                  : 'bg-gray-50/50 border-gray-100 dark:bg-gray-700/20 dark:border-gray-700/50'
+                }`}>
+
+              {/* Urgency dot */}
+              {!done && goal.urgency !== 'normal' && (
+                <div className={`absolute top-2 right-2 w-2 h-2 rounded-full ${urgDot}`} />
+              )}
+
+              {/* Icon */}
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 transition-all
+                ${done ? 'bg-emerald-100 dark:bg-emerald-900/30 shadow-sm' : cc.bg}`}>
+                {done
+                  ? <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  : <Icon className={`w-4 h-4 ${cc.text}`} />}
               </div>
+
+              {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
-                  <p className={`text-[11px] font-semibold truncate ${done ? 'text-emerald-700 dark:text-emerald-400 line-through' : 'text-gray-900 dark:text-white'}`}>
+                  <p className={`text-[11px] font-semibold truncate pr-4
+                    ${done ? 'text-emerald-700 dark:text-emerald-400 line-through' : 'text-gray-900 dark:text-white'}`}>
                     {l === 'hi' ? goal.titleHi : goal.title}
                   </p>
-                  <span className="text-[9px] font-bold text-gray-500 ml-1 flex-shrink-0">
-                    {goal.current}/{goal.target}{goal.type === 'percentage' ? '%' : ''}
-                  </span>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <span className={`text-[9px] font-black
+                      ${done ? 'text-emerald-600 dark:text-emerald-400' : pct >= 50 ? cc.text : 'text-gray-500'}`}>
+                      {goal.current}{goal.type === 'percentage' ? '%' : ''}/{goal.target}{goal.type === 'percentage' ? '%' : ''}
+                    </span>
+                    {/* XP badge */}
+                    {done && (
+                      <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        +{goal.xp}XP
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+
+                {/* Description */}
+                <p className={`text-[8px] mb-1 ${done ? 'text-emerald-600/60 dark:text-emerald-400/60' : 'text-gray-500'}`}>
+                  {l === 'hi' ? goal.descriptionHi : goal.description}
+                </p>
+
+                {/* Progress bar */}
+                <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                   <div className={`h-full rounded-full transition-all duration-1000 ${done ? 'bg-emerald-500' : cc.bar}`}
                     style={{ width: `${pct}%` }} />
                 </div>
+
+                {/* Priority badge */}
+                {!done && (
+                  <div className="flex items-center justify-between mt-1">
+                    <span className={`text-[7px] font-bold uppercase tracking-wider
+                      ${goal.priority === 'critical' ? 'text-red-500' :
+                      goal.priority === 'high' ? 'text-orange-500' :
+                      goal.priority === 'medium' ? 'text-blue-500' : 'text-gray-400'}`}>
+                      {goal.priority}
+                    </span>
+                    <span className="text-[7px] text-gray-400">{pct}%</span>
+                  </div>
+                )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* ── FOOTER ── */}
+      <div className="px-4 py-2.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-[8px] text-gray-400">
+              {l === 'hi' ? 'गोल स्ट्रीक' : 'Goal Streak'}: <b className="text-amber-600 dark:text-amber-400">{goalStreak}d</b>
+            </span>
+            <span className="text-[8px] text-gray-400">|</span>
+            <span className="text-[8px] text-gray-400">
+              XP: <b className="text-indigo-600 dark:text-indigo-400">{todayXP}</b>
+            </span>
+          </div>
+          {(todayDetailed?.count || 0) === 0 && (
+            <button onClick={() => navigate && navigate('/tests')}
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[9px] font-bold rounded-lg hover:shadow-lg transition-all">
+              <Play className="w-3 h-3" />{l === 'hi' ? 'शुरू करो!' : 'Start Now!'}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
-
 // ════════════════════════════════════════════════════════════
 //  🆕 SYLLABUS COVERAGE HEATMAP (FIXED)
 //  Replace the old SyllabusCoverageMap in Dashboard.jsx
@@ -2118,13 +2293,23 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
             ═══════════════════════════════════════════════ */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <JRFProbabilityMeter data={d.jrfProbability} language={l} />
-              <GoalTracker
+                            <GoalTracker
                 goals={d.autoGeneratedGoals}
                 completionPct={d.goalCompletionPct}
                 todayActivity={d.todayActivity}
+                todayDetailed={d.todayDetailed}
+                yesterdayActivity={d.yesterdayActivity}
                 customTargets={d.customTargets}
                 updateCustomTargets={d.updateCustomTargets}
+                dayProgress={d.dayProgress}
+                goalStreak={d.goalStreak}
+                goalsCompleted={d.goalsCompleted}
+                totalGoals={d.totalGoals}
+                pressureMessage={d.pressureMessage}
+                todayXP={d.todayXP}
+                streak={d.streak}
                 language={l}
+                navigate={navigate}
               />
               <div className="space-y-4">
                 <ExamCountdown

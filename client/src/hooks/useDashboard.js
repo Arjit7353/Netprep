@@ -274,12 +274,9 @@ const useDashboard = () => {
   }, [allCompletedAttempts]);
 
   // ════════════════════════════════════════════════════════════
-  //  🆕 SYLLABUS COVERAGE (Test-based, not question count)
-  //  Tracks: which units have DPP/Practice/Chapter/Unit tests
-  //  created AND attempted, with their scores
+  //  SYLLABUS COVERAGE
   // ════════════════════════════════════════════════════════════
   const syllabusCoverage = useMemo(() => {
-    // Helper: normalize unit name for matching
     const normalizeUnit = (str) => {
       if (!str) return '';
       return str.toLowerCase().replace(/\s+/g, ' ').trim();
@@ -289,11 +286,8 @@ const useDashboard = () => {
       if (!testUnit) return false;
       const t = normalizeUnit(testUnit);
       const s = normalizeUnit(syllabusUnit);
-      // Exact match
       if (t === s) return true;
-      // Contains check
       if (t.includes(s) || s.includes(t)) return true;
-      // Extract roman numeral
       const extractNum = (str) => {
         const m = str.match(/unit\s*(i{1,3}|iv|v|vi{0,3}|ix|x)/i);
         return m ? m[1].toLowerCase() : '';
@@ -304,32 +298,20 @@ const useDashboard = () => {
     };
 
     const TEST_TYPE_WEIGHTS = {
-      dpp: 10,
-      topic_test: 15,
-      chapter_test: 25,
-      unit_test: 35,
-      practice: 20,
-      pyq_year: 30,
-      full_mock_p1: 20,
-      full_mock_p2: 20,
-      full_mock_combined: 15,
+      dpp: 10, topic_test: 15, chapter_test: 25, unit_test: 35,
+      practice: 20, pyq_year: 30, full_mock_p1: 20, full_mock_p2: 20, full_mock_combined: 15,
     };
 
     const buildCoverage = (syllabusUnits, unitNames, paper, paperTests, paperAttempts) => {
-      // Build test map per unit
       const attemptedTestIds = new Set(paperAttempts.map(a => a.testId?._id?.toString() || a.testId?.toString()));
 
       return syllabusUnits.map(unit => {
-        // Find all tests for this unit
         const unitTests = paperTests.filter(t => matchUnit(t.unit, unit));
         const totalTests = unitTests.length;
-
-        // Find attempted tests for this unit
         const attemptedTests = unitTests.filter(t => attemptedTestIds.has(t._id?.toString()));
         const attemptedCount = attemptedTests.length;
         const pendingCount = totalTests - attemptedCount;
 
-        // Get test type breakdown
         const testTypeBreakdown = {};
         unitTests.forEach(t => {
           const type = t.testType || 'practice';
@@ -338,13 +320,11 @@ const useDashboard = () => {
           if (attemptedTestIds.has(t._id?.toString())) testTypeBreakdown[type].attempted += 1;
         });
 
-        // Get attempts for this unit with scores
         const unitAttempts = paperAttempts.filter(a => {
           const testUnit = a.testId?.unit;
           return matchUnit(testUnit, unit);
         });
 
-        // Get topic analysis from attempts
         const topicData = { correct: 0, wrong: 0, skipped: 0, total: 0 };
         paperAttempts.forEach(a => {
           (a.topicAnalysis || []).forEach(ta => {
@@ -358,20 +338,14 @@ const useDashboard = () => {
         });
 
         const accuracy = topicData.total > 0 ? Math.round((topicData.correct / topicData.total) * 100) : 0;
-
-        // Best score from attempts
         const bestScore = unitAttempts.length > 0
           ? Math.max(...unitAttempts.map(a => a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0))
           : 0;
-
-        // Average score
         const avgScore = unitAttempts.length > 0
           ? Math.round(unitAttempts.reduce((s, a) => s + (a.totalMarks > 0 ? (a.score / a.totalMarks) * 100 : 0), 0) / unitAttempts.length)
           : 0;
 
-        // Calculate coverage score (weighted by test types)
-        let coverageScore = 0;
-        let maxPossibleScore = 0;
+        let coverageScore = 0, maxPossibleScore = 0;
         Object.entries(testTypeBreakdown).forEach(([type, data]) => {
           const weight = TEST_TYPE_WEIGHTS[type] || 15;
           maxPossibleScore += data.total * weight;
@@ -379,49 +353,25 @@ const useDashboard = () => {
         });
         const coveragePct = maxPossibleScore > 0 ? Math.round((coverageScore / maxPossibleScore) * 100) : 0;
 
-        // Determine mastery level based on tests attempted + accuracy
         let level = 'not_started';
-        if (totalTests === 0) {
-          level = 'no_tests';
-        } else if (attemptedCount === 0) {
-          level = 'not_started';
-        } else if (coveragePct >= 80 && accuracy >= 70) {
-          level = 'mastered';
-        } else if (coveragePct >= 50 && accuracy >= 50) {
-          level = 'learning';
-        } else if (coveragePct >= 25 || attemptedCount >= 1) {
-          level = accuracy < 40 ? 'weak' : 'in_progress';
-        } else {
-          level = 'not_started';
-        }
+        if (totalTests === 0) level = 'no_tests';
+        else if (attemptedCount === 0) level = 'not_started';
+        else if (coveragePct >= 80 && accuracy >= 70) level = 'mastered';
+        else if (coveragePct >= 50 && accuracy >= 50) level = 'learning';
+        else if (coveragePct >= 25 || attemptedCount >= 1) level = accuracy < 40 ? 'weak' : 'in_progress';
+        else level = 'not_started';
 
-        // Color based on level
         const colorMap = {
           mastered: '#22c55e', learning: '#3b82f6', in_progress: '#f59e0b',
           weak: '#ef4444', not_started: '#d1d5db', no_tests: '#f3f4f6',
         };
 
         return {
-          unit,
-          name: unitNames[unit] || unit,
-          // Test counts
-          totalTests,
-          attemptedCount,
-          pendingCount,
-          testTypeBreakdown,
-          // Performance
-          accuracy,
-          bestScore,
-          avgScore,
-          correct: topicData.correct,
-          wrong: topicData.wrong,
-          skipped: topicData.skipped,
-          questionsAttempted: topicData.total,
-          // Coverage
-          coveragePct,
-          level,
-          color: colorMap[level] || '#d1d5db',
-          // Attempts
+          unit, name: unitNames[unit] || unit,
+          totalTests, attemptedCount, pendingCount, testTypeBreakdown,
+          accuracy, bestScore, avgScore,
+          correct: topicData.correct, wrong: topicData.wrong, skipped: topicData.skipped, questionsAttempted: topicData.total,
+          coveragePct, level, color: colorMap[level] || '#d1d5db',
           totalAttempts: unitAttempts.length,
         };
       });
@@ -439,7 +389,6 @@ const useDashboard = () => {
       const notStarted = coverage.filter(c => c.level === 'not_started').length;
       const noTests = coverage.filter(c => c.level === 'no_tests').length;
 
-      // Coverage based on test completion weighted by accuracy
       const totalPossible = total * 100;
       const achieved = coverage.reduce((s, c) => {
         if (c.level === 'mastered') return s + 100;
@@ -464,16 +413,14 @@ const useDashboard = () => {
     const p2Summary = calcSummary(p2Coverage);
 
     return {
-      paper1: p1Coverage,
-      paper2: p2Coverage,
-      paper1Summary: p1Summary,
-      paper2Summary: p2Summary,
+      paper1: p1Coverage, paper2: p2Coverage,
+      paper1Summary: p1Summary, paper2Summary: p2Summary,
       overallPct: Math.round((p1Summary.overallPct + p2Summary.overallPct) / 2),
     };
   }, [paper1Tests, paper2Tests, paper1Attempts, paper2Attempts]);
 
   // ════════════════════════════════════════════════════════════
-  //  🆕 JRF PROBABILITY METER (NET: 70%, JRF: 80%)
+  //  JRF PROBABILITY METER
   // ════════════════════════════════════════════════════════════
   const jrfProbability = useMemo(() => {
     if (allCompletedAttempts.length < 3) {
@@ -490,7 +437,6 @@ const useDashboard = () => {
     const p1Scores = paper1Attempts.filter(a => a.completedAt).sort((a, b) => new Date(a.completedAt) - new Date(b.completedAt)).slice(-10).map(a => a.totalMarks > 0 ? (a.score / a.totalMarks) * 100 : 0);
     const p2Scores = paper2Attempts.filter(a => a.completedAt).sort((a, b) => new Date(a.completedAt) - new Date(b.completedAt)).slice(-10).map(a => a.totalMarks > 0 ? (a.score / a.totalMarks) * 100 : 0);
 
-    // Weighted average (recent = higher weight)
     const weightedAvg = (scores) => {
       if (scores.length === 0) return 0;
       let tw = 0, ws = 0;
@@ -498,7 +444,6 @@ const useDashboard = () => {
       return tw > 0 ? ws / tw : 0;
     };
 
-    // Trend adjustment
     const trendAdj = (scores) => {
       if (scores.length < 3) return 0;
       const half = Math.floor(scores.length / 2);
@@ -514,7 +459,6 @@ const useDashboard = () => {
     const predictedP2 = Math.round(p2Adj);
     const predictedTotal = Math.round((predictedP1 + predictedP2) / 2);
 
-    // Consistency
     const stdDev = (scores) => {
       if (scores.length < 2) return 50;
       const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
@@ -524,7 +468,6 @@ const useDashboard = () => {
     const sd = stdDev(allScores);
     const consistencyScore = Math.max(0, Math.min(100, Math.round(100 - sd * 2)));
 
-    // NET Probability (cutoff = 70%)
     const netGap = predictedTotal - NET_CUTOFF;
     let netProb;
     if (netGap >= 20) netProb = 95;
@@ -534,7 +477,6 @@ const useDashboard = () => {
     else if (netGap >= -10) netProb = 10 + (netGap + 10) * 2.5;
     else netProb = Math.max(3, 10 + netGap);
 
-    // JRF Probability (cutoff = 80%)
     const jrfGap = predictedTotal - JRF_CUTOFF;
     let jrfProb;
     if (jrfGap >= 15) jrfProb = 92;
@@ -544,12 +486,10 @@ const useDashboard = () => {
     else if (jrfGap >= -8) jrfProb = 8 + (jrfGap + 8) * 2.1;
     else jrfProb = Math.max(2, 8 + jrfGap);
 
-    // Consistency modifier
     const cMod = (consistencyScore - 50) / 100;
     netProb = Math.min(99, Math.max(1, Math.round(netProb + cMod * 10)));
     jrfProb = Math.min(99, Math.max(1, Math.round(jrfProb + cMod * 10)));
 
-    // Syllabus coverage bonus/penalty
     const covPct = syllabusCoverage.overallPct || 0;
     if (covPct >= 70) { netProb = Math.min(99, netProb + 3); jrfProb = Math.min(99, jrfProb + 2); }
     else if (covPct < 30) { netProb = Math.max(1, netProb - 5); jrfProb = Math.max(1, jrfProb - 5); }
@@ -563,7 +503,6 @@ const useDashboard = () => {
     else if (jrfProb >= 20) riskLevel = 'risky';
     else riskLevel = 'critical';
 
-    // Factors
     const factors = [];
     if (paper1Accuracy >= 70) factors.push({ type: 'positive', text: `P1 accuracy ${paper1Accuracy}% (≥70%)` });
     else factors.push({ type: 'negative', text: `P1 accuracy ${paper1Accuracy}% (need 70%+)` });
@@ -579,7 +518,6 @@ const useDashboard = () => {
     if (covPct >= 60) factors.push({ type: 'positive', text: `Syllabus coverage ${covPct}%` });
     else factors.push({ type: 'negative', text: `Syllabus coverage only ${covPct}%` });
 
-    // Suggestions
     const suggestions = [];
     if (predictedP1 < NET_CUTOFF) suggestions.push(`Paper 1 needs ${NET_CUTOFF}%+. Current: ${predictedP1}%`);
     if (predictedP2 < NET_CUTOFF) suggestions.push(`Paper 2 needs ${NET_CUTOFF}%+. Current: ${predictedP2}%`);
@@ -601,9 +539,9 @@ const useDashboard = () => {
   }, [allCompletedAttempts, paper1Attempts, paper2Attempts, paper1Accuracy, paper2Accuracy,
     streak, paper1TrendDir, paper2TrendDir, notAttemptedTests, syllabusCoverage]);
 
-  // ════════════════════════════════════════════
-  //  GOAL TRACKER
-  // ════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════
+  //  🆕 FULLY WORKING GOAL TRACKER (Replaced old section)
+  // ════════════════════════════════════════════════════════════
   const setExamDate = useCallback((date) => {
     setExamDateState(date);
     try { localStorage.setItem('netprep_exam_date', date); } catch {}
@@ -619,36 +557,471 @@ const useDashboard = () => {
     return Math.max(0, Math.ceil((new Date(examDate) - new Date()) / 86400000));
   }, [examDate]);
 
+  // ── TODAY'S DETAILED ACTIVITY (Real data, not dummy) ──
   const todayKey = new Date().toISOString().split('T')[0];
-  const todayActivity = useMemo(() => activityMap[todayKey] || { count: 0, avgScore: 0, avgAccuracy: 0 }, [activityMap, todayKey]);
 
+  const todayDetailed = useMemo(() => {
+    const todayStr = todayKey;
+
+    // All attempts completed today
+    const todayAttempts = allCompletedAttempts.filter(a => {
+      const d = new Date(a.completedAt || a.createdAt).toISOString().split('T')[0];
+      return d === todayStr;
+    });
+
+    const todayTestIds = new Set(todayAttempts.map(a =>
+      a.testId?._id?.toString() || a.testId?.toString()
+    ));
+
+    // Count pending tests cleared today (first-time attempts)
+    let pendingCleared = 0;
+    let weakRetried = 0;
+
+    todayAttempts.forEach(a => {
+      const tid = a.testId?._id?.toString() || a.testId?.toString();
+      if (!tid) return;
+
+      // Previous attempts before today
+      const previousAttempts = allCompletedAttempts.filter(prev => {
+        const prevTid = prev.testId?._id?.toString() || prev.testId?.toString();
+        const prevDate = new Date(prev.completedAt || prev.createdAt).toISOString().split('T')[0];
+        return prevTid === tid && prevDate !== todayStr;
+      });
+
+      if (previousAttempts.length === 0) {
+        pendingCleared++;
+      } else {
+        const prevBest = Math.max(
+          ...previousAttempts.map(p =>
+            p.totalMarks > 0 ? Math.round((p.score / p.totalMarks) * 100) : 0
+          )
+        );
+        if (prevBest < 50) weakRetried++;
+      }
+    });
+
+    // Scores today
+    const todayScores = todayAttempts.map(a =>
+      a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0
+    );
+    const bestToday = todayScores.length > 0 ? Math.max(...todayScores) : 0;
+    const avgToday = todayScores.length > 0
+      ? Math.round(todayScores.reduce((a, b) => a + b, 0) / todayScores.length) : 0;
+
+    // Accuracy today
+    const todayCorrect = todayAttempts.reduce((s, a) => s + (a.correctCount || 0), 0);
+    const todayWrong = todayAttempts.reduce((s, a) => s + (a.wrongCount || 0), 0);
+    const todaySkipped = todayAttempts.reduce((s, a) => s + (a.skippedCount || 0), 0);
+    const todayAccuracy = (todayCorrect + todayWrong) > 0
+      ? Math.round((todayCorrect / (todayCorrect + todayWrong)) * 100) : 0;
+
+    // Time spent today (seconds)
+    const todayTime = todayAttempts.reduce((s, a) => s + (a.totalTimeTaken || 0), 0);
+
+    // Paper wise
+    const p1Today = todayAttempts.filter(a => a.testId?.paper === 'paper1').length;
+    const p2Today = todayAttempts.filter(a => a.testId?.paper === 'paper2').length;
+
+    // Questions solved today
+    const totalQuestionsSolved = todayCorrect + todayWrong + todaySkipped;
+
+    // Scores above target
+    const scoresAboveTarget = todayScores.filter(s => s >= (customTargets.targetScore || 75)).length;
+
+    // Perfect scores (90%+)
+    const perfectScores = todayScores.filter(s => s >= 90).length;
+
+    return {
+      count: todayAttempts.length,
+      pendingCleared,
+      weakRetried,
+      bestScore: bestToday,
+      avgScore: avgToday,
+      avgAccuracy: todayAccuracy,
+      accuracy: todayAccuracy,
+      timeSpent: todayTime,
+      p1Count: p1Today,
+      p2Count: p2Today,
+      correct: todayCorrect,
+      wrong: todayWrong,
+      skipped: todaySkipped,
+      totalQuestionsSolved,
+      scoresAboveTarget,
+      perfectScores,
+      attempts: todayAttempts,
+      scores: todayScores,
+    };
+  }, [allCompletedAttempts, todayKey, customTargets]);
+
+  // Use todayDetailed as todayActivity for backward compat
+  const todayActivity = todayDetailed;
+
+  // ── YESTERDAY'S ACTIVITY (for comparison) ──
+  const yesterdayActivity = useMemo(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yKey = yesterday.toISOString().split('T')[0];
+    const data = activityMap[yKey];
+    return data || { count: 0, avgScore: 0, avgAccuracy: 0 };
+  }, [activityMap]);
+
+  // ── GOAL STREAK (consecutive days all goals completed) ──
+  const [goalHistory, setGoalHistoryState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('netprep_goal_history');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+
+  const updateGoalHistory = useCallback((date, completed) => {
+    setGoalHistoryState(prev => {
+      const next = { ...prev, [date]: completed };
+      try { localStorage.setItem('netprep_goal_history', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  const goalStreak = useMemo(() => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    let count = 0;
+    for (let i = 1; i < 365; i++) { // start from yesterday
+      const d = new Date(today); d.setDate(d.getDate() - i);
+      const k = d.toISOString().split('T')[0];
+      if (goalHistory[k] === true) count++;
+      else break;
+    }
+    return count;
+  }, [goalHistory]);
+
+  // ── DAY PROGRESS (what % of the day has passed) ──
+  const dayProgress = useMemo(() => {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const totalMinutes = hours * 60 + minutes;
+    // Study day: 6 AM to 11 PM = 17 hours = 1020 minutes
+    const studyStart = 6 * 60; // 6 AM
+    const studyEnd = 23 * 60; // 11 PM
+    const studyDuration = studyEnd - studyStart;
+    const elapsed = Math.max(0, Math.min(totalMinutes - studyStart, studyDuration));
+    const pct = Math.round((elapsed / studyDuration) * 100);
+    const remaining = Math.max(0, studyEnd - totalMinutes);
+    const remainingHours = Math.floor(remaining / 60);
+    const remainingMins = remaining % 60;
+
+    // Time period
+    let period = 'morning';
+    if (hours >= 17) period = 'evening';
+    else if (hours >= 12) period = 'afternoon';
+    else if (hours < 6) period = 'night';
+
+    return {
+      pct: Math.min(100, Math.max(0, pct)),
+      remainingHours,
+      remainingMins,
+      totalRemaining: remaining,
+      period,
+      isLateNight: hours >= 23 || hours < 6,
+      isPastHalf: pct > 50,
+      isAlmostOver: pct > 80,
+      currentHour: hours,
+    };
+  }, []); // Updates on re-render which happens every minute anyway
+
+  // ── XP SYSTEM ──
+  const todayXP = useMemo(() => {
+    let xp = 0;
+    const td = todayDetailed;
+    // Base XP for tests
+    xp += td.count * 10;
+    // Bonus for accuracy
+    if (td.accuracy >= 80) xp += td.count * 5;
+    else if (td.accuracy >= 70) xp += td.count * 3;
+    // Bonus for perfect scores
+    xp += td.perfectScores * 15;
+    // Bonus for clearing pending
+    xp += td.pendingCleared * 8;
+    // Bonus for retrying weak
+    xp += td.weakRetried * 12;
+    // Streak bonus
+    xp += Math.min(streak, 7) * 2;
+    return xp;
+  }, [todayDetailed, streak]);
+
+  // ── AUTO-GENERATED GOALS (Fully Working) ──
   const autoGeneratedGoals = useMemo(() => {
     const goals = [];
-    const { dailyTests, dailyAccuracy } = customTargets;
+    const { dailyTests, dailyAccuracy, targetScore } = customTargets;
+    const td = todayDetailed;
+    const dp = dayProgress;
 
-    goals.push({ id: 'daily_tests', title: `Complete ${dailyTests} tests today`, titleHi: `आज ${dailyTests} टेस्ट पूरे करें`, icon: 'ClipboardList', target: dailyTests, current: todayActivity.count, type: 'count', color: 'blue', priority: 'high' });
-    goals.push({ id: 'daily_accuracy', title: `Maintain ${dailyAccuracy}%+ accuracy`, titleHi: `${dailyAccuracy}%+ सटीकता बनाएं`, icon: 'Target', target: dailyAccuracy, current: todayActivity.count > 0 ? todayActivity.avgAccuracy : 0, type: 'percentage', color: 'emerald', priority: 'high' });
+    // ── Goal 1: Daily test count ──
+    goals.push({
+      id: 'daily_tests',
+      title: `Complete ${dailyTests} tests today`,
+      titleHi: `आज ${dailyTests} टेस्ट पूरे करें`,
+      icon: 'ClipboardList',
+      target: dailyTests,
+      current: td.count,
+      type: 'count',
+      color: 'blue',
+      priority: 'critical',
+      xp: 10,
+      description: td.count >= dailyTests
+        ? `Done! ${td.count} tests completed`
+        : `${dailyTests - td.count} more to go`,
+      descriptionHi: td.count >= dailyTests
+        ? `पूरा! ${td.count} टेस्ट दिए`
+        : `${dailyTests - td.count} और बाकी`,
+      urgency: td.count < dailyTests && dp.isPastHalf ? 'high' : 'normal',
+    });
 
-    const recentAvg = scoreTrend.slice(-5).reduce((s, d) => s + d.score, 0) / (Math.min(scoreTrend.length, 5) || 1);
-    const improvTarget = Math.min(100, Math.round(recentAvg + 5));
-    goals.push({ id: 'score_improve', title: `Score ${improvTarget}%+ in next test`, titleHi: `अगले टेस्ट में ${improvTarget}%+ स्कोर`, icon: 'TrendingUp', target: improvTarget, current: todayActivity.count > 0 ? todayActivity.avgScore : 0, type: 'percentage', color: 'purple', priority: 'medium' });
+    // ── Goal 2: Accuracy target ──
+    goals.push({
+      id: 'daily_accuracy',
+      title: `Score ${dailyAccuracy}%+ accuracy`,
+      titleHi: `${dailyAccuracy}%+ सटीकता हासिल करें`,
+      icon: 'Target',
+      target: dailyAccuracy,
+      current: td.count > 0 ? td.accuracy : 0,
+      type: 'percentage',
+      color: 'emerald',
+      priority: 'high',
+      xp: 15,
+      description: td.count === 0
+        ? 'Take a test to start tracking'
+        : td.accuracy >= dailyAccuracy
+        ? `Great! ${td.accuracy}% accuracy`
+        : `Current: ${td.accuracy}%. Need ${dailyAccuracy - td.accuracy}% more`,
+      descriptionHi: td.count === 0
+        ? 'ट्रैकिंग शुरू करने के लिए टेस्ट दें'
+        : td.accuracy >= dailyAccuracy
+        ? `बढ़िया! ${td.accuracy}% सटीकता`
+        : `अभी: ${td.accuracy}%। ${dailyAccuracy - td.accuracy}% और चाहिए`,
+      urgency: td.count > 0 && td.accuracy < dailyAccuracy ? 'medium' : 'normal',
+    });
 
+    // ── Goal 3: Score improvement target ──
+    const last5Avg = scoreTrend.slice(-5).reduce((s, d) => s + d.score, 0) / (Math.min(scoreTrend.length, 5) || 1);
+    const improvTarget = Math.min(100, Math.round(last5Avg + 5));
+    const bestTodayScore = td.bestScore;
+    goals.push({
+      id: 'beat_average',
+      title: `Score ${improvTarget}%+ in a test`,
+      titleHi: `किसी टेस्ट में ${improvTarget}%+ लाएं`,
+      icon: 'TrendingUp',
+      target: improvTarget,
+      current: bestTodayScore,
+      type: 'percentage',
+      color: 'purple',
+      priority: 'high',
+      xp: 20,
+      description: bestTodayScore >= improvTarget
+        ? `Achieved! Best today: ${bestTodayScore}%`
+        : td.count === 0
+        ? `Beat your recent average of ${Math.round(last5Avg)}%`
+        : `Best today: ${bestTodayScore}%. Target: ${improvTarget}%`,
+      descriptionHi: bestTodayScore >= improvTarget
+        ? `हासिल! आज का सर्वश्रेष्ठ: ${bestTodayScore}%`
+        : td.count === 0
+        ? `हाल के औसत ${Math.round(last5Avg)}% को तोड़ें`
+        : `आज का सर्वश्रेष्ठ: ${bestTodayScore}%`,
+      urgency: td.count > 2 && bestTodayScore < improvTarget ? 'high' : 'normal',
+    });
+
+    // ── Goal 4: Clear pending tests ──
+    const pendingTarget = Math.min(2, notAttemptedTests.length);
     if (notAttemptedTests.length > 0) {
-      goals.push({ id: 'clear_pending', title: `Clear ${Math.min(2, notAttemptedTests.length)} pending tests`, titleHi: `${Math.min(2, notAttemptedTests.length)} बाकी टेस्ट पूरे करें`, icon: 'Clock', target: Math.min(2, notAttemptedTests.length), current: 0, type: 'count', color: 'amber', priority: 'medium' });
+      goals.push({
+        id: 'clear_pending',
+        title: `Clear ${pendingTarget} pending test${pendingTarget > 1 ? 's' : ''}`,
+        titleHi: `${pendingTarget} बाकी टेस्ट पूरे करें`,
+        icon: 'Clock',
+        target: pendingTarget,
+        current: td.pendingCleared,
+        type: 'count',
+        color: 'amber',
+        priority: 'medium',
+        xp: 8,
+        description: td.pendingCleared >= pendingTarget
+          ? `Done! ${td.pendingCleared} pending tests cleared`
+          : `${notAttemptedTests.length} total pending. Clear ${pendingTarget - td.pendingCleared} more`,
+        descriptionHi: td.pendingCleared >= pendingTarget
+          ? `पूरा! ${td.pendingCleared} बाकी टेस्ट दिए`
+          : `कुल ${notAttemptedTests.length} बाकी। ${pendingTarget - td.pendingCleared} और दें`,
+        urgency: notAttemptedTests.length > 10 ? 'high' : 'normal',
+      });
     }
+
+    // ── Goal 5: Retry weak tests ──
     if (needsAttentionTests.length > 0) {
-      goals.push({ id: 'retry_weak', title: 'Retry 1 low-score test', titleHi: '1 कम स्कोर वाला दोबारा दें', icon: 'RefreshCw', target: 1, current: 0, type: 'count', color: 'red', priority: 'high' });
+      goals.push({
+        id: 'retry_weak',
+        title: 'Retry 1 low-score test (<50%)',
+        titleHi: '1 कम स्कोर (<50%) वाला दोबारा दें',
+        icon: 'RefreshCw',
+        target: 1,
+        current: td.weakRetried,
+        type: 'count',
+        color: 'red',
+        priority: 'high',
+        xp: 12,
+        description: td.weakRetried >= 1
+          ? `Done! Retried ${td.weakRetried} weak test(s)`
+          : `${needsAttentionTests.length} tests below 50%. Retry one!`,
+        descriptionHi: td.weakRetried >= 1
+          ? `पूरा! ${td.weakRetried} कमजोर टेस्ट दोबारा दिया`
+          : `${needsAttentionTests.length} टेस्ट 50% से कम। एक दोबारा दें!`,
+        urgency: needsAttentionTests.length > 3 ? 'high' : 'normal',
+      });
     }
-    goals.push({ id: 'maintain_streak', title: `Maintain ${streak + 1}-day streak`, titleHi: `${streak + 1}-दिन स्ट्रीक बनाएं`, icon: 'Flame', target: 1, current: todayActivity.count > 0 ? 1 : 0, type: 'count', color: 'orange', priority: 'low' });
+
+    // ── Goal 6: Maintain streak ──
+    goals.push({
+      id: 'maintain_streak',
+      title: streak > 0 ? `Extend ${streak}-day streak to ${streak + 1}` : 'Start a study streak',
+      titleHi: streak > 0 ? `${streak}-दिन स्ट्रीक को ${streak + 1} बनाएं` : 'अध्ययन स्ट्रीक शुरू करें',
+      icon: 'Flame',
+      target: 1,
+      current: td.count > 0 ? 1 : 0,
+      type: 'count',
+      color: 'orange',
+      priority: td.count === 0 && dp.isPastHalf ? 'critical' : 'medium',
+      xp: 5 + Math.min(streak, 10),
+      description: td.count > 0
+        ? `Streak secured! ${streak + 1} days!`
+        : streak > 0
+        ? `Don't break your ${streak}-day streak!`
+        : 'Take 1 test to start your streak',
+      descriptionHi: td.count > 0
+        ? `स्ट्रीक पक्की! ${streak + 1} दिन!`
+        : streak > 0
+        ? `अपनी ${streak}-दिन स्ट्रीक मत तोड़ो!`
+        : '1 टेस्ट दो स्ट्रीक शुरू करो',
+      urgency: td.count === 0 && dp.isAlmostOver ? 'critical' : td.count === 0 && dp.isPastHalf ? 'high' : 'normal',
+    });
+
+    // ── Goal 7: Study time target ──
+    const timeTarget = 30; // 30 minutes minimum
+    const todayMins = Math.round(td.timeSpent / 60);
+    goals.push({
+      id: 'study_time',
+      title: `Study ${timeTarget}+ minutes today`,
+      titleHi: `आज ${timeTarget}+ मिनट पढ़ाई करें`,
+      icon: 'Timer',
+      target: timeTarget,
+      current: todayMins,
+      type: 'count',
+      color: 'cyan',
+      priority: 'medium',
+      xp: 10,
+      description: todayMins >= timeTarget
+        ? `Done! ${todayMins} minutes studied`
+        : `${todayMins}/${timeTarget} minutes. ${timeTarget - todayMins} more`,
+      descriptionHi: todayMins >= timeTarget
+        ? `पूरा! ${todayMins} मिनट पढ़ाई की`
+        : `${todayMins}/${timeTarget} मिनट। ${timeTarget - todayMins} और`,
+      urgency: 'normal',
+    });
+
+    // ── Goal 8: Paper balance ──
+    const p1Target = Math.max(1, Math.floor(dailyTests / 2));
+    const p2Target = Math.max(1, dailyTests - p1Target);
+    if (dailyTests >= 2) {
+      goals.push({
+        id: 'paper_balance',
+        title: `P1: ${p1Target}+ & P2: ${p2Target}+ tests`,
+        titleHi: `P1: ${p1Target}+ और P2: ${p2Target}+ टेस्ट`,
+        icon: 'BarChart2',
+        target: 2, // Both papers
+        current: (td.p1Count >= p1Target ? 1 : 0) + (td.p2Count >= p2Target ? 1 : 0),
+        type: 'count',
+        color: 'indigo',
+        priority: 'low',
+        xp: 8,
+        description: `P1: ${td.p1Count}/${p1Target} | P2: ${td.p2Count}/${p2Target}`,
+        descriptionHi: `P1: ${td.p1Count}/${p1Target} | P2: ${td.p2Count}/${p2Target}`,
+        urgency: 'normal',
+      });
+    }
+
+    // ── Goal 9: Questions solved ──
+    const qTarget = dailyTests * 15; // ~15 questions per test average
+    goals.push({
+      id: 'questions_solved',
+      title: `Solve ${qTarget}+ questions`,
+      titleHi: `${qTarget}+ प्रश्न हल करें`,
+      icon: 'Hash',
+      target: qTarget,
+      current: td.totalQuestionsSolved,
+      type: 'count',
+      color: 'teal',
+      priority: 'low',
+      xp: 5,
+      description: td.totalQuestionsSolved >= qTarget
+        ? `Done! ${td.totalQuestionsSolved} questions solved`
+        : `${td.totalQuestionsSolved}/${qTarget} solved`,
+      descriptionHi: td.totalQuestionsSolved >= qTarget
+        ? `पूरा! ${td.totalQuestionsSolved} प्रश्न हल`
+        : `${td.totalQuestionsSolved}/${qTarget} हल`,
+      urgency: 'normal',
+    });
+
+    // Sort: critical > high > medium > low, incomplete first
+    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+    goals.sort((a, b) => {
+      const aDone = a.current >= a.target ? 1 : 0;
+      const bDone = b.current >= b.target ? 1 : 0;
+      if (aDone !== bDone) return aDone - bDone; // incomplete first
+      return (priorityOrder[a.priority] || 3) - (priorityOrder[b.priority] || 3);
+    });
 
     return goals;
-  }, [customTargets, todayActivity, scoreTrend, notAttemptedTests, needsAttentionTests, streak]);
+  }, [customTargets, todayDetailed, scoreTrend, notAttemptedTests, needsAttentionTests,
+    streak, dayProgress]);
 
+  // ── GOAL COMPLETION ──
   const goalCompletionPct = useMemo(() => {
     if (autoGeneratedGoals.length === 0) return 0;
     const done = autoGeneratedGoals.filter(g => g.current >= g.target).length;
-    return Math.round((done / autoGeneratedGoals.length) * 100);
-  }, [autoGeneratedGoals]);
+    const pct = Math.round((done / autoGeneratedGoals.length) * 100);
+
+    // Auto-save goal history if all complete
+    if (pct === 100 && todayDetailed.count > 0) {
+      try {
+        const existing = JSON.parse(localStorage.getItem('netprep_goal_history') || '{}');
+        if (!existing[todayKey]) {
+          existing[todayKey] = true;
+          localStorage.setItem('netprep_goal_history', JSON.stringify(existing));
+        }
+      } catch {}
+    }
+
+    return pct;
+  }, [autoGeneratedGoals, todayDetailed, todayKey]);
+
+  const goalsCompleted = useMemo(() =>
+    autoGeneratedGoals.filter(g => g.current >= g.target).length,
+  [autoGeneratedGoals]);
+
+  const totalGoals = autoGeneratedGoals.length;
+
+  // ── PRESSURE MESSAGE ──
+  const pressureMessage = useMemo(() => {
+    const td = todayDetailed;
+    const dp = dayProgress;
+    const gc = goalsCompleted;
+    const tg = totalGoals;
+
+    if (gc === tg && td.count > 0) return { type: 'celebration', en: 'All goals complete! You\'re a champion!', hi: 'सभी लक्ष्य पूरे! आप चैंपियन हैं!' };
+    if (td.count === 0 && dp.isAlmostOver) return { type: 'critical', en: 'Day almost over! Take at least 1 test NOW!', hi: 'दिन खत्म हो रहा! अभी कम से कम 1 टेस्ट दो!' };
+    if (td.count === 0 && dp.isPastHalf) return { type: 'warning', en: 'Half day gone, 0 tests! Start now!', hi: 'आधा दिन गया, 0 टेस्ट! अभी शुरू करो!' };
+    if (td.count === 0) return { type: 'info', en: 'New day, new goals! Start your first test.', hi: 'नया दिन, नए लक्ष्य! पहला टेस्ट शुरू करो।' };
+    if (gc < tg / 2 && dp.isPastHalf) return { type: 'warning', en: `Only ${gc}/${tg} goals done. Pick up the pace!`, hi: `सिर्फ ${gc}/${tg} लक्ष्य। तेज करो!` };
+    if (gc >= tg / 2) return { type: 'positive', en: `${gc}/${tg} goals done! Keep pushing!`, hi: `${gc}/${tg} लक्ष्य पूरे! जारी रखो!` };
+    if (td.accuracy < customTargets.dailyAccuracy) return { type: 'warning', en: `Accuracy ${td.accuracy}% < target ${customTargets.dailyAccuracy}%. Focus!`, hi: `सटीकता ${td.accuracy}% < लक्ष्य ${customTargets.dailyAccuracy}%। ध्यान दो!` };
+    return { type: 'info', en: `${tg - gc} goals remaining. You can do it!`, hi: `${tg - gc} लक्ष्य बाकी। आप कर सकते हो!` };
+  }, [todayDetailed, dayProgress, goalsCompleted, totalGoals, customTargets]);
 
   // ════════════════════════════════════════════
   //  SPEED ANALYTICS
@@ -710,7 +1083,6 @@ const useDashboard = () => {
       recs.push({ id: 'weak_unit', priority: 'critical', icon: 'AlertTriangle', title: `Focus on ${w.unit}`, titleHi: `${w.unit} पर ध्यान दें`, detail: `Only ${w.accuracy}% accuracy`, detailHi: `केवल ${w.accuracy}% सटीकता`, action: 'practice', color: 'red' });
     }
 
-    // Untouched units (no_tests or not_started)
     const p1Untouched = syllabusCoverage.paper1.filter(c => c.level === 'not_started' || c.level === 'no_tests');
     const p2Untouched = syllabusCoverage.paper2.filter(c => c.level === 'not_started' || c.level === 'no_tests');
     if (p1Untouched.length > 0) {
@@ -861,11 +1233,23 @@ const useDashboard = () => {
     difficultyData, questionTypeData, topicPerformance,
     activityMap, streak, longestStreak, weeklyComparison, achievements,
     jrfProbability,
-    examDate, setExamDate, daysUntilExam, customTargets, updateCustomTargets,
-    autoGeneratedGoals, goalCompletionPct, todayActivity,
     syllabusCoverage,
     speedAnalytics, errorPatterns, studyRecommendations,
     scoreDistribution, personalRecords, timeOfDayAnalysis,
+
+    // 🆕 Updated Goal Tracker returns
+    examDate, setExamDate, daysUntilExam,
+    customTargets, updateCustomTargets,
+    autoGeneratedGoals, goalCompletionPct,
+    todayActivity: todayDetailed,  // backward compat
+    todayDetailed,
+    yesterdayActivity,
+    dayProgress,
+    goalStreak,
+    goalsCompleted,
+    totalGoals,
+    pressureMessage,
+    todayXP,
   };
 };
 
