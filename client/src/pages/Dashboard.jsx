@@ -42,7 +42,7 @@ import {
   Printer, Mail, Phone, MapPinned, Navigation,
   Home, User, Users, Heart, Bookmark,
   Tag, Filter, Search, SortAsc, SortDesc,
-  Grid, List, Table, MoreHorizontal, MoreVertical,
+  Grid, List, Table, MoreHorizontal, MoreVertical, Quote,
 } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import useDashboard from '../hooks/useDashboard';
@@ -2329,6 +2329,415 @@ const QuickActionCard = ({ icon: Icon, title, description, to, gradient, badge, 
 };
 
 // ════════════════════════════════════════════════════════════
+//  🆕 ADDITIONAL COMPONENTS (All Required)
+// ════════════════════════════════════════════════════════════
+
+const WeeklyChapterMatrix = ({ data, language: l }) => {
+  if (!data?.currentWeek) return null;
+  const cw = data.currentWeek;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Layers className="w-4 h-4 text-blue-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'साप्ताहिक परिणाम' : 'Week Matrix'}</h3>
+        <span className="text-[9px] text-gray-400">{cw.dateRange}</span>
+      </div>
+      <div className="space-y-1.5">
+        {cw.chapters.slice(0, 8).map((ch, i) => (
+          <div key={i} className="flex items-center gap-2 text-[10px]">
+            <div className="w-20 truncate text-gray-600 dark:text-gray-400 font-semibold">{ch.name}</div>
+            <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div className="h-full rounded-full" style={{ width: `${ch.avgScore}%`, backgroundColor: ch.avgScore >= 70 ? '#22c55e' : ch.avgScore >= 50 ? '#f59e0b' : '#ef4444' }} />
+            </div>
+            <div className="w-8 text-right font-bold">{ch.avgScore}%</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-[9px] text-gray-500">
+        {data.insights.slice(0, 2).map((ins, i) => (
+          <p key={i} className="text-[8px]">{ins.type === 'warning' ? '⚠️' : '✓'} {l === 'hi' ? ins.textHi : ins.text}</p>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const SyllabusCoverageMap = ({ data, language: l }) => {
+  if (!data) return null;
+  const p1 = data.paper1Summary, p2 = data.paper2Summary;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <MapPin className="w-4 h-4 text-purple-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'पाठ्यक्रम कवरेज' : 'Syllabus'}</h3>
+      </div>
+      <div className="space-y-3">
+        {[{ title: 'Paper 1', summary: p1, icon: BookOpen }, { title: 'Paper 2', summary: p2, icon: Target }].map((p, i) => (
+          <div key={i}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">{p.title}</span>
+              <span className="text-[10px] font-bold text-gray-900 dark:text-white">{p.summary.overallPct}%</span>
+            </div>
+            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500" style={{ width: `${p.summary.overallPct}%` }} />
+            </div>
+            <div className="flex justify-between text-[8px] text-gray-500 mt-1">
+              <span>{p.summary.mastered}/{p.summary.total}  mastered</span>
+              <span>{p.summary.inProgress} in progress</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const SpeedAnalyticsCard = ({ data, language: l }) => {
+  if (!data) return null;
+  const chartData = data.speedTrend || [];
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Zap className="w-4 h-4 text-amber-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गति विश्लेषण' : 'Speed'}</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-2">
+          <p className="text-[8px] text-gray-500">{l === 'hi' ? 'औसत समय' : 'Avg Time'}</p>
+          <p className="text-lg font-bold text-blue-600">{data.avgTimePerQ}s</p>
+        </div>
+        <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-lg p-2">
+          <p className="text-[8px] text-gray-500">{l === 'hi' ? 'प्रति प्रश्न' : 'Per Q'}</p>
+          <p className="text-lg font-bold text-emerald-600">{Math.round(60 / (data.avgTimePerQ || 1))} Q/m</p>
+        </div>
+      </div>
+      {chartData.length > 0 && (
+        <ResponsiveContainer width="100%" height={100}>
+          <LineChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+            <Line type="monotone" dataKey="speed" stroke="#f59e0b" dot={false} isAnimationActive={false} />
+            <Line type="monotone" dataKey="accuracy" stroke="#22c55e" dot={false} isAnimationActive={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+};
+
+const StudyRecommendations = ({ data, language: l, navigate }) => {
+  const data_items = data || [];
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Lightbulb className="w-4 h-4 text-amber-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'सुझाव' : 'Tips'}</h3>
+      </div>
+      <div className="space-y-2">
+        {data_items.slice(0, 6).map((rec, i) => (
+          <button key={i} onClick={() => navigate?.('/results')} className="w-full text-left p-2 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all">
+            <div className="flex items-center gap-2">
+              {rec.priority === 'critical' && <AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
+              {rec.priority === 'high' && <AlertCircle className="w-3.5 h-3.5 text-orange-500" />}
+              {rec.priority === 'medium' && <Info className="w-3.5 h-3.5 text-blue-500" />}
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold text-gray-900 dark:text-white line-clamp-1">{l === 'hi' ? rec.titleHi : rec.title}</p>
+                <p className="text-[8px] text-gray-500">{rec.detail}</p>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const ScoreDistributionCard = ({ data, language: l }) => {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <BarChart2 className="w-4 h-4 text-indigo-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'स्कोर वितरण' : 'Scores'}</h3>
+      </div>
+      <ResponsiveContainer width="100%" height={200}>
+        <BarChart data={data || []}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <XAxis dataKey="range" tick={{ fontSize: 10 }} />
+          <YAxis tick={{ fontSize: 10 }} />
+          <Tooltip content={<CustomTooltip />} />
+          <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+const PersonalRecords = ({ data, language: l }) => {
+  if (!data?.highestScore) return null;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-2">
+      <div className="flex items-center gap-2 mb-3">
+        <Medal className="w-4 h-4 text-amber-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'रिकॉर्ड' : 'Records'}</h3>
+      </div>
+      {[
+        { label: l === 'hi' ? 'उच्चतम' : 'Highest', value: `${data.highestScore.pct}%`, icon: Trophy },
+        { label: l === 'hi' ? 'सटीकता' : 'Best Acc', value: `${data.bestAccuracy.accuracy}%`, icon: Target },
+        { label: l === 'hi' ? 'स्ट्रीक' : 'Streak', value: `${data.currentStreak}d`, icon: Flame },
+        { label: l === 'hi' ? 'कुल टेस्ट' : 'Total', value: `${data.totalTestsTaken}`, icon: Award },
+      ].map((rec, i) => {
+        const RecIcon = rec.icon;
+        return (
+          <div key={i} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div className="flex items-center gap-2">
+              <RecIcon className="w-4 h-4 text-amber-500" />
+              <span className="text-[10px] text-gray-600 dark:text-gray-400">{rec.label}</span>
+            </div>
+            <span className="text-sm font-bold text-gray-900 dark:text-white">{rec.value}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const TimeOfDayCard = ({ data, language: l }) => {
+  if (!data?.periodData) return null;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Sun className="w-4 h-4 text-amber-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'समय विश्लेषण' : 'Best Time'}</h3>
+      </div>
+      <ResponsiveContainer width="100%" height={180}>
+        <RadarChart data={data.periodData}><PolarGrid /><PolarAngleAxis dataKey="name" tick={{ fontSize: 8 }} /><PolarRadiusAxis /><Radar name="Avg Score" dataKey="avgScore" stroke="#22c55e" fill="#22c55e" fillOpacity={0.6} /></RadarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+const ActivityHeatmap = ({ data, language: l }) => {
+  if (!data || data.length === 0) return null;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Grid3X3 className="w-4 h-4 text-emerald-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गतिविधि' : 'Activity'}</h3>
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {data.slice(-35).map((day, i) => (
+          <div key={i} className={`w-4 h-4 rounded-sm transition-all cursor-pointer ${
+            day.value === 0 ? 'bg-gray-100 dark:bg-gray-700' :
+            day.value === 1 ? 'bg-emerald-100 dark:bg-emerald-900/30' :
+            day.value === 2 ? 'bg-emerald-300 dark:bg-emerald-700/50' :
+            day.value === 3 ? 'bg-emerald-500' :
+            day.value === 4 ? 'bg-emerald-600' :
+            'bg-emerald-800'
+          }`} title={day.label} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const WeeklyComparison = ({ data, language: l }) => {
+  if (!data?.thisWeek) return null;
+  const tw = data.thisWeek, lw = data.lastWeek;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <ArrowUpDown className="w-4 h-4 text-indigo-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'साप्ताहिक तुलना' : 'This vs Last'}</h3>
+      </div>
+      <div className="space-y-2">
+        {[{ label: 'Tests', thisWeek: tw.tests, lastWeek: lw.tests }, { label: 'Avg Score', thisWeek: tw.avgScore, lastWeek: lw.avgScore }, { label: 'Accuracy', thisWeek: tw.avgAccuracy, lastWeek: lw.avgAccuracy }].map((item, i) => (
+          <div key={i} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-400">{item.label}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold">{item.thisWeek}</span>
+              <span className={`text-[10px] font-bold ${item.thisWeek > item.lastWeek ? 'text-emerald-500' : item.thisWeek < item.lastWeek ? 'text-red-500' : 'text-gray-500'}`}>
+                {item.thisWeek > item.lastWeek ? '+' : item.thisWeek < item.lastWeek ? '-' : ''}{Math.abs(item.thisWeek - item.lastWeek)}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const PaperTrendCard = ({ paper1Trend, paper2Trend, language: l }) => {
+  const buildChartData = (trend) => trend.slice(-15).map((t, i) => ({ name: t.dateFormatted || `T${i}`, score: t.score, accuracy: t.accuracy }));
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <TrendUp className="w-4 h-4 text-purple-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'प्रवृत्ति' : 'Trends'}</h3>
+      </div>
+      <ResponsiveContainer width="100%" height={220}>
+        <ComposedChart data={buildChartData(paper1Trend.length >= paper2Trend.length ? paper1Trend : paper2Trend)}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <XAxis dataKey="name" tick={{ fontSize: 8 }} />
+          <YAxis tick={{ fontSize: 8 }} />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend wrapperStyle={{ fontSize: 10 }} />
+          <Area type="monotone" dataKey="score" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} name="P1" />
+          <Line type="monotone" dataKey="accuracy" stroke="#22c55e" name="Acc" />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+const ErrorAnalysisCard = ({ data, language: l }) => {
+  if (!data?.weakUnits) return null;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <AlertTriangle className="w-4 h-4 text-red-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'त्रुटि विश्लेषण' : 'Errors'}</h3>
+      </div>
+      <div className="space-y-2">
+        {data.weakUnits.slice(0, 4).map((unit, i) => (
+          <div key={i} className="p-2 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200 dark:border-red-800">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-bold text-red-700 dark:text-red-400">{unit.name}</span>
+              <span className="text-[10px] font-bold text-red-600">{unit.errorRate}%</span>
+            </div>
+            <p className="text-[8px] text-red-600 dark:text-red-400">{unit.commonErrors}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const TopicMasteryRadar = ({ data, language: l }) => {
+  if (!data || data.length === 0) return null;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Compass className="w-4 h-4 text-cyan-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'विषय दक्षता' : 'Topics'}</h3>
+      </div>
+      <ResponsiveContainer width="100%" height={240}>
+        <RadarChart data={data.slice(0, 8)}>
+          <PolarGrid />
+          <PolarAngleAxis dataKey="unit" tick={{ fontSize: 8 }} />
+          <PolarRadiusAxis tick={{ fontSize: 8 }} />
+          <Radar name="Accuracy" dataKey="accuracy" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.6} />
+        </RadarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+const NeedsAttentionCard = ({ data, language: l, navigate }) => {
+  if (!data || data.length === 0) return null;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <AlertCircle className="w-4 h-4 text-orange-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'ध्यान दें' : 'Attention'}</h3>
+      </div>
+      <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
+        {data.slice(0, 8).map((test, i) => (
+          <button key={i} onClick={() => navigate?.(`/results/${test.lastAttempt?._id}`)} className="w-full text-left p-2 rounded-lg bg-orange-50 dark:bg-orange-900/10 hover:bg-orange-100 dark:hover:bg-orange-900/20 transition-all border border-orange-200 dark:border-orange-800">
+            <div className="flex justify-between items-center">
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-semibold text-gray-900 dark:text-white truncate">{test.title}</p>
+                <p className="text-[8px] text-orange-600 dark:text-orange-400">{test.bestScore < 40 ? `Critical: ${test.bestScore}%` : `Weak: ${test.bestScore}%`}</p>
+              </div>
+              <RotateCcw className="w-3 h-3 text-orange-500 flex-shrink-0 ml-2" />
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const PendingTimeline = ({ data, language: l, navigate }) => {
+  if (!data || data.length === 0) return null;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Clock className="w-4 h-4 text-gray-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'बाकी टेस्ट' : 'Pending'}</h3>
+      </div>
+      <div className="space-y-1.5">
+        {data.slice(0, 6).map((test, i) => (
+          <button key={i} onClick={() => navigate?.(`/test/${test.testId}`)} className="w-full text-left p-2 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all">
+            <div className="flex justify-between items-center">
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-semibold text-gray-900 dark:text-white truncate">{test.title}</p>
+                <p className="text-[8px] text-gray-500">{new Date(test.createdDate).toLocaleDateString()}</p>
+              </div>
+              <Play className="w-3 h-3 text-indigo-500 flex-shrink-0" />
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const AchievementCard = ({ data, language: l }) => {
+  if (!data || data.length === 0) return null;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Medal className="w-4 h-4 text-amber-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'उपलब्धियां' : 'Achievements'}</h3>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {data.slice(0, 8).map((ach, i) => (
+          <div key={i} className={`p-3 rounded-lg text-center transition-all  ${ach.unlocked ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800' : 'bg-gray-100 dark:bg-gray-700 opacity-50'}`}>
+            <div className="text-xl mb-1">{ach.icon === 'medal' ? '🏅' : ach.icon === 'flame' ? '🔥' : ach.icon === 'target' ? '🎯' : ach.icon === 'bolt' ? '⚡' : '⭐'}</div>
+            <p className="text-[8px] font-bold text-gray-900 dark:text-white line-clamp-2">{ach.label}</p>
+            {!ach.unlocked && ach.progress && <p className="text-[7px] text-gray-500 mt-0.5">{Math.round(ach.progress * 100)}%</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const QuoteCard = ({ quotes, language: l }) => {
+  const quote = quotes?.[Math.floor(Math.random() * quotes.length)] || { en: 'Keep pushing!', hi: 'आगे बढ़ो!' };
+  return (
+    <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-5 text-white text-center">
+      <Quote className="w-6 h-6 mx-auto mb-2 opacity-50" />
+      <p className="text-sm font-semibold italic mb-3">{l === 'hi' ? quote.hi : quote.en}</p>
+      <p className="text-[10px] opacity-60">{l === 'hi' ? '💪 तुम कर सकते हो!' : '💪 You got this!'}</p>
+    </div>
+  );
+};
+
+const MistakeJournal = ({ data, language: l }) => {
+  if (!data || data.length === 0) return null;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <NotebookPen className="w-4 h-4 text-rose-500" />
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'सामान्य त्रुटियां' : 'Mistakes'}</h3>
+      </div>
+      <div className="space-y-2">
+        {data.slice(0, 5).map((mistake, i) => (
+          <div key={i} className="p-2 bg-rose-50 dark:bg-rose-900/10 rounded-lg border border-rose-200 dark:border-rose-800">
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <p className="text-[10px] font-bold text-rose-700 dark:text-rose-400">{mistake.topic}</p>
+                <p className="text-[8px] text-rose-600 dark:text-rose-400">{mistake.errorType}</p>
+              </div>
+              <span className="text-[9px] font-bold text-rose-600 bg-rose-100 dark:bg-rose-900/20 px-1.5 py-0.5 rounded">{mistake.count}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════
 //  MAIN DASHBOARD COMPONENT
 // ════════════════════════════════════════════════════════════
 const Dashboard = ({ language: propLanguage, setLanguage }) => {
@@ -2719,6 +3128,72 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
                   gradient={GRADIENTS.amber}
                   delay={300}
                 />
+              </div>
+            </div>
+
+            {/* ═══════════════════════════════════════════════
+                 COMPREHENSIVE ANALYTICS SECTION
+            ═══════════════════════════════════════════════ */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart3 className="w-5 h-5 text-indigo-500" />
+                <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+                  {l === 'hi' ? 'विस्तृत विश्लेषण' : 'Analytics'}
+                </h2>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-2" />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <WeeklyChapterMatrix data={d.weeklyChapterMatrix} language={l} />
+                <SyllabusCoverageMap data={d.syllabusCoverage} language={l} />
+                <SpeedAnalyticsCard data={d.speedAnalytics} language={l} />
+                <StudyRecommendations data={d.studyRecommendations} language={l} navigate={navigate} />
+                <ScoreDistributionCard data={d.scoreDistributionData} language={l} />
+                <PersonalRecords data={d.personalRecords} language={l} />
+                <TimeOfDayCard data={d.timeOfDayAnalysis} language={l} />
+                <ActivityHeatmap data={d.activityHeatmapData} language={l} />
+                <WeeklyComparison data={d.weeklyComparison} language={l} />
+              </div>
+            </div>
+
+            {/* ═══════════════════════════════════════════════
+                 ADVANCED INSIGHTS SECTION
+            ═══════════════════════════════════════════════ */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Brain className="w-5 h-5 text-purple-500" />
+                <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+                  {l === 'hi' ? 'उन्नत अंतर्दृष्टि' : 'Insights'}
+                </h2>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-2" />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <PaperTrendCard paper1Trend={d.paper1Trend} paper2Trend={d.paper2Trend} language={l} />
+                <ErrorAnalysisCard data={d.errorAnalysis} language={l} />
+                <TopicMasteryRadar data={d.topicPerformance} language={l} />
+                <NeedsAttentionCard data={d.needsAttentionTests} language={l} navigate={navigate} />
+                <PendingTimeline data={d.pendingTests} language={l} navigate={navigate} />
+                <AchievementCard data={d.achievements} language={l} />
+              </div>
+            </div>
+
+            {/* ═══════════════════════════════════════════════
+                 MOTIVATION & MISC SECTION
+            ═══════════════════════════════════════════════ */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+                  {l === 'hi' ? 'प्रेरणा' : 'Motivation'}
+                </h2>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-2" />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <QuoteCard quotes={d.motivationalQuotes} language={l} />
+                <MistakeJournal data={d.mistakeJournal} language={l} />
+                {/* Additional space cards can be added here */}
               </div>
             </div>
 
