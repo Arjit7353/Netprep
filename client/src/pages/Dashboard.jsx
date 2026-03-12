@@ -1,7 +1,7 @@
 // client/src/pages/Dashboard.jsx
 // ═══════════════════════════════════════════════════════════════
-//  NETPREP ULTIMATE DASHBOARD - PART 2 (Section 1/3)
-//  Save all 3 sections in ONE file: client/src/pages/Dashboard.jsx
+//  NETPREP ULTIMATE DASHBOARD V2 - PART 1 (Components)
+//  Paste Part 2 directly below this in the SAME file
 // ═══════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -24,16 +24,20 @@ import {
   Lightbulb, AlertTriangle, Info, Rocket, Crosshair,
   Swords, FileText, LayoutGrid, AlertCircle, Shield,
   ArrowUpDown, Hourglass, ListOrdered,
-  Flag, CircleDot, Brain, Percent, MapPin, Radar as RadarIcon,
+  Flag, CircleDot, Brain, Percent, MapPin,
   Milestone, CalendarDays, CalendarClock, Workflow,
-  TreePine, Grid3X3, Cpu, Dumbbell, HeartPulse,
+  Grid3X3, Dumbbell, HeartPulse,
   ArrowUp, ArrowDown, Minus, Settings, X,
+  BookMarked, Repeat, RotateCcw, Newspaper,
+  SquareStack, ChevronLeft, Download, Share2,
+  Inbox, AlarmClock, Footprints, CircleCheck,
+  ListChecks, NotebookPen, Waypoints, ScanEye,
 } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import useDashboard from '../hooks/useDashboard';
 
 // ════════════════════════════════════════════════════════════
-//                        UTILITIES
+//  UTILITIES
 // ════════════════════════════════════════════════════════════
 const getGreeting = () => {
   const h = new Date().getHours();
@@ -43,7 +47,6 @@ const getGreeting = () => {
   if (h < 21) return { I: Sunset, en: 'Good Evening', hi: 'शुभ संध्या', g: 'from-orange-600 to-rose-600' };
   return { I: Moon, en: 'Good Night', hi: 'शुभ रात्रि', g: 'from-indigo-600 to-purple-700' };
 };
-
 const tAgo = (d, l) => {
   const m = Math.floor((Date.now() - new Date(d)) / 60000);
   if (m < 1) return l === 'hi' ? 'अभी' : 'Now';
@@ -52,7 +55,6 @@ const tAgo = (d, l) => {
   if (m < 10080) return `${Math.floor(m / 1440)}d`;
   return new Date(d).toLocaleDateString(l === 'hi' ? 'hi-IN' : 'en', { day: 'numeric', month: 'short' });
 };
-
 const grd = (p) => {
   if (p >= 90) return { g: 'A+', c: 'emerald' };
   if (p >= 80) return { g: 'A', c: 'emerald' };
@@ -62,7 +64,6 @@ const grd = (p) => {
   if (p >= 40) return { g: 'D', c: 'orange' };
   return { g: 'F', c: 'red' };
 };
-
 const GC = {
   emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800',
   blue: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
@@ -70,19 +71,12 @@ const GC = {
   orange: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800',
   red: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
 };
-
-const fmtTime = (seconds) => {
-  if (!seconds) return '0m';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-};
+const fmtTime = (s) => { if (!s) return '0m'; const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); return h > 0 ? `${h}h ${m}m` : `${m}m`; };
 
 // ════════════════════════════════════════════════════════════
-//                   MICRO COMPONENTS
+//  MICRO COMPONENTS
 // ════════════════════════════════════════════════════════════
-const Cnt = ({ end, sfx = '', decimals = 0 }) => {
+const Cnt = React.memo(({ end, sfx = '', decimals = 0 }) => {
   const [c, setC] = useState(0);
   useEffect(() => {
     if (!end && end !== 0) { setC(0); return; }
@@ -91,23 +85,19 @@ const Cnt = ({ end, sfx = '', decimals = 0 }) => {
     const r = t => {
       if (!s) s = t;
       const p = Math.min((t - s) / 1200, 1);
-      const val = (1 - Math.pow(1 - p, 4)) * target;
-      setC(decimals > 0 ? parseFloat(val.toFixed(decimals)) : Math.floor(val));
+      setC(decimals > 0 ? parseFloat(((1 - Math.pow(1 - p, 4)) * target).toFixed(decimals)) : Math.floor((1 - Math.pow(1 - p, 4)) * target));
       if (p < 1) f = requestAnimationFrame(r);
     };
     f = requestAnimationFrame(r);
     return () => cancelAnimationFrame(f);
   }, [end, decimals]);
   return <>{typeof c === 'number' ? c.toLocaleString() : c}{sfx}</>;
-};
+});
 
-const Ring = ({ pct, size = 100, sw = 7, color = '#3b82f6', bg, children }) => {
+const Ring = React.memo(({ pct, size = 100, sw = 7, color = '#3b82f6', bg, children }) => {
   const [a, setA] = useState(0);
   const r = (size - sw) / 2, C = 2 * Math.PI * r;
-  useEffect(() => {
-    const t = setTimeout(() => setA(Math.min(pct || 0, 100)), 200);
-    return () => clearTimeout(t);
-  }, [pct]);
+  useEffect(() => { const t = setTimeout(() => setA(Math.min(pct || 0, 100)), 200); return () => clearTimeout(t); }, [pct]);
   return (
     <div className="relative inline-flex items-center justify-center">
       <svg width={size} height={size} className="-rotate-90">
@@ -118,11 +108,9 @@ const Ring = ({ pct, size = 100, sw = 7, color = '#3b82f6', bg, children }) => {
       <div className="absolute inset-0 flex items-center justify-center">{children}</div>
     </div>
   );
-};
+});
 
-const Sk = ({ className = '' }) => (
-  <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg ${className}`} />
-);
+const Sk = ({ className = '' }) => <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg ${className}`} />;
 
 const LiveClock = () => {
   const [t, setT] = useState(new Date());
@@ -137,7 +125,7 @@ const LiveClock = () => {
   );
 };
 
-const SessionTimer = ({ language: l }) => {
+const SessionTimer = () => {
   const [s, setS] = useState(0);
   useEffect(() => { const i = setInterval(() => setS(p => p + 1), 1000); return () => clearInterval(i); }, []);
   const pad = n => String(n).padStart(2, '0');
@@ -174,7 +162,7 @@ const TrendBadge = ({ direction, size = 'sm' }) => {
 };
 
 // ════════════════════════════════════════════════════════════
-//                   STAT CARD (Enhanced)
+//  STAT CARD
 // ════════════════════════════════════════════════════════════
 const StatCard = ({ icon: Icon, label, value, sub, gradient, iconBg, onClick, delay = 0, spark, trend }) => {
   const [v, setV] = useState(false);
@@ -203,7 +191,7 @@ const StatCard = ({ icon: Icon, label, value, sub, gradient, iconBg, onClick, de
             {spark.map((sv, i) => (
               <div key={i} className="flex-1 rounded-t-sm transition-all duration-700" style={{
                 height: `${Math.max((sv / mx) * 100, 8)}%`,
-                background: iconBg.includes('blue') ? '#3b82f6' : iconBg.includes('emerald') || iconBg.includes('green') ? '#22c55e' : iconBg.includes('purple') ? '#8b5cf6' : '#f59e0b',
+                background: iconBg?.includes('blue') ? '#3b82f6' : iconBg?.includes('emerald') || iconBg?.includes('green') ? '#22c55e' : iconBg?.includes('purple') ? '#8b5cf6' : '#f59e0b',
                 opacity: 0.25 + (i / spark.length) * 0.75,
               }} />
             ))}
@@ -215,11 +203,10 @@ const StatCard = ({ icon: Icon, label, value, sub, gradient, iconBg, onClick, de
 };
 
 // ════════════════════════════════════════════════════════════
-//   🆕 JRF PROBABILITY METER
+//  JRF PROBABILITY METER
 // ════════════════════════════════════════════════════════════
-const JRFProbabilityMeter = ({ data, language }) => {
-  const l = language;
-  if (!data || data.confidence === 'low' && data.dataPoints < 3) {
+const JRFProbabilityMeter = ({ data, language: l }) => {
+  if (!data || (data.confidence === 'low' && data.dataPoints < 3)) {
     return (
       <div className="bg-gradient-to-br from-slate-800 via-indigo-900 to-slate-900 rounded-2xl p-5 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl" />
@@ -229,187 +216,114 @@ const JRFProbabilityMeter = ({ data, language }) => {
           <p className="text-sm text-indigo-300/60 mb-4">{l === 'hi' ? 'कम से कम 3 टेस्ट दें' : 'Take at least 3 tests to unlock'}</p>
           <div className="flex items-center justify-center gap-2">
             <Lock className="w-4 h-4 text-indigo-400" />
-            <span className="text-xs text-indigo-400">{data?.dataPoints || 0}/6 {l === 'hi' ? 'डेटा पॉइंट' : 'data points'}</span>
+            <span className="text-xs text-indigo-400">{data?.dataPoints || 0}/6 {l === 'hi' ? 'डेटा' : 'data pts'}</span>
           </div>
         </div>
       </div>
     );
   }
-
-  const riskColors = {
-    safe: { bg: 'from-emerald-500 to-green-600', text: 'text-emerald-400', badge: 'bg-emerald-500/20 border-emerald-500/30' },
-    moderate: { bg: 'from-blue-500 to-indigo-600', text: 'text-blue-400', badge: 'bg-blue-500/20 border-blue-500/30' },
-    risky: { bg: 'from-amber-500 to-orange-600', text: 'text-amber-400', badge: 'bg-amber-500/20 border-amber-500/30' },
-    critical: { bg: 'from-red-500 to-rose-600', text: 'text-red-400', badge: 'bg-red-500/20 border-red-500/30' },
-  };
-  const rc = riskColors[data.riskLevel] || riskColors.moderate;
-
-  const riskLabels = {
-    safe: { en: 'Safe Zone', hi: 'सुरक्षित' },
-    moderate: { en: 'Moderate', hi: 'मध्यम' },
-    risky: { en: 'Risky', hi: 'जोखिम' },
-    critical: { en: 'Critical', hi: 'गंभीर' },
-  };
+  const rc = { safe: { text: 'text-emerald-400', badge: 'bg-emerald-500/20 border-emerald-500/30' }, moderate: { text: 'text-blue-400', badge: 'bg-blue-500/20 border-blue-500/30' }, risky: { text: 'text-amber-400', badge: 'bg-amber-500/20 border-amber-500/30' }, critical: { text: 'text-red-400', badge: 'bg-red-500/20 border-red-500/30' } }[data.riskLevel] || { text: 'text-blue-400', badge: 'bg-blue-500/20 border-blue-500/30' };
+  const rl = { safe: { en: 'Safe', hi: 'सुरक्षित' }, moderate: { en: 'Moderate', hi: 'मध्यम' }, risky: { en: 'Risky', hi: 'जोखिम' }, critical: { en: 'Critical', hi: 'गंभीर' } };
 
   return (
     <div className="bg-gradient-to-br from-slate-800 via-indigo-900 to-slate-900 rounded-2xl p-5 text-white relative overflow-hidden">
       <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl" />
       <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl" />
-
-      {/* Header */}
-      <div className="relative flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
-            <Brain className="w-4.5 h-4.5 text-white" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold">{l === 'hi' ? 'JRF संभावना मीटर' : 'JRF Probability Meter'}</h3>
-            <p className="text-[9px] text-indigo-300/50">{l === 'hi' ? 'AI आधारित भविष्यवाणी' : 'AI-Powered Prediction'}</p>
-          </div>
-        </div>
-        <div className={`px-2 py-1 rounded-lg border ${rc.badge} flex items-center gap-1`}>
-          <CircleDot className={`w-2.5 h-2.5 ${rc.text}`} />
-          <span className={`text-[9px] font-bold ${rc.text}`}>{riskLabels[data.riskLevel]?.[l] || data.riskLevel}</span>
-        </div>
-      </div>
-
-      {/* Main Meters */}
-      <div className="relative grid grid-cols-2 gap-4 mb-4">
-        {/* NET Probability */}
-        <div className="text-center">
-          <Ring pct={data.netProbability} size={100} sw={7}
-            color={data.netProbability >= 60 ? '#22c55e' : data.netProbability >= 40 ? '#f59e0b' : '#ef4444'}
-            bg="rgba(255,255,255,0.08)">
-            <div>
-              <p className="text-xl font-black">{data.netProbability}%</p>
-              <p className="text-[7px] text-indigo-300/50 uppercase">NET</p>
+      <div className="relative">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+              <Brain className="w-4.5 h-4.5 text-white" />
             </div>
-          </Ring>
-          <p className="text-[10px] font-semibold mt-1.5 text-indigo-200">NET {l === 'hi' ? 'संभावना' : 'Probability'}</p>
-          <p className="text-[8px] text-indigo-400/50">{l === 'hi' ? 'कटऑफ' : 'Cutoff'}: {data.netCutoff}%</p>
-        </div>
-
-        {/* JRF Probability */}
-        <div className="text-center">
-          <Ring pct={data.jrfProbability} size={100} sw={7}
-            color={data.jrfProbability >= 60 ? '#22c55e' : data.jrfProbability >= 35 ? '#f59e0b' : '#ef4444'}
-            bg="rgba(255,255,255,0.08)">
             <div>
-              <p className="text-xl font-black">{data.jrfProbability}%</p>
-              <p className="text-[7px] text-indigo-300/50 uppercase">JRF</p>
+              <h3 className="text-sm font-bold">{l === 'hi' ? 'JRF संभावना' : 'JRF Probability'}</h3>
+              <p className="text-[9px] text-indigo-300/50">{l === 'hi' ? 'AI भविष्यवाणी' : 'AI Prediction'}</p>
             </div>
-          </Ring>
-          <p className="text-[10px] font-semibold mt-1.5 text-indigo-200">JRF {l === 'hi' ? 'संभावना' : 'Probability'}</p>
-          <p className="text-[8px] text-indigo-400/50">{l === 'hi' ? 'कटऑफ' : 'Cutoff'}: {data.jrfCutoff}%</p>
-        </div>
-      </div>
-
-      {/* Predicted Scores Strip */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        {[
-          { l: 'Paper 1', v: `${data.predictedP1}%`, icon: BookOpen, t: data.p1Trend },
-          { l: 'Paper 2', v: `${data.predictedP2}%`, icon: Target, t: data.p2Trend },
-          { l: l === 'hi' ? 'कुल' : 'Overall', v: `${data.predictedTotal}%`, icon: Trophy, t: null },
-        ].map((s, i) => (
-          <div key={i} className="bg-white/5 rounded-lg p-2 text-center border border-white/5">
-            <s.icon className="w-3 h-3 mx-auto mb-0.5 text-indigo-300/50" />
-            <p className="text-sm font-black">{s.v}</p>
-            <p className="text-[7px] text-indigo-300/40 uppercase">{s.l}</p>
-            {s.t && <TrendBadge direction={s.t} />}
           </div>
-        ))}
-      </div>
-
-      {/* Consistency Bar */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-[9px] text-indigo-300/50">{l === 'hi' ? 'स्थिरता स्कोर' : 'Consistency Score'}</span>
-          <span className="text-[10px] font-bold">{data.consistencyScore}%</span>
+          <div className={`px-2 py-1 rounded-lg border ${rc.badge} flex items-center gap-1`}>
+            <CircleDot className={`w-2.5 h-2.5 ${rc.text}`} />
+            <span className={`text-[9px] font-bold ${rc.text}`}>{rl[data.riskLevel]?.[l] || data.riskLevel}</span>
+          </div>
         </div>
-        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-          <div className="h-full rounded-full transition-all duration-1000"
-            style={{
-              width: `${data.consistencyScore}%`,
-              background: data.consistencyScore >= 60 ? 'linear-gradient(90deg, #22c55e, #10b981)'
-                : data.consistencyScore >= 40 ? 'linear-gradient(90deg, #f59e0b, #eab308)'
-                : 'linear-gradient(90deg, #ef4444, #f97316)'
-            }} />
-        </div>
-      </div>
 
-      {/* Factors */}
-      {data.factors.length > 0 && (
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          {[{ label: 'NET', value: data.netProbability, cutoff: data.netCutoff }, { label: 'JRF', value: data.jrfProbability, cutoff: data.jrfCutoff }].map((m, i) => (
+            <div key={i} className="text-center">
+              <Ring pct={m.value} size={90} sw={6} color={m.value >= 60 ? '#22c55e' : m.value >= 40 ? '#f59e0b' : '#ef4444'} bg="rgba(255,255,255,0.08)">
+                <div><p className="text-lg font-black">{m.value}%</p><p className="text-[7px] text-indigo-300/50">{m.label}</p></div>
+              </Ring>
+              <p className="text-[8px] text-indigo-400/50 mt-1">{l === 'hi' ? 'कटऑफ' : 'Cut'}: {m.cutoff}%</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {[{ l: 'P1', v: `${data.predictedP1}%`, t: data.p1Trend }, { l: 'P2', v: `${data.predictedP2}%`, t: data.p2Trend }, { l: l === 'hi' ? 'कुल' : 'Total', v: `${data.predictedTotal}%` }].map((s, i) => (
+            <div key={i} className="bg-white/5 rounded-lg p-2 text-center border border-white/5">
+              <p className="text-sm font-black">{s.v}</p>
+              <p className="text-[7px] text-indigo-300/40">{s.l}</p>
+              {s.t && <TrendBadge direction={s.t} />}
+            </div>
+          ))}
+        </div>
+
         <div className="mb-3">
-          <p className="text-[9px] text-indigo-300/40 uppercase tracking-wider mb-1.5">{l === 'hi' ? 'प्रभावी कारक' : 'Key Factors'}</p>
-          <div className="space-y-1">
+          <div className="flex justify-between mb-1"><span className="text-[9px] text-indigo-300/50">{l === 'hi' ? 'स्थिरता' : 'Consistency'}</span><span className="text-[10px] font-bold">{data.consistencyScore}%</span></div>
+          <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${data.consistencyScore}%`, background: data.consistencyScore >= 60 ? '#22c55e' : data.consistencyScore >= 40 ? '#f59e0b' : '#ef4444' }} />
+          </div>
+        </div>
+
+        {data.factors.length > 0 && (
+          <div className="mb-3 space-y-1">
             {data.factors.slice(0, 4).map((f, i) => (
               <div key={i} className="flex items-center gap-1.5 text-[9px]">
-                {f.type === 'positive'
-                  ? <CheckCircle className="w-3 h-3 text-emerald-400 flex-shrink-0" />
-                  : <XCircle className="w-3 h-3 text-red-400 flex-shrink-0" />}
+                {f.type === 'positive' ? <CheckCircle className="w-3 h-3 text-emerald-400 flex-shrink-0" /> : <XCircle className="w-3 h-3 text-red-400 flex-shrink-0" />}
                 <span className={f.type === 'positive' ? 'text-emerald-300/80' : 'text-red-300/80'}>{f.text}</span>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Suggestions */}
-      {data.suggestions.length > 0 && (
-        <div className="bg-white/5 rounded-lg p-2.5 border border-white/5">
-          <p className="text-[9px] text-indigo-300/40 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-            <Lightbulb className="w-3 h-3 text-yellow-400" />
-            {l === 'hi' ? 'सुझाव' : 'Suggestions'}
-          </p>
-          <div className="space-y-1">
+        {data.suggestions.length > 0 && (
+          <div className="bg-white/5 rounded-lg p-2.5 border border-white/5 space-y-1">
+            <p className="text-[9px] text-indigo-300/40 flex items-center gap-1"><Lightbulb className="w-3 h-3 text-yellow-400" />{l === 'hi' ? 'सुझाव' : 'Tips'}</p>
             {data.suggestions.slice(0, 3).map((s, i) => (
-              <p key={i} className="text-[9px] text-indigo-200/60 flex items-start gap-1">
-                <ArrowRight className="w-2.5 h-2.5 mt-0.5 text-indigo-400 flex-shrink-0" />
-                {s}
-              </p>
+              <p key={i} className="text-[9px] text-indigo-200/60 flex items-start gap-1"><ArrowRight className="w-2.5 h-2.5 mt-0.5 text-indigo-400 flex-shrink-0" />{s}</p>
             ))}
           </div>
+        )}
+        <div className="mt-2 text-[8px] text-indigo-400/30 flex justify-between">
+          <span>{l === 'hi' ? 'विश्वसनीयता' : 'Confidence'}: {data.confidence} ({data.dataPoints} pts)</span>
         </div>
-      )}
-
-      {/* Confidence */}
-      <div className="mt-3 flex items-center justify-between">
-        <span className="text-[8px] text-indigo-400/30">
-          {l === 'hi' ? 'विश्वसनीयता' : 'Confidence'}: {data.confidence}
-          ({data.dataPoints} {l === 'hi' ? 'डेटा' : 'data pts'})
-        </span>
-        <span className="text-[8px] text-indigo-400/30">{l === 'hi' ? 'अनुमानित' : 'Predicted'}</span>
       </div>
     </div>
   );
 };
 
 // ════════════════════════════════════════════════════════════
-//   🆕 EXAM COUNTDOWN
+//  🆕 EXAM COMMAND CENTER (Advanced Countdown)
 // ════════════════════════════════════════════════════════════
-const ExamCountdown = ({ examDate, setExamDate, daysUntilExam, notAttemptedCount, language }) => {
+const ExamCommandCenter = ({ data, examDate, setExamDate, language: l, navigate }) => {
   const [editing, setEditing] = useState(false);
   const [tempDate, setTempDate] = useState(examDate);
-  const l = language;
+  const [activeView, setActiveView] = useState('countdown');
 
-  const handleSave = () => {
-    setExamDate(tempDate);
-    setEditing(false);
-  };
+  const handleSave = () => { setExamDate(tempDate); setEditing(false); };
 
-  if (!examDate) {
+  if (!data?.countdown?.isSet) {
     return (
-      <div className="bg-gradient-to-br from-rose-500 via-pink-600 to-purple-700 rounded-2xl p-4 text-white relative overflow-hidden">
+      <div className="bg-gradient-to-br from-rose-500 via-pink-600 to-purple-700 rounded-2xl p-5 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-3xl" />
         <div className="relative text-center">
-          <CalendarClock className="w-8 h-8 mx-auto mb-2 text-pink-200" />
+          <CalendarClock className="w-10 h-10 mx-auto mb-2 text-pink-200" />
           <h3 className="font-bold text-sm mb-1">{l === 'hi' ? 'परीक्षा तिथि सेट करें' : 'Set Exam Date'}</h3>
-          <p className="text-[10px] text-pink-200/60 mb-3">{l === 'hi' ? 'काउंटडाउन शुरू करें' : 'Start your countdown'}</p>
+          <p className="text-[10px] text-pink-200/60 mb-3">{l === 'hi' ? 'एक बार सेट करें, हमेशा के लिए' : 'Set once, saved forever'}</p>
           <input type="date" value={tempDate} onChange={e => setTempDate(e.target.value)}
-            className="w-full px-3 py-1.5 rounded-lg bg-white/20 border border-white/20 text-white text-xs focus:outline-none focus:ring-2 focus:ring-white/30 mb-2"
+            className="w-full px-3 py-2 rounded-lg bg-white/20 border border-white/20 text-white text-xs focus:outline-none focus:ring-2 focus:ring-white/30 mb-2"
             min={new Date().toISOString().split('T')[0]} />
           <button onClick={handleSave} disabled={!tempDate}
-            className="w-full px-3 py-1.5 bg-white text-pink-600 font-bold text-xs rounded-lg hover:bg-pink-50 transition-colors disabled:opacity-50">
+            className="w-full px-3 py-2 bg-white text-pink-600 font-bold text-xs rounded-lg hover:bg-pink-50 transition disabled:opacity-50">
             {l === 'hi' ? 'सेट करें' : 'Set Date'}
           </button>
         </div>
@@ -417,61 +331,200 @@ const ExamCountdown = ({ examDate, setExamDate, daysUntilExam, notAttemptedCount
     );
   }
 
-  const urgency = daysUntilExam <= 7 ? 'critical' : daysUntilExam <= 30 ? 'urgent' : daysUntilExam <= 90 ? 'moderate' : 'relaxed';
-  const gradients = {
-    critical: 'from-red-600 via-rose-600 to-red-700',
-    urgent: 'from-orange-500 via-amber-600 to-orange-700',
-    moderate: 'from-blue-600 via-indigo-600 to-blue-700',
-    relaxed: 'from-emerald-600 via-green-600 to-emerald-700',
-  };
+  const { countdown, phase, milestones, pace, readiness, todayMission, riskAlerts } = data;
+  const urgency = countdown.days <= 7 ? 'critical' : countdown.days <= 30 ? 'urgent' : countdown.days <= 90 ? 'moderate' : 'relaxed';
+  const gradients = { critical: 'from-red-600 via-rose-700 to-red-800', urgent: 'from-orange-500 via-amber-600 to-orange-700', moderate: 'from-blue-600 via-indigo-700 to-blue-800', relaxed: 'from-emerald-600 via-green-700 to-emerald-800' };
 
-  const testsPerDay = daysUntilExam > 0 ? Math.ceil(notAttemptedCount / daysUntilExam) : notAttemptedCount;
+  const phaseIcons = { Foundation: BookOpen, Practice: Dumbbell, Revision: RotateCcw, 'Mock Tests': FileText, 'Final Review': ScanEye };
 
   return (
-    <div className={`bg-gradient-to-br ${gradients[urgency]} rounded-2xl p-4 text-white relative overflow-hidden`}>
-      <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full blur-3xl" />
-      <div className="relative">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="w-5 h-5" />
-            <span className="font-bold text-xs">{l === 'hi' ? 'UGC NET परीक्षा' : 'UGC NET Exam'}</span>
-          </div>
-          <button onClick={() => setEditing(!editing)} className="p-1 rounded-lg bg-white/10 hover:bg-white/20">
+    <div className={`bg-gradient-to-br ${gradients[urgency]} rounded-2xl text-white relative overflow-hidden`}>
+      <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-3xl" />
+
+      {/* Header */}
+      <div className="relative px-4 pt-3 pb-2 flex items-center justify-between border-b border-white/10">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="w-4 h-4" />
+          <span className="font-bold text-xs">UGC NET {l === 'hi' ? 'कमांड सेंटर' : 'Command Center'}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {['countdown', 'phases', 'mission'].map(v => (
+            <button key={v} onClick={() => setActiveView(v)}
+              className={`px-2 py-0.5 rounded text-[8px] font-bold transition-all ${activeView === v ? 'bg-white/20' : 'bg-white/5 hover:bg-white/10'}`}>
+              {v === 'countdown' ? '⏱️' : v === 'phases' ? '📊' : '🎯'}
+            </button>
+          ))}
+          <button onClick={() => setEditing(!editing)} className="p-1 rounded bg-white/10 hover:bg-white/20">
             <Settings className="w-3 h-3" />
           </button>
         </div>
+      </div>
 
-        {editing ? (
+      {editing && (
+        <div className="px-4 py-2 bg-black/20 border-b border-white/10 space-y-2">
+          <input type="date" value={tempDate || examDate} onChange={e => setTempDate(e.target.value)}
+            className="w-full px-3 py-1.5 rounded-lg bg-white/20 border border-white/20 text-white text-xs" />
+          <div className="flex gap-2">
+            <button onClick={handleSave} className="flex-1 px-3 py-1.5 bg-white text-indigo-600 font-bold text-xs rounded-lg">Save</button>
+            <button onClick={() => setEditing(false)} className="px-3 py-1.5 bg-white/10 text-xs rounded-lg">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      <div className="relative p-4">
+        {/* Countdown View */}
+        {activeView === 'countdown' && (
+          <>
+            <div className="text-center mb-4">
+              <div className="flex items-center justify-center gap-3 mb-2">
+                {[{ v: countdown.days, l: l === 'hi' ? 'दिन' : 'DAYS' }, { v: countdown.hours, l: l === 'hi' ? 'घंटे' : 'HRS' }, { v: countdown.minutes, l: l === 'hi' ? 'मिनट' : 'MIN' }].map((t, i) => (
+                  <div key={i} className="text-center">
+                    <div className={`w-16 h-16 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center ${urgency === 'critical' ? 'animate-pulse' : ''}`}>
+                      <span className="text-2xl font-black">{t.v}</span>
+                    </div>
+                    <span className="text-[7px] text-white/50 uppercase mt-1 block">{t.l}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[9px] text-white/40">
+                {new Date(examDate).toLocaleDateString(l === 'hi' ? 'hi-IN' : 'en', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
+            </div>
+
+            {/* Journey Progress */}
+            <div className="mb-3">
+              <div className="flex justify-between mb-1">
+                <span className="text-[9px] text-white/50">{l === 'hi' ? 'यात्रा प्रगति' : 'Journey Progress'}</span>
+                <span className="text-[9px] font-bold">{phase.overallProgress}%</span>
+              </div>
+              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-gradient-to-r from-white/40 to-white/80 transition-all duration-1000" style={{ width: `${phase.overallProgress}%` }} />
+              </div>
+              <div className="flex justify-between mt-0.5 text-[7px] text-white/30">
+                <span>{l === 'hi' ? 'शुरू' : 'Start'}</span>
+                <span className="font-bold text-white/60">{phase.current?.name || 'N/A'}</span>
+                <span>{l === 'hi' ? 'परीक्षा' : 'Exam'}</span>
+              </div>
+            </div>
+
+            {/* Readiness + Pace */}
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="bg-white/10 rounded-lg p-2.5 border border-white/5 text-center">
+                <Ring pct={readiness.overall} size={50} sw={4} color={readiness.overall >= 70 ? '#22c55e' : readiness.overall >= 50 ? '#f59e0b' : '#ef4444'} bg="rgba(255,255,255,0.1)">
+                  <span className="text-[9px] font-black">{readiness.overall}%</span>
+                </Ring>
+                <p className="text-[8px] text-white/50 mt-1">{l === 'hi' ? 'तैयारी' : 'Readiness'}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-2.5 border border-white/5">
+                <div className="flex items-center gap-1 mb-1">
+                  <Footprints className="w-3 h-3 text-white/60" />
+                  <span className="text-[9px] font-bold">{l === 'hi' ? 'रफ्तार' : 'Pace'}</span>
+                </div>
+                <p className="text-lg font-black">{pace.current}<span className="text-[8px] text-white/50">/day</span></p>
+                <p className={`text-[8px] ${pace.status === 'on_track' ? 'text-emerald-300' : pace.status === 'slightly_behind' ? 'text-amber-300' : 'text-red-300'}`}>
+                  {l === 'hi' ? `चाहिए: ${pace.required}/दिन` : `Need: ${pace.required}/day`}
+                </p>
+                <p className="text-[7px] text-white/40">{pace.remaining} {l === 'hi' ? 'बाकी' : 'remaining'}</p>
+              </div>
+            </div>
+
+            {/* Risk Alerts */}
+            {riskAlerts.length > 0 && (
+              <div className="space-y-1">
+                {riskAlerts.slice(0, 3).map((r, i) => (
+                  <div key={i} className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[9px] ${r.level === 'critical' ? 'bg-red-500/20 border border-red-400/20' : r.level === 'warning' ? 'bg-amber-500/20 border border-amber-400/20' : 'bg-white/5 border border-white/5'}`}>
+                    <AlertTriangle className={`w-3 h-3 flex-shrink-0 ${r.level === 'critical' ? 'text-red-300 animate-pulse' : 'text-amber-300'}`} />
+                    <span>{l === 'hi' ? r.textHi : r.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Phases View */}
+        {activeView === 'phases' && (
           <div className="space-y-2">
-            <input type="date" value={tempDate || examDate} onChange={e => setTempDate(e.target.value)}
-              className="w-full px-3 py-1.5 rounded-lg bg-white/20 border border-white/20 text-white text-xs focus:outline-none" />
-            <div className="flex gap-2">
-              <button onClick={handleSave} className="flex-1 px-3 py-1.5 bg-white text-indigo-600 font-bold text-xs rounded-lg">Save</button>
-              <button onClick={() => setEditing(false)} className="px-3 py-1.5 bg-white/10 text-xs rounded-lg">Cancel</button>
+            <p className="text-[10px] font-bold text-white/60 uppercase mb-2">{l === 'hi' ? 'तैयारी चरण' : 'Preparation Phases'}</p>
+            {phase.all.map((p, i) => {
+              const PhIcon = phaseIcons[p.name] || BookOpen;
+              return (
+                <div key={i} className={`flex items-center gap-2.5 p-2 rounded-lg border transition-all ${p.status === 'current' ? 'bg-white/15 border-white/20 ring-1 ring-white/10' : p.status === 'completed' ? 'bg-white/5 border-white/5' : 'bg-white/[0.02] border-white/5 opacity-60'}`}>
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${p.status === 'completed' ? 'bg-emerald-500/30' : p.status === 'current' ? 'bg-white/20' : 'bg-white/5'}`}>
+                    {p.status === 'completed' ? <CheckCircle className="w-3.5 h-3.5 text-emerald-300" /> : <PhIcon className="w-3.5 h-3.5" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold">{l === 'hi' ? p.nameHi : p.name}</p>
+                    <p className="text-[8px] text-white/40">{l === 'hi' ? p.descHi : p.description}</p>
+                    {p.status === 'current' && (
+                      <div className="h-1 bg-white/10 rounded-full mt-1 overflow-hidden">
+                        <div className="h-full bg-white/60 rounded-full transition-all" style={{ width: `${Math.max(p.progress, 5)}%` }} />
+                      </div>
+                    )}
+                  </div>
+                  <span className={`text-[8px] font-bold ${p.status === 'completed' ? 'text-emerald-300' : p.status === 'current' ? 'text-white' : 'text-white/30'}`}>
+                    {p.status === 'completed' ? '✓' : p.status === 'current' ? `${p.progress}%` : '—'}
+                  </span>
+                </div>
+              );
+            })}
+
+            {/* Readiness Factors */}
+            <div className="mt-3 pt-3 border-t border-white/10">
+              <p className="text-[9px] font-bold text-white/50 uppercase mb-2">{l === 'hi' ? 'तैयारी कारक' : 'Readiness Factors'}</p>
+              {readiness.factors.map((f, i) => (
+                <div key={i} className="flex items-center gap-2 mb-1.5">
+                  <span className="text-[9px] text-white/50 w-20 truncate">{l === 'hi' ? f.nameHi : f.name}</span>
+                  <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${f.score}%`, background: f.score >= 70 ? '#22c55e' : f.score >= 50 ? '#f59e0b' : '#ef4444' }} />
+                  </div>
+                  <span className="text-[9px] font-bold w-8 text-right">{f.score}%</span>
+                </div>
+              ))}
             </div>
           </div>
-        ) : (
-          <>
-            <div className="text-center mb-3">
-              <p className={`text-4xl font-black ${urgency === 'critical' ? 'animate-pulse' : ''}`}>
-                {daysUntilExam}
-              </p>
-              <p className="text-xs text-white/70">{l === 'hi' ? 'दिन शेष' : 'Days Remaining'}</p>
-              <p className="text-[9px] text-white/40 mt-0.5">
-                {new Date(examDate).toLocaleDateString(l === 'hi' ? 'hi-IN' : 'en', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-white/10 rounded-lg p-2 text-center">
-                <p className="text-lg font-black">{notAttemptedCount}</p>
-                <p className="text-[8px] text-white/50">{l === 'hi' ? 'बाकी टेस्ट' : 'Pending Tests'}</p>
+        )}
+
+        {/* Mission View */}
+        {activeView === 'mission' && (
+          <div>
+            <p className="text-[10px] font-bold text-white/60 uppercase mb-2">{l === 'hi' ? 'आज का मिशन' : "Today's Mission"}</p>
+            {todayMission.length > 0 ? (
+              <div className="space-y-1.5">
+                {todayMission.map((m, i) => {
+                  const MIcon = { ClipboardList, RefreshCw, AlertTriangle, Target }[m.icon] || Target;
+                  return (
+                    <div key={i} className={`flex items-center gap-2 p-2.5 rounded-lg border ${m.priority === 'critical' ? 'bg-red-500/15 border-red-400/20' : m.priority === 'high' ? 'bg-amber-500/10 border-amber-400/20' : 'bg-white/5 border-white/5'}`}>
+                      <MIcon className={`w-4 h-4 flex-shrink-0 ${m.priority === 'critical' ? 'text-red-300' : 'text-white/60'}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold">{l === 'hi' ? m.taskHi : m.task}</p>
+                        <p className="text-[8px] text-white/40">{m.reason}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="bg-white/10 rounded-lg p-2 text-center">
-                <p className="text-lg font-black">{testsPerDay}</p>
-                <p className="text-[8px] text-white/50">{l === 'hi' ? 'टेस्ट/दिन' : 'Tests/Day'}</p>
+            ) : (
+              <div className="text-center py-6"><CheckCircle className="w-8 h-8 mx-auto mb-2 text-emerald-300" /><p className="text-xs">{l === 'hi' ? 'सब पूरा!' : 'All done!'}</p></div>
+            )}
+
+            {/* Milestones */}
+            <div className="mt-3 pt-3 border-t border-white/10">
+              <p className="text-[9px] font-bold text-white/50 uppercase mb-2">{l === 'hi' ? 'माइलस्टोन' : 'Milestones'}</p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {data.milestones.slice(0, 6).map((m, i) => (
+                  <div key={i} className={`flex items-center gap-1.5 p-1.5 rounded-lg ${m.completed ? 'bg-emerald-500/10 border border-emerald-400/20' : 'bg-white/5 border border-white/5'}`}>
+                    {m.completed ? <CircleCheck className="w-3 h-3 text-emerald-300 flex-shrink-0" /> : <CircleDot className="w-3 h-3 text-white/30 flex-shrink-0" />}
+                    <div className="min-w-0">
+                      <p className={`text-[8px] font-bold truncate ${m.completed ? 'text-emerald-300 line-through' : ''}`}>{l === 'hi' ? m.titleHi : m.title}</p>
+                      {!m.completed && <p className="text-[7px] text-white/30">{m.progress}%</p>}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
@@ -479,69 +532,31 @@ const ExamCountdown = ({ examDate, setExamDate, daysUntilExam, notAttemptedCount
 };
 
 // ════════════════════════════════════════════════════════════
-//   🆕 ADVANCED GOAL TRACKER (Fully Working + Pressure)
-//   Replace the old GoalTracker in Dashboard.jsx
+//  GOAL TRACKER (Advanced)
 // ════════════════════════════════════════════════════════════
-const GoalTracker = ({
-  goals, completionPct, todayActivity, todayDetailed, yesterdayActivity,
-  customTargets, updateCustomTargets, dayProgress, goalStreak,
-  goalsCompleted, totalGoals, pressureMessage, todayXP, streak,
-  language, navigate
-}) => {
-  const l = language;
+const GoalTracker = ({ goals, completionPct, todayDetailed, yesterdayActivity, customTargets, updateCustomTargets, dayProgress, goalStreak, goalsCompleted, totalGoals, pressureMessage, todayXP, streak, language: l, navigate }) => {
   const [showSettings, setShowSettings] = useState(false);
-  const [celebrating, setCelebrating] = useState(false);
-
-  // Celebration effect when all goals done
-  useEffect(() => {
-    if (completionPct === 100 && todayDetailed?.count > 0 && !celebrating) {
-      setCelebrating(true);
-      const t = setTimeout(() => setCelebrating(false), 5000);
-      return () => clearTimeout(t);
-    }
-  }, [completionPct, todayDetailed]);
-
-  const iconMap = {
-    ClipboardList, Target, TrendingUp, Clock, RefreshCw, Flame,
-    Timer, BarChart2, Hash, Zap,
-  };
-
+  const celebrating = completionPct === 100 && (todayDetailed?.count || 0) > 0;
+  const iconMap = { ClipboardList, Target, TrendingUp, Clock, RefreshCw, Flame, Timer, BarChart2, Hash, Zap };
   const colorMap = {
-    blue: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400', bar: 'bg-blue-500', ring: '#3b82f6', glow: 'shadow-blue-500/20' },
-    emerald: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400', bar: 'bg-emerald-500', ring: '#22c55e', glow: 'shadow-emerald-500/20' },
-    purple: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400', bar: 'bg-purple-500', ring: '#8b5cf6', glow: 'shadow-purple-500/20' },
-    amber: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-600 dark:text-amber-400', bar: 'bg-amber-500', ring: '#f59e0b', glow: 'shadow-amber-500/20' },
-    red: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400', bar: 'bg-red-500', ring: '#ef4444', glow: 'shadow-red-500/20' },
-    orange: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-600 dark:text-orange-400', bar: 'bg-orange-500', ring: '#f97316', glow: 'shadow-orange-500/20' },
-    cyan: { bg: 'bg-cyan-100 dark:bg-cyan-900/30', text: 'text-cyan-600 dark:text-cyan-400', bar: 'bg-cyan-500', ring: '#06b6d4', glow: 'shadow-cyan-500/20' },
-    indigo: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-600 dark:text-indigo-400', bar: 'bg-indigo-500', ring: '#6366f1', glow: 'shadow-indigo-500/20' },
-    teal: { bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-600 dark:text-teal-400', bar: 'bg-teal-500', ring: '#14b8a6', glow: 'shadow-teal-500/20' },
+    blue: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400', bar: 'bg-blue-500' },
+    emerald: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400', bar: 'bg-emerald-500' },
+    purple: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400', bar: 'bg-purple-500' },
+    amber: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-600 dark:text-amber-400', bar: 'bg-amber-500' },
+    red: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400', bar: 'bg-red-500' },
+    orange: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-600 dark:text-orange-400', bar: 'bg-orange-500' },
+    cyan: { bg: 'bg-cyan-100 dark:bg-cyan-900/30', text: 'text-cyan-600 dark:text-cyan-400', bar: 'bg-cyan-500' },
+    indigo: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-600 dark:text-indigo-400', bar: 'bg-indigo-500' },
   };
-
-  const urgencyColors = {
-    critical: 'bg-red-500 animate-pulse',
-    high: 'bg-orange-500',
-    medium: 'bg-amber-400',
-    normal: 'bg-gray-300 dark:bg-gray-600',
-  };
-
-  const pressureColors = {
-    celebration: { bg: 'bg-emerald-50 dark:bg-emerald-900/10', border: 'border-emerald-300 dark:border-emerald-800', text: 'text-emerald-700 dark:text-emerald-400', icon: Trophy },
-    critical: { bg: 'bg-red-50 dark:bg-red-900/10', border: 'border-red-300 dark:border-red-800', text: 'text-red-700 dark:text-red-400', icon: AlertTriangle },
-    warning: { bg: 'bg-amber-50 dark:bg-amber-900/10', border: 'border-amber-300 dark:border-amber-800', text: 'text-amber-700 dark:text-amber-400', icon: AlertCircle },
-    positive: { bg: 'bg-blue-50 dark:bg-blue-900/10', border: 'border-blue-300 dark:border-blue-800', text: 'text-blue-700 dark:text-blue-400', icon: Sparkles },
-    info: { bg: 'bg-gray-50 dark:bg-gray-700/30', border: 'border-gray-200 dark:border-gray-700', text: 'text-gray-600 dark:text-gray-400', icon: Info },
-  };
-
-  const dp = dayProgress || { pct: 0, remainingHours: 0, remainingMins: 0, isAlmostOver: false, isPastHalf: false };
+  const urgC = { critical: 'bg-red-500 animate-pulse', high: 'bg-orange-500', medium: 'bg-amber-400', normal: 'bg-gray-300 dark:bg-gray-600' };
+  const pmC = { celebration: { bg: 'bg-emerald-50 dark:bg-emerald-900/10', text: 'text-emerald-700 dark:text-emerald-400', I: Trophy }, critical: { bg: 'bg-red-50 dark:bg-red-900/10', text: 'text-red-700 dark:text-red-400', I: AlertTriangle }, warning: { bg: 'bg-amber-50 dark:bg-amber-900/10', text: 'text-amber-700 dark:text-amber-400', I: AlertCircle }, positive: { bg: 'bg-blue-50 dark:bg-blue-900/10', text: 'text-blue-700 dark:text-blue-400', I: Sparkles }, info: { bg: 'bg-gray-50 dark:bg-gray-700/30', text: 'text-gray-600 dark:text-gray-400', I: Info } };
+  const dp = dayProgress || { pct: 0, remainingHours: 0, remainingMins: 0 };
   const pm = pressureMessage || { type: 'info', en: '', hi: '' };
-  const pmStyle = pressureColors[pm.type] || pressureColors.info;
-  const PMIcon = pmStyle.icon;
+  const pmS = pmC[pm.type] || pmC.info;
+  const PMIcon = pmS.I;
 
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden ${celebrating ? 'ring-2 ring-emerald-400 shadow-lg shadow-emerald-500/20' : ''}`}>
-
-      {/* ── HEADER ── */}
       <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/10 dark:to-purple-900/10 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
@@ -549,715 +564,348 @@ const GoalTracker = ({
               <Crosshair className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1">
                 {l === 'hi' ? 'आज के लक्ष्य' : "Today's Goals"}
                 {celebrating && <Sparkles className="w-3.5 h-3.5 text-yellow-500 animate-spin" />}
               </h3>
-              <p className="text-[9px] text-gray-500">
-                {goalsCompleted}/{totalGoals} {l === 'hi' ? 'पूरे' : 'done'}
-                {goalStreak > 0 && <span className="ml-1 text-amber-600 dark:text-amber-400 font-bold"> | {goalStreak}d {l === 'hi' ? 'गोल स्ट्रीक' : 'goal streak'}</span>}
+              <p className="text-[9px] text-gray-500">{goalsCompleted}/{totalGoals} {l === 'hi' ? 'पूरे' : 'done'}
+                {goalStreak > 0 && <span className="ml-1 text-amber-600 font-bold">| {goalStreak}d streak</span>}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* XP Badge */}
             <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800">
-              <Zap className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-              <span className="text-[9px] font-black text-amber-700 dark:text-amber-400">{todayXP} XP</span>
+              <Zap className="w-3 h-3 text-amber-600" /><span className="text-[9px] font-black text-amber-700 dark:text-amber-400">{todayXP} XP</span>
             </div>
-            <Ring pct={completionPct} size={36} sw={3}
-              color={completionPct === 100 ? '#22c55e' : completionPct >= 50 ? '#f59e0b' : '#ef4444'}>
+            <Ring pct={completionPct} size={36} sw={3} color={completionPct === 100 ? '#22c55e' : completionPct >= 50 ? '#f59e0b' : '#ef4444'}>
               <span className="text-[7px] font-bold text-gray-600 dark:text-gray-300">{completionPct}%</span>
             </Ring>
-            <button onClick={() => setShowSettings(!showSettings)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <button onClick={() => setShowSettings(!showSettings)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
               <Settings className="w-3.5 h-3.5 text-gray-400" />
             </button>
           </div>
         </div>
-
-        {/* ── DAY PROGRESS BAR ── */}
+        {/* Day progress */}
         <div className="mb-2">
-          <div className="flex items-center justify-between mb-0.5">
-            <span className="text-[8px] text-gray-500 flex items-center gap-1">
-              <Clock className="w-2.5 h-2.5" />
-              {l === 'hi' ? 'दिन की प्रगति' : 'Day Progress'}
-            </span>
-            <span className={`text-[8px] font-bold ${dp.isAlmostOver ? 'text-red-600 dark:text-red-400 animate-pulse' : dp.isPastHalf ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500'}`}>
+          <div className="flex justify-between mb-0.5">
+            <span className="text-[8px] text-gray-500 flex items-center gap-1"><Clock className="w-2.5 h-2.5" />{l === 'hi' ? 'दिन' : 'Day'}</span>
+            <span className={`text-[8px] font-bold ${dp.pct > 80 ? 'text-red-600 animate-pulse' : dp.pct > 50 ? 'text-amber-600' : 'text-gray-500'}`}>
               {dp.remainingHours}h {dp.remainingMins}m {l === 'hi' ? 'बाकी' : 'left'}
             </span>
           </div>
-          <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
-            <div className="h-full rounded-full transition-all duration-1000"
-              style={{
-                width: `${dp.pct}%`,
-                background: dp.isAlmostOver ? 'linear-gradient(90deg, #ef4444, #f97316)' : dp.isPastHalf ? 'linear-gradient(90deg, #f59e0b, #eab308)' : 'linear-gradient(90deg, #3b82f6, #6366f1)',
-              }} />
-            {/* Goal completion overlay */}
-            <div className="absolute top-0 h-full rounded-full bg-emerald-500/30"
-              style={{ width: `${completionPct}%` }} />
-          </div>
-          <div className="flex items-center justify-between mt-0.5">
-            <span className="text-[7px] text-gray-400">{dp.pct}% {l === 'hi' ? 'बीत चुका' : 'elapsed'}</span>
-            <span className="text-[7px] text-gray-400">{completionPct}% {l === 'hi' ? 'लक्ष्य' : 'goals'}</span>
+          <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all" style={{ width: `${dp.pct}%`, background: dp.pct > 80 ? '#ef4444' : dp.pct > 50 ? '#f59e0b' : '#3b82f6' }} />
           </div>
         </div>
-
-        {/* ── TODAY'S STATS STRIP ── */}
+        {/* Today stats */}
         <div className="flex items-center gap-2 text-[8px] flex-wrap">
           <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold">
             <ClipboardList className="w-2.5 h-2.5" />{todayDetailed?.count || 0} {l === 'hi' ? 'टेस्ट' : 'tests'}
           </span>
-          {(todayDetailed?.count || 0) > 0 && (
-            <>
-              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-bold">
-                <Target className="w-2.5 h-2.5" />{todayDetailed?.accuracy || 0}%
-              </span>
-              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-bold">
-                <BarChart3 className="w-2.5 h-2.5" />{todayDetailed?.avgScore || 0}% avg
-              </span>
-              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-bold">
-                <Timer className="w-2.5 h-2.5" />{Math.round((todayDetailed?.timeSpent || 0) / 60)}m
-              </span>
-            </>
-          )}
-          {/* Yesterday comparison */}
-          {(yesterdayActivity?.count || 0) > 0 && (
-            <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded font-bold
-              ${(todayDetailed?.count || 0) > yesterdayActivity.count
-                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-                : (todayDetailed?.count || 0) < yesterdayActivity.count
-                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-              }`}>
-              {(todayDetailed?.count || 0) >= yesterdayActivity.count
-                ? <ArrowUp className="w-2.5 h-2.5" />
-                : <ArrowDown className="w-2.5 h-2.5" />}
-              vs {l === 'hi' ? 'कल' : 'yday'}: {yesterdayActivity.count}
-            </span>
-          )}
+          {(todayDetailed?.count || 0) > 0 && (<>
+            <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 font-bold"><Target className="w-2.5 h-2.5" />{todayDetailed?.accuracy || 0}%</span>
+            <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 font-bold"><BarChart3 className="w-2.5 h-2.5" />{todayDetailed?.avgScore || 0}%</span>
+          </>)}
         </div>
       </div>
-
-      {/* ── PRESSURE MESSAGE ── */}
-      <div className={`px-4 py-2 border-b border-gray-100 dark:border-gray-700 ${pmStyle.bg} border-l-4 ${pmStyle.border}`}>
+      {/* Pressure */}
+      <div className={`px-4 py-2 border-b border-gray-100 dark:border-gray-700 ${pmS.bg} border-l-4 ${pm.type === 'critical' ? 'border-l-red-500' : pm.type === 'warning' ? 'border-l-amber-500' : pm.type === 'celebration' ? 'border-l-emerald-500' : 'border-l-blue-500'}`}>
         <div className="flex items-center gap-2">
-          <PMIcon className={`w-3.5 h-3.5 flex-shrink-0 ${pmStyle.text} ${pm.type === 'critical' ? 'animate-pulse' : ''}`} />
-          <p className={`text-[10px] font-semibold ${pmStyle.text}`}>
-            {l === 'hi' ? pm.hi : pm.en}
-          </p>
+          <PMIcon className={`w-3.5 h-3.5 ${pmS.text} ${pm.type === 'critical' ? 'animate-pulse' : ''}`} />
+          <p className={`text-[10px] font-semibold ${pmS.text}`}>{l === 'hi' ? pm.hi : pm.en}</p>
         </div>
       </div>
-
-      {/* ── SETTINGS PANEL ── */}
+      {/* Settings */}
       {showSettings && (
-        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700">
-          <p className="text-[10px] font-bold text-gray-600 dark:text-gray-300 mb-2">{l === 'hi' ? 'लक्ष्य सेटिंग्स' : 'Goal Settings'}</p>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { key: 'dailyTests', label: l === 'hi' ? 'दैनिक टेस्ट' : 'Daily Tests', min: 1, max: 20 },
-              { key: 'dailyAccuracy', label: l === 'hi' ? 'सटीकता %' : 'Accuracy %', min: 30, max: 100 },
-              { key: 'targetScore', label: l === 'hi' ? 'लक्ष्य स्कोर %' : 'Target Score %', min: 40, max: 100 },
-            ].map(s => (
-              <div key={s.key}>
-                <label className="text-[9px] text-gray-500">{s.label}</label>
-                <input type="number" value={customTargets[s.key]} min={s.min} max={s.max}
-                  onChange={e => updateCustomTargets({ ...customTargets, [s.key]: parseInt(e.target.value) || s.min })}
-                  className="w-full px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
-              </div>
-            ))}
-          </div>
+        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700 grid grid-cols-3 gap-2">
+          {[{ key: 'dailyTests', label: l === 'hi' ? 'दैनिक टेस्ट' : 'Tests/Day', min: 1, max: 20 }, { key: 'dailyAccuracy', label: l === 'hi' ? 'सटीकता' : 'Accuracy %', min: 30, max: 100 }, { key: 'targetScore', label: l === 'hi' ? 'लक्ष्य' : 'Target %', min: 40, max: 100 }].map(s => (
+            <div key={s.key}>
+              <label className="text-[9px] text-gray-500">{s.label}</label>
+              <input type="number" value={customTargets[s.key]} min={s.min} max={s.max}
+                onChange={e => updateCustomTargets({ ...customTargets, [s.key]: parseInt(e.target.value) || s.min })}
+                className="w-full px-2 py-1 text-xs border rounded-lg bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-900 dark:text-white" />
+            </div>
+          ))}
         </div>
       )}
-
-      {/* ── GOALS LIST ── */}
-      <div className="p-3 space-y-1.5 max-h-[400px] overflow-y-auto">
+      {/* Goals */}
+      <div className="p-3 space-y-1.5 max-h-[380px] overflow-y-auto">
         {goals.map((goal, i) => {
           const Icon = iconMap[goal.icon] || Target;
           const cc = colorMap[goal.color] || colorMap.blue;
           const pct = Math.min(100, Math.round((goal.current / Math.max(goal.target, 1)) * 100));
           const done = goal.current >= goal.target;
-          const isOverAchieved = goal.current > goal.target;
-          const urgDot = urgencyColors[goal.urgency] || urgencyColors.normal;
-
           return (
-            <div key={goal.id || i}
-              className={`relative flex items-start gap-2.5 p-2.5 rounded-xl border transition-all
-                ${done
-                  ? `bg-emerald-50/50 border-emerald-200 dark:bg-emerald-900/10 dark:border-emerald-800/30 ${isOverAchieved ? 'ring-1 ring-emerald-300 dark:ring-emerald-700' : ''}`
-                  : goal.urgency === 'critical'
-                  ? 'bg-red-50/30 border-red-200 dark:bg-red-900/5 dark:border-red-900/30'
-                  : goal.urgency === 'high'
-                  ? 'bg-orange-50/30 border-orange-200 dark:bg-orange-900/5 dark:border-orange-900/30'
-                  : 'bg-gray-50/50 border-gray-100 dark:bg-gray-700/20 dark:border-gray-700/50'
-                }`}>
-
-              {/* Urgency dot */}
-              {!done && goal.urgency !== 'normal' && (
-                <div className={`absolute top-2 right-2 w-2 h-2 rounded-full ${urgDot}`} />
-              )}
-
-              {/* Icon */}
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 transition-all
-                ${done ? 'bg-emerald-100 dark:bg-emerald-900/30 shadow-sm' : cc.bg}`}>
-                {done
-                  ? <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  : <Icon className={`w-4 h-4 ${cc.text}`} />}
+            <div key={goal.id || i} className={`relative flex items-start gap-2.5 p-2.5 rounded-xl border transition-all ${done ? 'bg-emerald-50/50 border-emerald-200 dark:bg-emerald-900/10 dark:border-emerald-800/30' : goal.urgency === 'critical' ? 'bg-red-50/30 border-red-200 dark:bg-red-900/5 dark:border-red-900/30' : 'bg-gray-50/50 border-gray-100 dark:bg-gray-700/20 dark:border-gray-700/50'}`}>
+              {!done && goal.urgency !== 'normal' && <div className={`absolute top-2 right-2 w-2 h-2 rounded-full ${urgC[goal.urgency]}`} />}
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${done ? 'bg-emerald-100 dark:bg-emerald-900/30' : cc.bg}`}>
+                {done ? <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Icon className={`w-4 h-4 ${cc.text}`} />}
               </div>
-
-              {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
-                  <p className={`text-[11px] font-semibold truncate pr-4
-                    ${done ? 'text-emerald-700 dark:text-emerald-400 line-through' : 'text-gray-900 dark:text-white'}`}>
-                    {l === 'hi' ? goal.titleHi : goal.title}
-                  </p>
+                  <p className={`text-[11px] font-semibold truncate pr-4 ${done ? 'text-emerald-700 dark:text-emerald-400 line-through' : 'text-gray-900 dark:text-white'}`}>{l === 'hi' ? goal.titleHi : goal.title}</p>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <span className={`text-[9px] font-black
-                      ${done ? 'text-emerald-600 dark:text-emerald-400' : pct >= 50 ? cc.text : 'text-gray-500'}`}>
-                      {goal.current}{goal.type === 'percentage' ? '%' : ''}/{goal.target}{goal.type === 'percentage' ? '%' : ''}
-                    </span>
-                    {/* XP badge */}
-                    {done && (
-                      <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                        +{goal.xp}XP
-                      </span>
-                    )}
+                    <span className={`text-[9px] font-black ${done ? 'text-emerald-600' : cc.text}`}>{goal.current}{goal.type === 'percentage' ? '%' : ''}/{goal.target}{goal.type === 'percentage' ? '%' : ''}</span>
+                    {done && <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">+{goal.xp}XP</span>}
                   </div>
                 </div>
-
-                {/* Description */}
-                <p className={`text-[8px] mb-1 ${done ? 'text-emerald-600/60 dark:text-emerald-400/60' : 'text-gray-500'}`}>
-                  {l === 'hi' ? goal.descriptionHi : goal.description}
-                </p>
-
-                {/* Progress bar */}
+                <p className={`text-[8px] mb-1 ${done ? 'text-emerald-600/60' : 'text-gray-500'}`}>{l === 'hi' ? goal.descriptionHi : goal.description}</p>
                 <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-1000 ${done ? 'bg-emerald-500' : cc.bar}`}
-                    style={{ width: `${pct}%` }} />
+                  <div className={`h-full rounded-full transition-all duration-1000 ${done ? 'bg-emerald-500' : cc.bar}`} style={{ width: `${pct}%` }} />
                 </div>
-
-                {/* Priority badge */}
-                {!done && (
-                  <div className="flex items-center justify-between mt-1">
-                    <span className={`text-[7px] font-bold uppercase tracking-wider
-                      ${goal.priority === 'critical' ? 'text-red-500' :
-                      goal.priority === 'high' ? 'text-orange-500' :
-                      goal.priority === 'medium' ? 'text-blue-500' : 'text-gray-400'}`}>
-                      {goal.priority}
-                    </span>
-                    <span className="text-[7px] text-gray-400">{pct}%</span>
-                  </div>
-                )}
               </div>
             </div>
           );
         })}
       </div>
+      <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 flex items-center justify-between">
+        <span className="text-[8px] text-gray-400">{l === 'hi' ? 'गोल स्ट्रीक' : 'Goal Streak'}: <b className="text-amber-600">{goalStreak}d</b> | XP: <b className="text-indigo-600">{todayXP}</b></span>
+        {(todayDetailed?.count || 0) === 0 && (
+          <button onClick={() => navigate?.('/tests')} className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[9px] font-bold rounded-lg">
+            <Play className="w-3 h-3" />{l === 'hi' ? 'शुरू करो!' : 'Start!'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
-      {/* ── FOOTER ── */}
-      <div className="px-4 py-2.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-        <div className="flex items-center justify-between">
+// ════════════════════════════════════════════════════════════
+//  🆕 SMART REVISION HUB
+// ════════════════════════════════════════════════════════════
+const SmartRevisionHub = ({ data, language: l, navigate }) => {
+  const [tab, setTab] = useState('due');
+  if (!data || data.stats.totalTests === 0) return null;
+
+  const catColors = { critical: { bg: 'bg-red-50 dark:bg-red-900/10', border: 'border-red-200 dark:border-red-800', text: 'text-red-700 dark:text-red-400', icon: AlertTriangle, badge: 'bg-red-500' }, weak: { bg: 'bg-orange-50 dark:bg-orange-900/10', border: 'border-orange-200 dark:border-orange-800', text: 'text-orange-700 dark:text-orange-400', icon: TrendingDown, badge: 'bg-orange-500' }, improving: { bg: 'bg-blue-50 dark:bg-blue-900/10', border: 'border-blue-200 dark:border-blue-800', text: 'text-blue-700 dark:text-blue-400', icon: TrendingUp, badge: 'bg-blue-500' }, learning: { bg: 'bg-amber-50 dark:bg-amber-900/10', border: 'border-amber-200 dark:border-amber-800', text: 'text-amber-700 dark:text-amber-400', icon: BookOpen, badge: 'bg-amber-500' }, mastered: { bg: 'bg-emerald-50 dark:bg-emerald-900/10', border: 'border-emerald-200 dark:border-emerald-800', text: 'text-emerald-700 dark:text-emerald-400', icon: CheckCircle, badge: 'bg-emerald-500' } };
+
+  const tabData = tab === 'due' ? data.todayDue : tab === 'critical' ? data.critical : tab === 'weak' ? data.weak : tab === 'improving' ? [...data.improving, ...data.mastered] : data.all;
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-[8px] text-gray-400">
-              {l === 'hi' ? 'गोल स्ट्रीक' : 'Goal Streak'}: <b className="text-amber-600 dark:text-amber-400">{goalStreak}d</b>
-            </span>
-            <span className="text-[8px] text-gray-400">|</span>
-            <span className="text-[8px] text-gray-400">
-              XP: <b className="text-indigo-600 dark:text-indigo-400">{todayXP}</b>
-            </span>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow">
+              <RotateCcw className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'स्मार्ट रिवीज़न' : 'Smart Revision Hub'}</h3>
+              <p className="text-[9px] text-gray-500">{l === 'hi' ? 'स्पेस्ड रिपिटिशन' : 'Spaced Repetition System'}</p>
+            </div>
           </div>
-          {(todayDetailed?.count || 0) === 0 && (
-            <button onClick={() => navigate && navigate('/tests')}
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[9px] font-bold rounded-lg hover:shadow-lg transition-all">
-              <Play className="w-3 h-3" />{l === 'hi' ? 'शुरू करो!' : 'Start Now!'}
+          {data.marathonQueue.length > 0 && (
+            <button onClick={() => navigate?.(`/test/${data.marathonQueue[0].testId}`)}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-rose-500 to-pink-600 text-white text-[9px] font-bold rounded-lg hover:shadow-lg">
+              <Rocket className="w-3 h-3" />{l === 'hi' ? 'मैराथन' : 'Marathon'}
             </button>
           )}
+        </div>
+
+        {/* Stats strip */}
+        <div className="flex items-center gap-2 flex-wrap text-[8px]">
+          <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-bold">{data.stats.critical} {l === 'hi' ? 'गंभीर' : 'critical'}</span>
+          <span className="px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 font-bold">{data.stats.weak} {l === 'hi' ? 'कमजोर' : 'weak'}</span>
+          <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-bold">{data.stats.overdue} {l === 'hi' ? 'देरी' : 'overdue'}</span>
+          <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold">{data.stats.mastered} ✓</span>
+          {data.stats.avgImprovement > 0 && (
+            <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 font-bold">+{data.stats.avgImprovement}% avg imp</span>
+          )}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-100 dark:border-gray-700">
+        {[{ id: 'due', label: l === 'hi' ? 'आज' : 'Due', count: data.todayDue.length, color: 'text-red-600' }, { id: 'critical', label: l === 'hi' ? 'गंभीर' : 'Critical', count: data.critical.length }, { id: 'weak', label: l === 'hi' ? 'कमजोर' : 'Weak', count: data.weak.length }, { id: 'improving', label: l === 'hi' ? 'सुधार' : 'Good', count: data.improving.length + data.mastered.length }].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`flex-1 px-2 py-2 text-[10px] font-bold transition-all ${tab === t.id ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10' : 'text-gray-500'}`}>
+            {t.label} <span className="text-[8px] ml-0.5 px-1 rounded-full bg-gray-100 dark:bg-gray-700">{t.count}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Items */}
+      <div className="p-3 space-y-1.5 max-h-[400px] overflow-y-auto">
+        {tabData.length === 0 ? (
+          <div className="text-center py-6"><CheckCircle className="w-8 h-8 mx-auto mb-2 text-emerald-200 dark:text-emerald-800" /><p className="text-xs text-gray-400">{l === 'hi' ? 'कोई नहीं!' : 'None!'}</p></div>
+        ) : tabData.slice(0, 15).map((item, i) => {
+          const cc = catColors[item.category] || catColors.learning;
+          const CIcon = cc.icon;
+          const trendIcon = item.trend === 'up' ? TrendingUp : item.trend === 'down' ? TrendingDown : Minus;
+          return (
+            <div key={i} className={`group flex items-center gap-2.5 p-2.5 rounded-xl border ${cc.border} ${cc.bg} hover:shadow-lg cursor-pointer transition-all`}
+              onClick={() => navigate?.(`/results/${item.lastAttempt?._id}`)}>
+              {/* Priority dot */}
+              <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+                <div className={`w-2 h-2 rounded-full ${item.isOverdue ? 'bg-red-500 animate-pulse' : cc.badge}`} />
+                <span className="text-[7px] text-gray-400">{item.bestScore}%</span>
+              </div>
+              {/* Score ring */}
+              <Ring pct={item.bestScore} size={32} sw={3} color={item.bestScore >= 70 ? '#22c55e' : item.bestScore >= 50 ? '#f59e0b' : '#ef4444'}>
+                <span className="text-[7px] font-bold">{item.bestScore}</span>
+              </Ring>
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1">
+                  <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{item.title}</h4>
+                  {item.paper && <span className={`px-1 rounded text-[7px] font-bold ${item.paper === 'paper1' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{item.paper === 'paper1' ? 'P1' : 'P2'}</span>}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5 text-[8px] text-gray-500">
+                  <span>{item.daysSinceLastAttempt}d ago</span>
+                  <span>{item.attempts} att</span>
+                  <span className={`font-bold ${cc.text}`}>{item.srsLabel}</span>
+                  {item.isOverdue && <span className="text-red-500 font-bold">{item.overdueBy}d overdue!</span>}
+                  {item.improvement !== 0 && (
+                    <span className={`flex items-center gap-0.5 ${item.improvement > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {React.createElement(trendIcon, { className: 'w-2.5 h-2.5' })}
+                      {item.improvement > 0 ? '+' : ''}{item.improvement}%
+                    </span>
+                  )}
+                </div>
+                {/* Score history mini */}
+                {item.allScores.length > 1 && (
+                  <div className="flex items-center gap-0.5 mt-1">
+                    {item.allScores.slice(-5).map((s, si) => (
+                      <div key={si} className={`h-1 rounded-full ${s.score >= 70 ? 'bg-emerald-400' : s.score >= 50 ? 'bg-amber-400' : 'bg-red-400'}`} style={{ width: `${Math.max(s.score / 5, 3)}px` }} />
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button onClick={(e) => { e.stopPropagation(); navigate?.(`/test/${item.testId}`); }}
+                className="p-1.5 rounded-lg bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 hover:bg-rose-200 transition flex-shrink-0">
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* SRS Schedule */}
+      <div className="px-4 py-2.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+        <div className="flex items-center justify-between text-[8px] text-gray-400">
+          <span>{l === 'hi' ? 'आज' : 'Today'}: <b className="text-red-600">{data.stats.dueToday}</b> | {l === 'hi' ? 'इस हफ्ते' : 'Week'}: <b className="text-amber-600">{data.stats.dueThisWeek}</b></span>
+          <span>{l === 'hi' ? 'कुल रिवीज़न' : 'Total'}: {data.stats.totalRevisions}</span>
         </div>
       </div>
     </div>
   );
 };
+
 // ════════════════════════════════════════════════════════════
-//  🆕 SYLLABUS COVERAGE HEATMAP (FIXED)
-//  Replace the old SyllabusCoverageMap in Dashboard.jsx
+//  🆕 WEEKLY CHAPTER MATRIX
 // ════════════════════════════════════════════════════════════
-const SyllabusCoverageMap = ({ coverage, language }) => {
-  const l = language;
-  const [activeTab, setActiveTab] = useState('paper1');
+const WeeklyChapterMatrix = ({ data, language: l }) => {
+  const [weekIdx, setWeekIdx] = useState(0);
+  if (!data || !data.currentWeek) return null;
 
-  const data = activeTab === 'paper1' ? coverage.paper1 : coverage.paper2;
-  const summary = activeTab === 'paper1' ? coverage.paper1Summary : coverage.paper2Summary;
-
-  const levelLabels = {
-    mastered: { en: 'Mastered', hi: 'माहिर', color: 'bg-emerald-500', textColor: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/10' },
-    learning: { en: 'Learning', hi: 'सीख रहे', color: 'bg-blue-500', textColor: 'text-blue-700 dark:text-blue-400', border: 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/10' },
-    in_progress: { en: 'In Progress', hi: 'प्रगति में', color: 'bg-amber-500', textColor: 'text-amber-700 dark:text-amber-400', border: 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/10' },
-    weak: { en: 'Weak', hi: 'कमजोर', color: 'bg-red-500', textColor: 'text-red-700 dark:text-red-400', border: 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-900/10' },
-    not_started: { en: 'Not Started', hi: 'शुरू नहीं', color: 'bg-gray-400 dark:bg-gray-500', textColor: 'text-gray-500 dark:text-gray-400', border: 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-700/20' },
-    no_tests: { en: 'No Tests', hi: 'कोई टेस्ट नहीं', color: 'bg-gray-300 dark:bg-gray-600', textColor: 'text-gray-400 dark:text-gray-500', border: 'border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/30' },
-  };
-
-  // Map summary keys to levelLabels keys
-  const summaryKeyMap = {
-    mastered: 'mastered',
-    learning: 'learning',
-    in_progress: 'inProgress',
-    weak: 'weak',
-    not_started: 'notStarted',
-    no_tests: 'noTests',
-  };
-
-  // Test type display labels
-  const testTypeLabels = {
-    dpp: 'DPP', topic_test: 'Topic', chapter_test: 'Chapter',
-    unit_test: 'Unit', practice: 'Practice', pyq_year: 'PYQ',
-    full_mock_p1: 'Mock P1', full_mock_p2: 'Mock P2', full_mock_combined: 'Mock',
-  };
+  const weeks = [data.currentWeek, ...(data.weeks || []).filter(w => w.weekKey !== data.currentWeek.weekKey)].slice(0, 6);
+  const week = weeks[weekIdx] || data.currentWeek;
+  const comp = weekIdx === 0 ? data.comparison : null;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      {/* Header */}
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center shadow">
-              <Grid3X3 className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow">
+              <Waypoints className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-                {l === 'hi' ? 'सिलेबस कवरेज' : 'Syllabus Coverage'}
-              </h3>
-              <p className="text-[9px] text-gray-500">
-                {l === 'hi' ? 'टेस्ट आधारित प्रगति' : 'Test-based progress'}
-              </p>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'साप्ताहिक अध्याय मैट्रिक्स' : 'Weekly Chapter Matrix'}</h3>
+              <p className="text-[9px] text-gray-500">{week.dateRange}</p>
             </div>
           </div>
-          <Ring pct={coverage.overallPct} size={40} sw={3.5} color="#14b8a6">
-            <span className="text-[8px] font-bold text-gray-600 dark:text-gray-300">{coverage.overallPct}%</span>
-          </Ring>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setWeekIdx(Math.min(weeks.length - 1, weekIdx + 1))} disabled={weekIdx >= weeks.length - 1}
+              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"><ChevronLeft className="w-3.5 h-3.5 text-gray-500" /></button>
+            <button onClick={() => setWeekIdx(0)} className={`px-2 py-0.5 rounded text-[9px] font-bold ${weekIdx === 0 ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-100'}`}>
+              {l === 'hi' ? 'इस हफ्ते' : 'This Week'}
+            </button>
+            <button onClick={() => setWeekIdx(Math.max(0, weekIdx - 1))} disabled={weekIdx <= 0}
+              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"><ChevronRight className="w-3.5 h-3.5 text-gray-500" /></button>
+          </div>
         </div>
 
-        {/* Paper tabs */}
-        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
-          {['paper1', 'paper2'].map(tab => {
-            const tabSummary = tab === 'paper1' ? coverage.paper1Summary : coverage.paper2Summary;
-            return (
-              <button key={tab} onClick={() => setActiveTab(tab)}
-                className={`flex-1 px-3 py-1.5 rounded-md text-[10px] font-bold transition-all
-                  ${activeTab === tab ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                {tab === 'paper1' ? 'Paper 1' : 'Paper 2'}
-                <span className={`ml-1 text-[8px] px-1 rounded-full ${activeTab === tab ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' : 'bg-gray-200 dark:bg-gray-600'}`}>
-                  {tabSummary.overallPct}%
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Summary strip */}
-      <div className="px-4 py-2 bg-gray-50/50 dark:bg-gray-700/20 border-b border-gray-100 dark:border-gray-700">
-        <div className="flex items-center gap-2 flex-wrap">
-          {Object.entries(levelLabels).map(([key, val]) => {
-            const summaryField = summaryKeyMap[key];
-            const count = summaryField ? (summary[summaryField] || 0) : 0;
-            return (
-              <div key={key} className="flex items-center gap-1">
-                <div className={`w-2 h-2 rounded-sm ${val.color}`} />
-                <span className="text-[8px] text-gray-500">{val[l] || val.en}: {count}</span>
-              </div>
-            );
-          })}
-        </div>
-        {/* Test counts */}
-        <div className="flex items-center gap-3 mt-1 text-[8px] text-gray-400">
-          <span>{l === 'hi' ? 'बनाए' : 'Created'}: {summary.totalTestsCreated || 0}</span>
-          <span>{l === 'hi' ? 'दिए' : 'Attempted'}: {summary.totalTestsAttempted || 0}</span>
-          <span>{l === 'hi' ? 'बाकी' : 'Pending'}: {summary.totalTestsPending || 0}</span>
+        {/* Week overview */}
+        <div className="flex items-center gap-3 text-[9px]">
+          <span className="px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-bold">{week.stats.totalTests} {l === 'hi' ? 'टेस्ट' : 'tests'}</span>
+          <span className="px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-bold">{week.stats.chaptersCovered}/{week.stats.totalChapters} {l === 'hi' ? 'अध्याय' : 'chapters'}</span>
+          <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-bold">{week.stats.avgScore}% avg</span>
+          {comp && (
+            <span className={`px-2 py-0.5 rounded font-bold flex items-center gap-0.5 ${comp.scoreChange > 0 ? 'bg-emerald-100 text-emerald-700' : comp.scoreChange < 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>
+              {comp.scoreChange > 0 ? <ArrowUp className="w-2.5 h-2.5" /> : comp.scoreChange < 0 ? <ArrowDown className="w-2.5 h-2.5" /> : <Minus className="w-2.5 h-2.5" />}
+              {comp.scoreChange > 0 ? '+' : ''}{comp.scoreChange}% vs {l === 'hi' ? 'पिछला' : 'last'}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Heatmap Grid */}
-      <div className="p-3">
-        <div className="grid grid-cols-2 gap-2">
-          {data.map((unit, i) => {
-            const ll = levelLabels[unit.level] || levelLabels.not_started;
-            const borderClass = ll.border || 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-700/20';
-
-            return (
-              <div key={i} className="relative group">
-                <div className={`p-2.5 rounded-xl border-2 transition-all hover:shadow-lg cursor-pointer ${borderClass}`}>
-                  {/* Unit header */}
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[8px] font-bold text-gray-500 uppercase">{unit.unit}</span>
-                    <div className="flex items-center gap-1">
-                      {unit.accuracy > 0 && (
-                        <span className={`text-[7px] font-bold px-1 py-0.5 rounded-full ${ll.color} text-white`}>
-                          {unit.accuracy}%
+      {/* Chapter ranking */}
+      <div className="p-3 space-y-1.5 max-h-[350px] overflow-y-auto">
+        {week.chapters.length > 0 ? (
+          <>
+            {week.chapters.map((ch, i) => {
+              const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
+              const change = ch.changeVsLastWeek;
+              return (
+                <div key={i} className="flex items-center gap-2.5 p-2 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20 hover:shadow-md transition-all">
+                  <span className="text-sm w-6 text-center flex-shrink-0">{medal}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <p className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{ch.name}</p>
+                      <span className={`px-1 rounded text-[7px] font-bold ${ch.paper === 'paper1' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{ch.paper === 'paper1' ? 'P1' : 'P2'}</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-0.5">
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${ch.avgScore}%`, background: ch.avgScore >= 70 ? '#22c55e' : ch.avgScore >= 50 ? '#f59e0b' : '#ef4444' }} />
+                    </div>
+                    <div className="flex items-center gap-2 text-[8px] text-gray-500">
+                      <span>{ch.testsCount} tests</span>
+                      <span>✓{ch.correct} ✗{ch.wrong}</span>
+                      {change !== null && change !== undefined && (
+                        <span className={`font-bold flex items-center gap-0.5 ${change > 0 ? 'text-emerald-600' : change < 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                          {change > 0 ? <ArrowUp className="w-2.5 h-2.5" /> : change < 0 ? <ArrowDown className="w-2.5 h-2.5" /> : null}
+                          {change > 0 ? '+' : ''}{change}%
                         </span>
                       )}
                     </div>
                   </div>
-
-                  {/* Unit name */}
-                  <p className="text-[10px] font-semibold text-gray-800 dark:text-gray-200 truncate mb-1.5">
-                    {unit.name}
-                  </p>
-
-                  {/* Test stats */}
-                  <div className="flex items-center gap-1.5 text-[8px] text-gray-500 mb-1">
-                    <span className="flex items-center gap-0.5">
-                      <ClipboardList className="w-2.5 h-2.5" />
-                      {unit.attemptedCount}/{unit.totalTests}
-                    </span>
-                    {unit.questionsAttempted > 0 && (
-                      <span className="flex items-center gap-0.5">
-                        <FileQuestion className="w-2.5 h-2.5" />
-                        {unit.questionsAttempted}Q
-                      </span>
-                    )}
-                    {unit.bestScore > 0 && (
-                      <span className="flex items-center gap-0.5">
-                        <Trophy className="w-2.5 h-2.5 text-amber-500" />
-                        {unit.bestScore}%
-                      </span>
-                    )}
+                  <div className="text-right flex-shrink-0">
+                    <p className={`text-base font-black ${ch.avgScore >= 70 ? 'text-emerald-600' : ch.avgScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>{ch.avgScore}%</p>
+                    <p className="text-[7px] text-gray-400">{l === 'hi' ? 'सर्वश्रेष्ठ' : 'Best'}: {ch.bestScore}%</p>
                   </div>
-
-                  {/* Test type badges */}
-                  {unit.testTypeBreakdown && Object.keys(unit.testTypeBreakdown).length > 0 && (
-                    <div className="flex flex-wrap gap-0.5 mb-1.5">
-                      {Object.entries(unit.testTypeBreakdown).map(([type, td]) => (
-                        <span key={type} className={`text-[6px] font-bold px-1 py-0.5 rounded
-                          ${td.attempted >= td.total
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                            : td.attempted > 0
-                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                            : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
-                          }`}>
-                          {testTypeLabels[type] || type}: {td.attempted}/{td.total}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Coverage progress bar */}
-                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-1000"
-                      style={{
-                        width: `${unit.totalTests > 0 ? Math.round((unit.attemptedCount / unit.totalTests) * 100) : 0}%`,
-                        backgroundColor: unit.color || '#d1d5db'
-                      }} />
-                  </div>
-
-                  {/* Level label */}
-                  <div className="flex items-center justify-between mt-1">
-                    <span className={`text-[7px] font-bold ${ll.textColor}`}>
-                      {ll[l] || ll.en}
-                    </span>
-                    {unit.totalTests > 0 && (
-                      <span className="text-[7px] text-gray-400">
-                        {Math.round((unit.attemptedCount / unit.totalTests) * 100)}%
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* No data message */}
-        {data.length === 0 && (
-          <div className="text-center py-8">
-            <Grid3X3 className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
-            <p className="text-xs text-gray-400">{l === 'hi' ? 'कोई डेटा नहीं' : 'No data available'}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// ════════════════════════════════════════════════════════════
-//   🆕 SPEED ANALYTICS CARD
-// ════════════════════════════════════════════════════════════
-const SpeedAnalyticsCard = ({ data, language }) => {
-  const l = language;
-  if (!data || data.speedTrend.length === 0) return null;
-
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow">
-            <Zap className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गति विश्लेषण' : 'Speed Analytics'}</h3>
-            <p className="text-[9px] text-gray-500">{l === 'hi' ? 'प्रति प्रश्न समय' : 'Time per question'}</p>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="text-lg font-black text-gray-900 dark:text-white">{data.avgTimePerQ}s</p>
-          <p className="text-[8px] text-gray-400">{l === 'hi' ? 'औसत' : 'avg'}/Q</p>
-        </div>
-      </div>
-
-      <div className="p-4">
-        {/* Speed vs Accuracy Chart */}
-        <div style={{ height: 160 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data.speedTrend} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:stroke-gray-700" />
-              <XAxis dataKey="name" tick={{ fontSize: 9 }} stroke="#94a3b8" />
-              <YAxis tick={{ fontSize: 9 }} stroke="#94a3b8" />
-              <Tooltip content={<CTooltip />} />
-              <Line type="monotone" dataKey="speed" stroke="#06b6d4" strokeWidth={2} dot={{ r: 3, fill: '#06b6d4' }} name={l === 'hi' ? 'गति(s)' : 'Speed(s)'} />
-              <Line type="monotone" dataKey="accuracy" stroke="#22c55e" strokeWidth={2} dot={{ r: 3, fill: '#22c55e' }} name={l === 'hi' ? 'सटीकता%' : 'Accuracy%'} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-          <div className="text-center">
-            <Zap className="w-3 h-3 mx-auto mb-0.5 text-emerald-500" />
-            <p className="text-xs font-bold text-gray-900 dark:text-white">{data.fastestTest?.avgTime || 0}s</p>
-            <p className="text-[7px] text-gray-400 uppercase">{l === 'hi' ? 'सबसे तेज' : 'Fastest'}</p>
-          </div>
-          <div className="text-center">
-            <Timer className="w-3 h-3 mx-auto mb-0.5 text-blue-500" />
-            <p className="text-xs font-bold text-gray-900 dark:text-white">{data.avgTimePerQ}s</p>
-            <p className="text-[7px] text-gray-400 uppercase">{l === 'hi' ? 'औसत' : 'Average'}</p>
-          </div>
-          <div className="text-center">
-            <Hourglass className="w-3 h-3 mx-auto mb-0.5 text-amber-500" />
-            <p className="text-xs font-bold text-gray-900 dark:text-white">{data.slowestTest?.avgTime || 0}s</p>
-            <p className="text-[7px] text-gray-400 uppercase">{l === 'hi' ? 'सबसे धीमा' : 'Slowest'}</p>
-          </div>
-        </div>
-
-        {/* Time Distribution */}
-        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-          <p className="text-[9px] font-bold text-gray-500 mb-2 uppercase">{l === 'hi' ? 'समय वितरण' : 'Time Distribution'}</p>
-          <div className="flex items-end gap-1" style={{ height: 40 }}>
-            {data.timeDistribution.map((b, i) => {
-              const maxVal = Math.max(...data.timeDistribution.map(d => d.value), 1);
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center">
-                  <div className="w-full rounded-t-sm bg-gradient-to-t from-cyan-500 to-blue-400 transition-all duration-700"
-                    style={{ height: `${Math.max((b.value / maxVal) * 100, 5)}%` }} />
-                  <span className="text-[6px] text-gray-400 mt-0.5">{b.name}</span>
                 </div>
               );
             })}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
-// ════════════════════════════════════════════════════════════
-//  🆕 STUDY RECOMMENDATIONS
-// ════════════════════════════════════════════════════════════
-const StudyRecommendations = ({ recommendations, language, navigate }) => {
-  const l = language;
-  if (!recommendations || recommendations.length === 0) return null;
-
-  const iconMap = {
-    AlertTriangle, BookOpen, Target, TrendingDown, Clock, Flame, BarChart2, Zap, Lightbulb,
-  };
-
-  const priorityColors = {
-    critical: 'border-red-300 bg-red-50/50 dark:border-red-800/30 dark:bg-red-900/5',
-    high: 'border-orange-300 bg-orange-50/50 dark:border-orange-800/30 dark:bg-orange-900/5',
-    medium: 'border-blue-300 bg-blue-50/50 dark:border-blue-800/30 dark:bg-blue-900/5',
-    low: 'border-gray-200 bg-gray-50/50 dark:border-gray-700/30 dark:bg-gray-700/10',
-  };
-
-  const colorBg = {
-    red: 'from-red-500 to-rose-600', orange: 'from-orange-500 to-amber-600',
-    blue: 'from-blue-500 to-indigo-600', purple: 'from-purple-500 to-violet-600',
-    amber: 'from-amber-500 to-yellow-600', cyan: 'from-cyan-500 to-teal-600',
-  };
-
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow">
-          <Lightbulb className="w-4 h-4 text-white" />
-        </div>
-        <div>
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-            {l === 'hi' ? 'स्मार्ट सुझाव' : 'Smart Recommendations'}
-          </h3>
-          <p className="text-[9px] text-gray-500">{l === 'hi' ? 'आपके डेटा पर आधारित' : 'Based on your data'}</p>
-        </div>
-      </div>
-
-      <div className="p-3 space-y-1.5">
-        {recommendations.map((rec, i) => {
-          const Icon = iconMap[rec.icon] || Lightbulb;
-          const bgGrad = colorBg[rec.color] || colorBg.blue;
-          return (
-            <div key={rec.id || i}
-              className={`flex items-start gap-2.5 p-2.5 rounded-xl border transition-all hover:shadow-md ${priorityColors[rec.priority] || priorityColors.medium}`}>
-              <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${bgGrad} flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5`}>
-                <Icon className="w-3.5 h-3.5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-semibold text-gray-900 dark:text-white">
-                  {l === 'hi' ? rec.titleHi : rec.title}
+            {/* Uncovered */}
+            {week.uncovered.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                <p className="text-[9px] font-bold text-gray-500 uppercase mb-1.5 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 text-amber-500" />{l === 'hi' ? 'इस हफ्ते नहीं' : 'Not Covered'}
                 </p>
-                <p className="text-[9px] text-gray-500 mt-0.5">
-                  {l === 'hi' ? rec.detailHi : rec.detail}
-                </p>
+                <div className="flex flex-wrap gap-1">
+                  {week.uncovered.slice(0, 8).map((u, i) => (
+                    <span key={i} className={`text-[8px] px-1.5 py-0.5 rounded border ${u.daysSince !== null && u.daysSince > 14 ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/10 dark:border-red-800 dark:text-red-400' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-700/30 dark:border-gray-700 dark:text-gray-400'}`}>
+                      {u.name} {u.daysSince !== null ? `(${u.daysSince}d)` : ''}
+                    </span>
+                  ))}
+                </div>
               </div>
-              <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0
-                ${rec.priority === 'critical' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
-                rec.priority === 'high' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' :
-                rec.priority === 'medium' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' :
-                'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
-                {rec.priority}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-// ════════════════════════════════════════════════════════════
-//  🆕 SCORE DISTRIBUTION CHART
-// ════════════════════════════════════════════════════════════
-const ScoreDistributionCard = ({ data, language }) => {
-  const l = language;
-  if (!data || data.length === 0) return null;
-  const maxCount = Math.max(...data.map(d => d.count), 1);
-
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow">
-          <BarChart2 className="w-4 h-4 text-white" />
-        </div>
-        <div>
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'स्कोर वितरण' : 'Score Distribution'}</h3>
-          <p className="text-[9px] text-gray-500">{l === 'hi' ? 'सभी टेस्ट' : 'All tests'}</p>
-        </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-6"><Inbox className="w-8 h-8 mx-auto mb-2 text-gray-200" /><p className="text-xs text-gray-400">{l === 'hi' ? 'इस हफ्ते कोई टेस्ट नहीं' : 'No tests this week'}</p></div>
+        )}
       </div>
 
-      <div className="flex items-end gap-2" style={{ height: 100 }}>
-        {data.map((d, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center">
-            <span className="text-[8px] font-bold text-gray-600 dark:text-gray-300 mb-1">{d.count}</span>
-            <div className="w-full rounded-t-lg transition-all duration-1000 relative group" style={{
-              height: `${Math.max((d.count / maxCount) * 100, 5)}%`,
-              backgroundColor: d.color,
-            }}>
-              <div className="absolute -top-6 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-[8px] px-1.5 py-0.5 rounded whitespace-nowrap">
-                {d.pct}%
-              </div>
-            </div>
-            <span className="text-[8px] text-gray-400 mt-1 font-medium">{d.range}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// ════════════════════════════════════════════════════════════
-//  🆕 PERSONAL RECORDS BOARD
-// ════════════════════════════════════════════════════════════
-const PersonalRecords = ({ records, language }) => {
-  const l = language;
-  if (!records || !records.highestScore) return null;
-
-  const items = [
-    { icon: Trophy, label: l === 'hi' ? 'सर्वश्रेष्ठ' : 'Best Score', value: `${records.highestScore?.pct || 0}%`, sub: records.highestScore?.title, color: 'from-amber-500 to-yellow-600' },
-    { icon: Target, label: l === 'hi' ? 'सटीकता' : 'Best Accuracy', value: `${records.bestAccuracy?.accuracy || 0}%`, sub: records.bestAccuracy?.title, color: 'from-emerald-500 to-green-600' },
-    { icon: Flame, label: l === 'hi' ? 'स्ट्रीक' : 'Best Streak', value: `${records.longestStreak || 0}d`, sub: `Current: ${records.currentStreak}d`, color: 'from-orange-500 to-red-600' },
-    { icon: Calendar, label: l === 'hi' ? 'सर्वश्रेष्ठ दिन' : 'Best Day', value: records.bestDay?.count || 0, sub: records.bestDay?.date ? new Date(records.bestDay.date).toLocaleDateString(l === 'hi' ? 'hi-IN' : 'en', { day: 'numeric', month: 'short' }) : '-', color: 'from-blue-500 to-indigo-600' },
-    { icon: Clock, label: l === 'hi' ? 'कुल समय' : 'Study Time', value: fmtTime(records.totalStudyTime || 0), sub: `${records.totalTestsTaken} tests`, color: 'from-purple-500 to-violet-600' },
-  ];
-
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow">
-          <Crown className="w-4 h-4 text-white" />
-        </div>
-        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'व्यक्तिगत रिकॉर्ड' : 'Personal Records'}</h3>
-      </div>
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-        {items.map((item, i) => (
-          <div key={i} className="text-center p-2 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
-            <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center shadow-sm mx-auto mb-1.5`}>
-              <item.icon className="w-3.5 h-3.5 text-white" />
-            </div>
-            <p className="text-sm font-black text-gray-900 dark:text-white">{item.value}</p>
-            <p className="text-[8px] text-gray-400 uppercase">{item.label}</p>
-            {item.sub && <p className="text-[7px] text-gray-400 truncate mt-0.5">{item.sub}</p>}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// ════════════════════════════════════════════════════════════
-//  🆕 TIME OF DAY ANALYSIS
-// ════════════════════════════════════════════════════════════
-const TimeOfDayCard = ({ data, language }) => {
-  const l = language;
-  if (!data || !data.bestPeriod) return null;
-
-  const periodIcons = { Sun, Coffee, Sunset, Moon };
-
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow">
-            <Clock className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'समय विश्लेषण' : 'Best Study Time'}</h3>
-            <p className="text-[9px] text-gray-500">{l === 'hi' ? 'सबसे अच्छा प्रदर्शन समय' : 'When you perform best'}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Period cards */}
-      <div className="grid grid-cols-4 gap-1.5 mb-3">
-        {data.periodData.map((p, i) => {
-          const PIcon = periodIcons[p.icon] || Sun;
-          const isBest = p.name === data.bestPeriod?.name;
-          return (
-            <div key={i} className={`text-center p-2 rounded-xl border transition-all
-              ${isBest ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-900/20 ring-1 ring-indigo-200 dark:ring-indigo-800' : 'border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20'}`}>
-              <PIcon className={`w-4 h-4 mx-auto mb-1 ${isBest ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`} />
-              <p className={`text-xs font-bold ${isBest ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'}`}>
-                {p.avgScore}%
-              </p>
-              <p className="text-[7px] text-gray-400">{l === 'hi' ? p.nameHi : p.name}</p>
-              <p className="text-[7px] text-gray-400">{p.count} tests</p>
-              {isBest && <span className="text-[6px] font-bold text-indigo-600 dark:text-indigo-400">BEST</span>}
-            </div>
-          );
-        })}
-      </div>
-
-      {data.bestHour && (
-        <div className="bg-indigo-50 dark:bg-indigo-900/10 rounded-lg p-2 border border-indigo-200/50 dark:border-indigo-800/30">
-          <p className="text-[9px] text-indigo-600 dark:text-indigo-400 font-semibold">
-            {l === 'hi' ? `सबसे अच्छा समय: ${data.bestHour.label} (${data.bestHour.avgScore}% avg)` : `Peak time: ${data.bestHour.label} (${data.bestHour.avgScore}% avg)`}
-          </p>
+      {/* Insights */}
+      {data.insights.length > 0 && (
+        <div className="px-4 py-2.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 space-y-1">
+          {data.insights.slice(0, 3).map((ins, i) => (
+            <p key={i} className={`text-[9px] flex items-center gap-1 ${ins.type === 'critical' ? 'text-red-600 font-bold' : ins.type === 'warning' ? 'text-amber-600' : ins.type === 'positive' ? 'text-emerald-600' : 'text-gray-500'}`}>
+              <Lightbulb className="w-3 h-3 flex-shrink-0" />{l === 'hi' ? ins.textHi : ins.text}
+            </p>
+          ))}
         </div>
       )}
     </div>
@@ -1265,321 +913,151 @@ const TimeOfDayCard = ({ data, language }) => {
 };
 
 // ════════════════════════════════════════════════════════════
-//  🆕 ACTIVITY HEATMAP CALENDAR
+//  🆕 DAILY REPORT CARD
 // ════════════════════════════════════════════════════════════
-const ActivityHeatmap = ({ activityMap, language }) => {
-  const l = language;
-  const [hoveredDay, setHoveredDay] = useState(null);
-
-  // Generate last 90 days
-  const days = useMemo(() => {
-    const result = [];
-    const today = new Date();
-    for (let i = 89; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().split('T')[0];
-      const data = activityMap[key];
-      result.push({
-        date: key,
-        day: d.getDate(),
-        month: d.getMonth(),
-        dayOfWeek: d.getDay(),
-        count: data?.count || 0,
-        avgScore: data?.avgScore || 0,
-        avgAccuracy: data?.avgAccuracy || 0,
-      });
-    }
-    return result;
-  }, [activityMap]);
-
-  const maxCount = Math.max(...days.map(d => d.count), 1);
-
-  const getColor = (count) => {
-    if (count === 0) return 'bg-gray-100 dark:bg-gray-800';
-    const intensity = count / maxCount;
-    if (intensity > 0.75) return 'bg-emerald-600 dark:bg-emerald-500';
-    if (intensity > 0.5) return 'bg-emerald-500 dark:bg-emerald-600';
-    if (intensity > 0.25) return 'bg-emerald-400 dark:bg-emerald-700';
-    return 'bg-emerald-200 dark:bg-emerald-800';
-  };
-
-  // Group by weeks
-  const weeks = [];
-  let currentWeek = [];
-  days.forEach((d, i) => {
-    currentWeek.push(d);
-    if (d.dayOfWeek === 6 || i === days.length - 1) {
-      weeks.push([...currentWeek]);
-      currentWeek = [];
-    }
-  });
+const DailyReportCard = ({ data, language: l }) => {
+  if (!data) return null;
+  const gc = { emerald: 'from-emerald-500 to-green-600', blue: 'from-blue-500 to-indigo-600', amber: 'from-amber-500 to-orange-600', red: 'from-red-500 to-rose-600' };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow">
-            <Calendar className="w-4 h-4 text-white" />
-          </div>
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className={`bg-gradient-to-r ${gc[data.gradeColor] || gc.blue} p-4 text-white`}>
+        <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गतिविधि कैलेंडर' : 'Activity Calendar'}</h3>
-            <p className="text-[9px] text-gray-500">{l === 'hi' ? 'पिछले 90 दिन' : 'Last 90 days'}</p>
+            <p className="text-[9px] text-white/60 uppercase">{l === 'hi' ? 'आज का रिपोर्ट कार्ड' : "Today's Report Card"}</p>
+            <p className="text-[10px] text-white/40">{new Date().toLocaleDateString(l === 'hi' ? 'hi-IN' : 'en', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
           </div>
-        </div>
-        <div className="flex items-center gap-0.5">
-          <span className="text-[7px] text-gray-400 mr-1">{l === 'hi' ? 'कम' : 'Less'}</span>
-          {['bg-gray-100 dark:bg-gray-800', 'bg-emerald-200 dark:bg-emerald-800', 'bg-emerald-400 dark:bg-emerald-700', 'bg-emerald-500 dark:bg-emerald-600', 'bg-emerald-600 dark:bg-emerald-500'].map((c, i) => (
-            <div key={i} className={`w-2.5 h-2.5 rounded-sm ${c}`} />
-          ))}
-          <span className="text-[7px] text-gray-400 ml-1">{l === 'hi' ? 'ज्यादा' : 'More'}</span>
+          <div className="text-center">
+            <p className="text-3xl font-black">{data.grade}</p>
+            <div className="flex gap-0.5 mt-0.5">{[1, 2, 3, 4, 5].map(i => <Star key={i} className={`w-2.5 h-2.5 ${i <= data.rating ? 'text-yellow-300 fill-yellow-300' : 'text-white/20'}`} />)}</div>
+          </div>
         </div>
       </div>
 
-      {/* Heatmap grid */}
-      <div className="flex gap-0.5 overflow-x-auto pb-1">
-        {weeks.map((week, wi) => (
-          <div key={wi} className="flex flex-col gap-0.5">
-            {week.map((day, di) => (
-              <div key={di} className="relative"
-                onMouseEnter={() => setHoveredDay(day)}
-                onMouseLeave={() => setHoveredDay(null)}>
-                <div className={`w-3 h-3 rounded-sm ${getColor(day.count)} transition-all hover:ring-1 hover:ring-gray-400 cursor-pointer`} />
-                {hoveredDay?.date === day.date && (
-                  <div className="absolute z-50 bottom-5 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-gray-700 text-white text-[8px] px-2 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
-                    <p className="font-bold">{new Date(day.date).toLocaleDateString(l === 'hi' ? 'hi-IN' : 'en', { day: 'numeric', month: 'short' })}</p>
-                    <p>{day.count} {l === 'hi' ? 'टेस्ट' : 'tests'}</p>
-                    {day.count > 0 && <p>{l === 'hi' ? 'स्कोर' : 'Score'}: {day.avgScore}%</p>}
-                  </div>
-                )}
+      <div className="p-4">
+        {/* Stats grid */}
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          {[
+            { l: l === 'hi' ? 'टेस्ट' : 'Tests', v: data.stats.tests, i: ClipboardList, c: 'text-blue-500' },
+            { l: l === 'hi' ? 'सटीकता' : 'Accuracy', v: `${data.stats.accuracy}%`, i: Target, c: 'text-emerald-500' },
+            { l: l === 'hi' ? 'औसत' : 'Avg', v: `${data.stats.avgScore}%`, i: BarChart3, c: 'text-purple-500' },
+            { l: l === 'hi' ? 'समय' : 'Time', v: fmtTime(data.stats.time), i: Clock, c: 'text-amber-500' },
+          ].map((s, i) => (
+            <div key={i} className="text-center p-1.5 rounded-lg bg-gray-50 dark:bg-gray-700/30">
+              <s.i className={`w-3 h-3 mx-auto mb-0.5 ${s.c}`} />
+              <p className="text-xs font-black text-gray-900 dark:text-white">{s.v}</p>
+              <p className="text-[7px] text-gray-400 uppercase">{s.l}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* CQS breakdown */}
+        <div className="flex items-center gap-2 mb-3 text-[9px]">
+          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold"><CheckCircle className="w-2.5 h-2.5" />{data.stats.correct}</span>
+          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-bold"><XCircle className="w-2.5 h-2.5" />{data.stats.wrong}</span>
+          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-bold"><SkipForward className="w-2.5 h-2.5" />{data.stats.skipped}</span>
+          {data.comparison.direction !== 'stable' && (
+            <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded font-bold ${data.comparison.direction === 'up' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+              {data.comparison.direction === 'up' ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />}
+              vs {l === 'hi' ? 'कल' : 'yday'}
+            </span>
+          )}
+        </div>
+
+        {/* Highlights */}
+        {data.highlights.length > 0 && (
+          <div className="space-y-1 mb-3">
+            {data.highlights.map((h, i) => (
+              <div key={i} className="flex items-center gap-1.5 text-[9px]">
+                {h.type === 'achievement' ? <Star className="w-3 h-3 text-amber-500" /> : h.type === 'improvement' ? <TrendingUp className="w-3 h-3 text-emerald-500" /> : <Sparkles className="w-3 h-3 text-blue-500" />}
+                <span className="text-gray-700 dark:text-gray-300">{l === 'hi' ? h.textHi : h.text}</span>
               </div>
             ))}
           </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// ════════════════════════════════════════════════════════════
-//  🆕 WEEKLY COMPARISON CARD
-// ════════════════════════════════════════════════════════════
-const WeeklyComparison = ({ data, language }) => {
-  const l = language;
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow">
-          <Activity className="w-4 h-4 text-white" />
-        </div>
-        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'साप्ताहिक तुलना' : 'Weekly Comparison'}</h3>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        {/* This week */}
-        <div className="bg-indigo-50 dark:bg-indigo-900/10 rounded-xl p-3 border border-indigo-200/50 dark:border-indigo-800/30">
-          <p className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-1">{l === 'hi' ? 'इस हफ्ते' : 'This Week'}</p>
-          <p className="text-2xl font-black text-indigo-900 dark:text-indigo-200">{data.thisWeek.tests}</p>
-          <p className="text-[9px] text-indigo-500">{l === 'hi' ? 'टेस्ट' : 'tests'} | {data.thisWeek.avgScore}% avg</p>
-        </div>
-        {/* Last week */}
-        <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
-          <p className="text-[9px] font-bold text-gray-500 uppercase mb-1">{l === 'hi' ? 'पिछला हफ्ता' : 'Last Week'}</p>
-          <p className="text-2xl font-black text-gray-700 dark:text-gray-300">{data.lastWeek.tests}</p>
-          <p className="text-[9px] text-gray-400">{l === 'hi' ? 'टेस्ट' : 'tests'} | {data.lastWeek.avgScore}% avg</p>
-        </div>
-      </div>
-
-      {/* Change indicator */}
-      <div className="mt-2 flex items-center justify-center gap-2">
-        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold
-          ${data.change > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-          data.change < 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-          'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
-          {data.change > 0 ? <ArrowUp className="w-3 h-3" /> : data.change < 0 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-          {Math.abs(data.change)} {l === 'hi' ? 'टेस्ट' : 'tests'}
-        </div>
-        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold
-          ${data.scoreChange > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-          data.scoreChange < 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-          'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
-          {data.scoreChange > 0 ? '+' : ''}{data.scoreChange}% score
-        </div>
-      </div>
-    </div>
-  );
-};
-// ════════════════════════════════════════════════════════════
-//  PAPER-WISE SCORE TREND (Enhanced)
-// ════════════════════════════════════════════════════════════
-const PaperTrendCard = ({ title, icon: Icon, color, data, trend, predicted, avgScore, accuracy, language }) => {
-  const cMap = {
-    blue: { stroke: '#3b82f6', grad: 'from-blue-600 to-cyan-600', badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', border: 'border-blue-200/50 dark:border-blue-800/30', light: 'bg-blue-50 dark:bg-blue-900/10' },
-    purple: { stroke: '#8b5cf6', grad: 'from-purple-600 to-violet-600', badge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400', border: 'border-purple-200/50 dark:border-purple-800/30', light: 'bg-purple-50 dark:bg-purple-900/10' },
-  };
-  const c = cMap[color];
-  const avg = data.length > 0 ? Math.round(data.reduce((s, d) => s + d.score, 0) / data.length) : 0;
-  const best = data.length > 0 ? Math.max(...data.map(d => d.score)) : 0;
-  const worst = data.length > 0 ? Math.min(...data.map(d => d.score)) : 0;
-  const l = language;
-
-  return (
-    <div className={`bg-white dark:bg-gray-800 rounded-2xl border-2 ${c.border} overflow-hidden`}>
-      <div className={`${c.light} px-4 py-3 border-b ${c.border} flex items-center justify-between`}>
-        <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${c.grad} flex items-center justify-center shadow`}>
-            <Icon className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h4>
-            <p className="text-[9px] text-gray-500">{data.length} {l === 'hi' ? 'टेस्ट दिए' : 'tests taken'}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {predicted !== null && (
-            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${c.badge}`}>
-              {l === 'hi' ? 'अनुमानित' : 'Pred'}: {predicted}%
-            </span>
-          )}
-          <TrendBadge direction={trend} />
-        </div>
-      </div>
-      <div className="p-4">
-        {data.length > 0 ? (
-          <>
-            <div style={{ height: 150 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}>
-                  <defs>
-                    <linearGradient id={`grad_${color}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={c.stroke} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={c.stroke} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:stroke-gray-700" />
-                  <XAxis dataKey="name" tick={{ fontSize: 9 }} stroke="#94a3b8" />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} stroke="#94a3b8" />
-                  <Tooltip content={<CTooltip />} />
-                  <Area type="monotone" dataKey="score" stroke={c.stroke} strokeWidth={2.5} fill={`url(#grad_${color})`} dot={{ r: 3, fill: c.stroke }} />
-                  <Area type="monotone" dataKey="accuracy" stroke={c.stroke} strokeWidth={1} strokeDasharray="4 4" fillOpacity={0} dot={false} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-              {[
-                { l: l === 'hi' ? 'औसत' : 'Avg', v: `${avg}%`, i: Gauge, cl: 'text-blue-500' },
-                { l: l === 'hi' ? 'सर्वश्रेष्ठ' : 'Best', v: `${best}%`, i: TrendingUp, cl: 'text-emerald-500' },
-                { l: l === 'hi' ? 'न्यूनतम' : 'Low', v: `${worst}%`, i: TrendingDown, cl: 'text-amber-500' },
-                { l: l === 'hi' ? 'सटीकता' : 'Acc', v: `${accuracy}%`, i: Target, cl: 'text-violet-500' },
-              ].map((m, i) => (
-                <div key={i} className="text-center">
-                  <m.i className={`w-3 h-3 mx-auto mb-0.5 ${m.cl}`} />
-                  <p className="text-xs font-bold text-gray-900 dark:text-white">{m.v}</p>
-                  <p className="text-[7px] text-gray-400 uppercase">{m.l}</p>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="text-center py-8">
-            <BarChart3 className="w-8 h-8 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
-            <p className="text-[10px] text-gray-400">{l === 'hi' ? 'कोई डेटा नहीं' : 'No data yet'}</p>
-          </div>
         )}
+
+        {/* Tomorrow focus */}
+        <div className="bg-indigo-50 dark:bg-indigo-900/10 rounded-lg p-2.5 border border-indigo-200/50 dark:border-indigo-800/30">
+          <p className="text-[9px] font-bold text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
+            <Crosshair className="w-3 h-3" />{l === 'hi' ? 'कल का फोकस' : "Tomorrow's Focus"}
+          </p>
+          <p className="text-[10px] font-semibold text-indigo-900 dark:text-indigo-200 mt-0.5">{data.tomorrowFocus.unit}</p>
+          <p className="text-[8px] text-indigo-500">{l === 'hi' ? data.tomorrowFocus.reasonHi : data.tomorrowFocus.reason}</p>
+        </div>
       </div>
     </div>
   );
 };
 
 // ════════════════════════════════════════════════════════════
-//  🆕 ERROR ANALYSIS CARD
+//  🆕 MISTAKE JOURNAL
 // ════════════════════════════════════════════════════════════
-const ErrorAnalysisCard = ({ data, language, navigate }) => {
-  const l = language;
-  if (!data || data.unitPerformance?.length === 0) return null;
+const MistakeJournal = ({ data, language: l }) => {
+  if (!data || data.totalMistakes === 0) return null;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow">
-            <AlertTriangle className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow">
+            <NotebookPen className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गलती विश्लेषण' : 'Error Analysis'}</h3>
-            <p className="text-[9px] text-gray-500">{l === 'hi' ? 'कमजोर क्षेत्र पहचानें' : 'Identify weak areas'}</p>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गलती जर्नल' : 'Mistake Journal'}</h3>
+            <p className="text-[9px] text-gray-500">{data.totalMistakes} {l === 'hi' ? 'गलतियां' : 'mistakes'} | {data.overallErrorRate}% {l === 'hi' ? 'त्रुटि दर' : 'error rate'}</p>
           </div>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-            {l === 'hi' ? 'त्रुटि दर' : 'Error Rate'}: {data.errorRate}%
-          </span>
         </div>
       </div>
 
       <div className="p-4">
-        {/* Weak vs Strong summary */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-red-50 dark:bg-red-900/10 rounded-xl p-2.5 border border-red-200/50 dark:border-red-800/30">
-            <div className="flex items-center gap-1 mb-1">
-              <TrendingDown className="w-3 h-3 text-red-500" />
-              <span className="text-[9px] font-bold text-red-700 dark:text-red-400">
-                {l === 'hi' ? 'कमजोर' : 'Weak Areas'} ({data.weakUnits.length})
-              </span>
+        {/* Error trend */}
+        {data.trend.length > 2 && (
+          <div className="mb-4">
+            <p className="text-[9px] font-bold text-gray-500 uppercase mb-2">{l === 'hi' ? 'साप्ताहिक त्रुटि ट्रेंड' : 'Weekly Error Trend'}</p>
+            <div style={{ height: 80 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data.trend} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}>
+                  <defs><linearGradient id="errGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} /><stop offset="95%" stopColor="#ef4444" stopOpacity={0} /></linearGradient></defs>
+                  <XAxis dataKey="weekLabel" tick={{ fontSize: 8 }} stroke="#94a3b8" />
+                  <YAxis tick={{ fontSize: 8 }} stroke="#94a3b8" />
+                  <Tooltip content={<CTooltip />} />
+                  <Area type="monotone" dataKey="errorRate" stroke="#ef4444" strokeWidth={2} fill="url(#errGrad)" dot={{ r: 2, fill: '#ef4444' }} name="Error %" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-            {data.weakUnits.slice(0, 3).map((u, i) => (
-              <p key={i} className="text-[8px] text-red-600/70 dark:text-red-400/70 truncate">
-                {u.unit}: {u.accuracy}%
-              </p>
-            ))}
           </div>
-          <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-xl p-2.5 border border-emerald-200/50 dark:border-emerald-800/30">
-            <div className="flex items-center gap-1 mb-1">
-              <TrendingUp className="w-3 h-3 text-emerald-500" />
-              <span className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400">
-                {l === 'hi' ? 'मजबूत' : 'Strong Areas'} ({data.strongUnits.length})
-              </span>
-            </div>
-            {data.strongUnits.slice(0, 3).map((u, i) => (
-              <p key={i} className="text-[8px] text-emerald-600/70 dark:text-emerald-400/70 truncate">
-                {u.unit}: {u.accuracy}%
-              </p>
-            ))}
-          </div>
-        </div>
+        )}
 
-        {/* Unit performance bars */}
-        <p className="text-[9px] font-bold text-gray-500 uppercase mb-2">{l === 'hi' ? 'इकाई प्रदर्शन' : 'Unit Performance'}</p>
-        <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-          {(data.unitPerformance || []).slice(0, 10).map((u, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <span className="text-[9px] font-medium text-gray-600 dark:text-gray-400 w-28 truncate flex-shrink-0">{u.unit}</span>
-              <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-1000"
-                  style={{
-                    width: `${u.accuracy}%`,
-                    background: u.accuracy >= 70 ? '#22c55e' : u.accuracy >= 50 ? '#3b82f6' : u.accuracy >= 30 ? '#f59e0b' : '#ef4444'
-                  }} />
-              </div>
-              <span className={`text-[9px] font-bold w-8 text-right flex-shrink-0
-                ${u.accuracy >= 70 ? 'text-emerald-600' : u.accuracy >= 50 ? 'text-blue-600' : u.accuracy >= 30 ? 'text-amber-600' : 'text-red-600'}`}>
-                {u.accuracy}%
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Improvement suggestions */}
-        {data.improvementAreas.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-            <p className="text-[9px] font-bold text-gray-500 uppercase mb-1.5">{l === 'hi' ? 'सुधार क्षेत्र' : 'Improvement Areas'}</p>
-            {data.improvementAreas.slice(0, 3).map((area, i) => (
-              <div key={i} className="flex items-start gap-1.5 mb-1">
-                <AlertCircle className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-[9px] font-semibold text-gray-700 dark:text-gray-300">{area.unit} ({area.accuracy}%)</p>
-                  <p className="text-[8px] text-gray-400">{area.suggestion}</p>
+        {/* Most repeated mistakes */}
+        {data.mostRepeated.length > 0 && (
+          <div className="mb-3">
+            <p className="text-[9px] font-bold text-gray-500 uppercase mb-1.5 flex items-center gap-1">
+              <Repeat className="w-3 h-3 text-red-500" />{l === 'hi' ? 'बार-बार गलतियां' : 'Repeated Mistakes'}
+            </p>
+            <div className="space-y-1">
+              {data.mostRepeated.slice(0, 5).map((m, i) => (
+                <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-red-50/50 dark:bg-red-900/5 border border-red-100 dark:border-red-900/20">
+                  <span className="text-[9px] font-bold text-red-600 w-5 text-center flex-shrink-0">{m.wrong}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-semibold text-gray-900 dark:text-white truncate">{m.unit}</p>
+                    <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-0.5">
+                      <div className="h-full bg-red-500 rounded-full" style={{ width: `${m.errorRate}%` }} />
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold text-red-600 flex-shrink-0">{m.errorRate}%</span>
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Suggestions */}
+        {data.suggestions.length > 0 && (
+          <div className="space-y-1">
+            {data.suggestions.map((s, i) => (
+              <div key={i} className={`flex items-start gap-1.5 text-[9px] p-1.5 rounded-lg ${s.priority === 'critical' ? 'bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400' : s.priority === 'high' ? 'bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                <Lightbulb className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                <span>{l === 'hi' ? s.textHi : s.text}</span>
               </div>
             ))}
           </div>
@@ -1590,538 +1068,371 @@ const ErrorAnalysisCard = ({ data, language, navigate }) => {
 };
 
 // ════════════════════════════════════════════════════════════
-//  🆕 TOPIC MASTERY RADAR
+//  SYLLABUS COVERAGE MAP
 // ════════════════════════════════════════════════════════════
-const TopicMasteryRadar = ({ data, language }) => {
-  const l = language;
-  if (!data || data.length === 0) return null;
-
-  // Shorten unit names for radar
-  const radarData = data.slice(0, 8).map(d => ({
-    ...d,
-    subject: d.unit?.replace(/UNIT\s*/i, 'U').substring(0, 12) || 'Other',
-  }));
-
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow">
-          <Crosshair className="w-4 h-4 text-white" />
-        </div>
-        <div>
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'विषय दक्षता' : 'Topic Mastery'}</h3>
-          <p className="text-[9px] text-gray-500">{l === 'hi' ? 'रडार चार्ट' : 'Radar chart'}</p>
-        </div>
-      </div>
-
-      <div style={{ height: 220 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <RadarChart data={radarData}>
-            <PolarGrid stroke="#e2e8f0" className="dark:stroke-gray-700" />
-            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 8, fill: '#94a3b8' }} />
-            <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 7 }} axisLine={false} />
-            <Radar name={l === 'hi' ? 'सटीकता' : 'Accuracy'} dataKey="accuracy" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.2} strokeWidth={2} />
-          </RadarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Legend */}
-      <div className="grid grid-cols-2 gap-1 mt-2">
-        {radarData.map((d, i) => (
-          <div key={i} className="flex items-center gap-1 text-[8px]">
-            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${d.accuracy >= 70 ? 'bg-emerald-500' : d.accuracy >= 50 ? 'bg-blue-500' : d.accuracy >= 30 ? 'bg-amber-500' : 'bg-red-500'}`} />
-            <span className="text-gray-500 truncate">{d.unit}</span>
-            <span className="font-bold text-gray-700 dark:text-gray-300 ml-auto flex-shrink-0">{d.accuracy}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// ════════════════════════════════════════════════════════════
-//  NEEDS ATTENTION (low scores)
-// ════════════════════════════════════════════════════════════
-const NeedsAttentionCard = ({ tests, language, navigate }) => {
-  const l = language;
-  if (!tests || tests.length === 0) return null;
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-red-200/50 dark:border-red-800/30 overflow-hidden">
-      <div className="bg-red-50 dark:bg-red-900/10 px-4 py-3 border-b border-red-200/50 dark:border-red-800/30 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow">
-            <AlertTriangle className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-red-800 dark:text-red-300">{l === 'hi' ? 'ध्यान दें - कम स्कोर' : 'Needs Attention'}</h3>
-            <p className="text-[9px] text-red-600/60">{l === 'hi' ? '50% से कम स्कोर' : 'Score below 50%'}</p>
-          </div>
-        </div>
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">{tests.length}</span>
-      </div>
-      <div className="p-3 space-y-1.5 max-h-[300px] overflow-y-auto">
-        {tests.slice(0, 5).map((t, i) => {
-          const { g, c } = grd(t.bestScore);
-          return (
-            <div key={i} onClick={() => navigate(`/results/${t.lastAttempt?._id}`)}
-              className="group flex items-center gap-2.5 p-2.5 rounded-xl bg-red-50/50 dark:bg-red-900/5 border border-red-100 dark:border-red-900/20 hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg cursor-pointer transition-all">
-              <div className="relative flex-shrink-0"><div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /></div>
-              <div className={`w-9 h-9 rounded-lg border flex items-center justify-center font-black text-sm flex-shrink-0 ${GC[c]}`}>{g}</div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate group-hover:text-red-600 transition-colors">{t.test?.title || 'Test'}</h4>
-                <div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500">
-                  <span>Best: {t.bestScore}%</span>
-                  <span>{t.attempts} att</span>
-                </div>
-              </div>
-              <p className="text-lg font-black text-red-600 dark:text-red-400 flex-shrink-0">{t.bestScore}%</p>
-              <button onClick={(e) => { e.stopPropagation(); navigate(`/test/${t.testId}`); }}
-                className="p-1.5 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 transition-colors flex-shrink-0">
-                <RefreshCw className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-// ════════════════════════════════════════════════════════════
-//  PENDING TESTS TIMELINE (Simplified but complete)
-// ════════════════════════════════════════════════════════════
-const PendingTimeline = ({ notAttemptedTests, paper1NotAttempted, paper2NotAttempted, language, navigate }) => {
-  const [activeTab, setActiveTab] = useState('all');
-  const l = language;
-
-  const sorted = useMemo(() => {
-    const base = activeTab === 'paper1' ? paper1NotAttempted : activeTab === 'paper2' ? paper2NotAttempted : notAttemptedTests;
-    return [...base].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-  }, [notAttemptedTests, paper1NotAttempted, paper2NotAttempted, activeTab]);
-
-  if (notAttemptedTests.length === 0) return null;
-
-  const getDaysOld = (date) => Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
-  const criticalCount = sorted.filter(t => getDaysOld(t.createdAt) >= 14).length;
+const SyllabusCoverageMap = ({ coverage, language: l }) => {
+  const [tab, setTab] = useState('paper1');
+  const data = tab === 'paper1' ? coverage.paper1 : coverage.paper2;
+  const summary = tab === 'paper1' ? coverage.paper1Summary : coverage.paper2Summary;
+  const lvl = { mastered: { en: 'Mastered', hi: 'माहिर', color: 'bg-emerald-500', border: 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/10' }, learning: { en: 'Learning', hi: 'सीख रहे', color: 'bg-blue-500', border: 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/10' }, in_progress: { en: 'Progress', hi: 'प्रगति', color: 'bg-amber-500', border: 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/10' }, weak: { en: 'Weak', hi: 'कमजोर', color: 'bg-red-500', border: 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-900/10' }, not_started: { en: 'Not Started', hi: 'शुरू नहीं', color: 'bg-gray-400', border: 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-700/20' }, no_tests: { en: 'No Tests', hi: 'टेस्ट नहीं', color: 'bg-gray-300', border: 'border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/30' } };
+  const smk = { mastered: 'mastered', learning: 'learning', in_progress: 'inProgress', weak: 'weak', not_started: 'notStarted', no_tests: 'noTests' };
+  const ttl = { dpp: 'DPP', topic_test: 'Topic', chapter_test: 'Chapter', unit_test: 'Unit', practice: 'Practice', pyq_year: 'PYQ', full_mock_p1: 'Mock', full_mock_p2: 'Mock', full_mock_combined: 'Mock' };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow">
-              <Calendar className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'बाकी टेस्ट' : 'Pending Tests'}</h3>
-              <p className="text-[9px] text-gray-500">{sorted.length} {l === 'hi' ? 'बाकी' : 'pending'}</p>
-            </div>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center shadow"><Grid3X3 className="w-4 h-4 text-white" /></div>
+            <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'सिलेबस कवरेज' : 'Syllabus Coverage'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'टेस्ट प्रगति' : 'Test progress'}</p></div>
           </div>
-          {criticalCount > 0 && (
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 flex items-center gap-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-              {criticalCount} {l === 'hi' ? 'जरूरी' : 'urgent'}
-            </span>
-          )}
+          <Ring pct={coverage.overallPct} size={40} sw={3.5} color="#14b8a6"><span className="text-[8px] font-bold">{coverage.overallPct}%</span></Ring>
         </div>
-
-        {/* Tabs */}
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
-          {[
-            { id: 'all', label: l === 'hi' ? 'सभी' : 'All', count: notAttemptedTests.length },
-            { id: 'paper1', label: 'P1', count: paper1NotAttempted.length },
-            { id: 'paper2', label: 'P2', count: paper2NotAttempted.length },
-          ].map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-[10px] font-bold transition-all
-                ${activeTab === tab.id ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              {tab.label}
-              <span className={`text-[8px] px-1 rounded-full ${activeTab === tab.id ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-gray-200 text-gray-500 dark:bg-gray-600'}`}>{tab.count}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Marathon button */}
-        {sorted[0] && (
-          <button onClick={() => navigate(`/test/${sorted[0]._id}`)}
-            className="w-full mt-2 p-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white flex items-center justify-center gap-2 hover:shadow-xl transition-all">
-            <Rocket className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-bold">{l === 'hi' ? 'मैराथन शुरू करें' : 'Start Marathon'}</span>
-            <ArrowRight className="w-3 h-3" />
-          </button>
-        )}
-      </div>
-
-      <div className="p-3 max-h-[400px] overflow-y-auto space-y-1.5">
-        {sorted.slice(0, 15).map((test, idx) => {
-          const days = getDaysOld(test.createdAt);
-          const urgClass = days >= 14 ? 'border-red-200 bg-red-50/30 dark:border-red-900/30 dark:bg-red-900/5'
-            : days >= 7 ? 'border-orange-200 bg-orange-50/20 dark:border-orange-900/20 dark:bg-orange-900/5'
-            : 'border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-700/20';
-
-          return (
-            <div key={test._id || idx} className={`group flex items-center gap-2.5 p-2.5 rounded-xl border hover:shadow-lg hover:bg-white dark:hover:bg-gray-700 transition-all ${urgClass}`}>
-              <div className="flex-shrink-0 text-center w-8">
-                <p className="text-sm font-black text-gray-900 dark:text-white leading-none">{new Date(test.createdAt).getDate()}</p>
-                <p className="text-[7px] text-gray-400 uppercase">{new Date(test.createdAt).toLocaleDateString('en', { month: 'short' })}</p>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1">
-                  <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{test.title || 'Untitled'}</h4>
-                  {test.paper && (
-                    <span className={`px-1 rounded text-[7px] font-bold flex-shrink-0 ${test.paper === 'paper1' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'}`}>
-                      {test.paper === 'paper1' ? 'P1' : 'P2'}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 text-[8px] text-gray-500 mt-0.5">
-                  <span><Hash className="w-2.5 h-2.5 inline" />{test.totalQuestions || 0}</span>
-                  <span><Clock className="w-2.5 h-2.5 inline" />{test.duration || 0}m</span>
-                  <span className={`font-bold ${days >= 14 ? 'text-red-500' : days >= 7 ? 'text-orange-500' : 'text-gray-400'}`}>{days}d ago</span>
-                </div>
-              </div>
-              <button onClick={() => navigate(`/test/${test._id}`)}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-white flex-shrink-0 bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-lg transition-all">
-                <Play className="w-3 h-3" />{l === 'hi' ? 'दें' : 'Take'}
-              </button>
-            </div>
-          );
-        })}
-      </div>
-
-      {sorted.length > 15 && (
-        <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 text-center">
-          <button onClick={() => navigate('/tests')} className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center justify-center gap-1 mx-auto">
-            {l === 'hi' ? `सभी ${sorted.length} टेस्ट देखें` : `View all ${sorted.length} tests`} <ArrowRight className="w-3 h-3" />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ════════════════════════════════════════════════════════════
-//  PAPER TABBED ACTIVITY
-// ════════════════════════════════════════════════════════════
-const PaperTabbedActivity = ({ allAttempts, paper1Attempts, paper2Attempts, allTests, paper1Tests, paper2Tests, notAttemptedTests, paper1NotAttempted, paper2NotAttempted, language, loading: la }) => {
-  const [mainTab, setMainTab] = useState('attempted');
-  const [paperFilter, setPaperFilter] = useState('all');
-  const navigate = useNavigate();
-  const l = language;
-  const fA = paperFilter === 'paper1' ? paper1Attempts : paperFilter === 'paper2' ? paper2Attempts : allAttempts;
-  const fT = paperFilter === 'paper1' ? paper1Tests : paperFilter === 'paper2' ? paper2Tests : allTests;
-  const fN = paperFilter === 'paper1' ? paper1NotAttempted : paperFilter === 'paper2' ? paper2NotAttempted : notAttemptedTests;
-
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="flex items-center justify-between px-4 pt-3 pb-1">
-        <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-          <History className="w-4 h-4 text-indigo-500" />{l === 'hi' ? 'गतिविधि' : 'Activity'}
-        </h3>
-        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
-          {[{ id: 'all', l: l === 'hi' ? 'सभी' : 'All' }, { id: 'paper1', l: 'P1' }, { id: 'paper2', l: 'P2' }].map(pt => (
-            <button key={pt.id} onClick={() => setPaperFilter(pt.id)}
-              className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${paperFilter === pt.id ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500'}`}>
-              {pt.l}
+          {['paper1', 'paper2'].map(t => (
+            <button key={t} onClick={() => setTab(t)} className={`flex-1 px-3 py-1.5 rounded-md text-[10px] font-bold transition-all ${tab === t ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500'}`}>
+              {t === 'paper1' ? 'Paper 1' : 'Paper 2'} <span className={`ml-1 text-[8px] px-1 rounded-full ${tab === t ? 'bg-teal-100 text-teal-700' : 'bg-gray-200'}`}>{(tab === t ? summary : (t === 'paper1' ? coverage.paper1Summary : coverage.paper2Summary)).overallPct}%</span>
             </button>
           ))}
         </div>
       </div>
-      <div className="flex border-b border-gray-100 dark:border-gray-700 px-1">
-        {[
-          { id: 'attempted', label: l === 'hi' ? 'दिए गए' : 'Attempted', Icon: CheckCircle, count: fA.length },
-          { id: 'created', label: l === 'hi' ? 'बनाए' : 'Created', Icon: PlusCircle, count: fT.length },
-          { id: 'pending', label: l === 'hi' ? 'बाकी' : 'Pending', Icon: Clock, count: fN.length },
-        ].map(t => (
-          <button key={t.id} onClick={() => setMainTab(t.id)}
-            className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 text-[11px] font-semibold transition-all
-              ${mainTab === t.id ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10' : 'text-gray-500 hover:text-gray-700'}`}>
-            <t.Icon className="w-3 h-3" />{t.label}
-            <span className={`text-[8px] font-bold px-1 rounded-full ${mainTab === t.id ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700'}`}>{t.count}</span>
-          </button>
-        ))}
+      <div className="px-4 py-1.5 bg-gray-50/50 dark:bg-gray-700/20 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2 flex-wrap">
+        {Object.entries(lvl).map(([k, v]) => (<div key={k} className="flex items-center gap-1"><div className={`w-2 h-2 rounded-sm ${v.color}`} /><span className="text-[8px] text-gray-500">{v[l] || v.en}: {summary[smk[k]] || 0}</span></div>))}
       </div>
-      <div className="p-3 max-h-[400px] overflow-y-auto">
-        {mainTab === 'attempted' && (la
-          ? <div className="space-y-2">{[1, 2, 3].map(i => <Sk key={i} className="h-14 w-full" />)}</div>
-          : fA.length > 0 ? (
-            <div className="space-y-1.5">
-              {fA.slice(0, 10).map((a, i) => {
-                const pct = a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0;
-                const { g, c } = grd(pct);
-                const isLow = pct < 50;
-                return (
-                  <div key={a._id || i} onClick={() => navigate(`/results/${a._id}`)}
-                    className={`group flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all hover:shadow-lg
-                      ${isLow ? 'border-red-200 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/5' : 'border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-700/30'} hover:bg-white dark:hover:bg-gray-700`}>
-                    <span className="text-[8px] font-bold text-gray-400 w-3 text-center">#{i + 1}</span>
-                    <div className={`w-9 h-9 rounded-lg border flex items-center justify-center font-black text-sm flex-shrink-0 ${GC[c]}`}>{g}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1">
-                        <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{a.testId?.title || 'Test'}</h4>
-                        {isLow && <AlertTriangle className="w-3 h-3 text-red-500 flex-shrink-0" />}
-                        {a.testId?.paper && <span className={`px-1 rounded text-[7px] font-bold flex-shrink-0 ${a.testId.paper === 'paper1' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{a.testId.paper === 'paper1' ? 'P1' : 'P2'}</span>}
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500">
-                        <span><CheckCircle className="w-2.5 h-2.5 text-emerald-500 inline" />{a.correctCount || 0}</span>
-                        <span><XCircle className="w-2.5 h-2.5 text-red-400 inline" />{a.wrongCount || 0}</span>
-                        <span><Clock className="w-2.5 h-2.5 inline" />{tAgo(a.completedAt, l)}</span>
-                      </div>
-                    </div>
-                    <p className={`text-base font-black flex-shrink-0 ${isLow ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>{pct}<span className="text-[9px] text-gray-400">%</span></p>
-                    <Ring pct={pct} size={26} sw={2.5} color={pct >= 70 ? '#22c55e' : pct >= 50 ? '#3b82f6' : '#ef4444'}>
-                      <span className="text-[6px] font-bold text-gray-500">{pct}</span>
-                    </Ring>
-                    <ChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
-                  </div>
-                );
-              })}
-              <Link to="/results" className="flex items-center justify-center gap-1 p-2 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 text-[10px] font-semibold text-gray-500 hover:text-indigo-600 transition-colors">
-                <History className="w-3 h-3" />{l === 'hi' ? 'सभी देखें' : 'View All'}<ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <ClipboardList className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
-              <p className="text-xs text-gray-400 mb-3">{l === 'hi' ? 'कोई टेस्ट नहीं' : 'No tests taken'}</p>
-              <button onClick={() => navigate('/tests')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-semibold rounded-lg">
-                <Play className="w-3 h-3" />Take Test
-              </button>
-            </div>
-          )
-        )}
-
-        {mainTab === 'created' && (fT.length > 0 ? (
-          <div className="space-y-1.5">
-            {fT.slice(0, 10).map((t, i) => (
-              <div key={t._id || i} className="group flex items-center gap-2.5 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-700/30 hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg transition-all">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow flex-shrink-0"><FileText className="w-4 h-4 text-white" /></div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title || 'Untitled'}</h4>
-                  <div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500">
-                    <span><Hash className="w-2.5 h-2.5 inline" />{t.totalQuestions || 0}</span>
-                    <span><Clock className="w-2.5 h-2.5 inline" />{t.duration || 0}m</span>
-                    <span>{tAgo(t.createdAt, l)}</span>
-                  </div>
-                </div>
-                <button onClick={() => navigate(`/test/${t._id}`)} className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-100 transition-colors flex-shrink-0"><Play className="w-3 h-3" /></button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <PlusCircle className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
-            <p className="text-xs text-gray-400 mb-3">No tests created</p>
-            <button onClick={() => navigate('/tests/create')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-semibold rounded-lg"><PlusCircle className="w-3 h-3" />Create</button>
-          </div>
-        ))}
-
-        {mainTab === 'pending' && (fN.length > 0 ? (
-          <div className="space-y-1.5">
-            {fN.slice(0, 10).map((t, i) => (
-              <div key={t._id || i} className="group flex items-center gap-2.5 p-2.5 rounded-xl bg-amber-50/30 dark:bg-amber-900/5 border border-amber-100 dark:border-amber-900/20 hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg transition-all">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 flex items-center justify-center border border-amber-200 dark:border-amber-800 flex-shrink-0"><Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" /></div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title}</h4>
-                  <div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500">
-                    <span><Hash className="w-2.5 h-2.5 inline" />{t.totalQuestions || 0}</span>
-                    <span><Clock className="w-2.5 h-2.5 inline" />{t.duration || 0}m</span>
-                  </div>
-                </div>
-                <button onClick={() => navigate(`/test/${t._id}`)} className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold rounded-lg hover:shadow-lg transition-all flex-shrink-0"><Play className="w-3 h-3" />{l === 'hi' ? 'दें' : 'Take'}</button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8"><CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-200 dark:text-emerald-900" /><p className="text-xs text-gray-400">All attempted!</p></div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// ════════════════════════════════════════════════════════════
-//  PAPER SECTION (Unit breakdown)
-// ════════════════════════════════════════════════════════════
-const PaperSection = ({ paper, title, subtitle, Icon, color, units, total, language, navigate }) => {
-  const [open, setOpen] = useState(true);
-  const sorted = [...units].sort((a, b) => b.count - a.count);
-  const l = language;
-  const c = color === 'blue'
-    ? { grad: 'from-blue-600 to-cyan-600', gradL: 'from-blue-50 to-cyan-50 dark:from-blue-900/10 dark:to-cyan-900/10', bdr: 'border-blue-200/50 dark:border-blue-800/30', txt: 'text-blue-600 dark:text-blue-400', bar: 'from-blue-500 to-cyan-400', iconBg: 'from-blue-500 to-cyan-500', ring: '#3b82f6', hover: 'hover:bg-blue-50/50 dark:hover:bg-blue-900/10' }
-    : { grad: 'from-purple-600 to-violet-600', gradL: 'from-purple-50 to-violet-50 dark:from-purple-900/10 dark:to-violet-900/10', bdr: 'border-purple-200/50 dark:border-purple-800/30', txt: 'text-purple-600 dark:text-purple-400', bar: 'from-purple-500 to-violet-400', iconBg: 'from-purple-500 to-violet-500', ring: '#8b5cf6', hover: 'hover:bg-purple-50/50 dark:hover:bg-purple-900/10' };
-
-  return (
-    <div className={`bg-white dark:bg-gray-800 rounded-2xl border-2 ${c.bdr} overflow-hidden`}>
-      <div className={`bg-gradient-to-r ${c.gradL} p-4 border-b ${c.bdr}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${c.iconBg} flex items-center justify-center shadow-lg`}><Icon className="w-5 h-5 text-white" /></div>
-            <div>
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">{title}<span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/80 dark:bg-gray-700/80 ${c.txt}`}>{total} Qs</span></h3>
-              <p className="text-[10px] text-gray-500">{subtitle}</p>
-            </div>
-          </div>
-          <button onClick={() => setOpen(!open)} className="p-1 rounded-lg hover:bg-white/60 dark:hover:bg-gray-700">
-            {open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-          </button>
-        </div>
-      </div>
-      {open && (
-        <div className="p-3">
-          {sorted.length > 0 ? (
-            <div className="space-y-1">
-              {sorted.map((u, idx) => {
-                const pct = total > 0 ? Math.round((u.count / total) * 100) : 0;
-                return (
-                  <div key={idx} onClick={() => navigate(`/questions?paper=${paper}&unit=${encodeURIComponent(u._id?.unit || '')}`)}
-                    className={`group flex items-center gap-2 p-2 rounded-lg ${c.hover} border border-transparent hover:border-gray-200 dark:hover:border-gray-700 cursor-pointer transition-all`}>
-                    <div className={`w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center ${idx === 0 ? `bg-gradient-to-br ${c.grad} text-white shadow` : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>{idx + 1}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <p className="text-[11px] font-semibold text-gray-800 dark:text-gray-200 truncate">{u._id?.unit || 'Unknown'}</p>
-                        {idx === 0 && <Crown className={`w-2.5 h-2.5 ${c.txt} flex-shrink-0`} />}
-                      </div>
-                      <div className="h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div className={`h-full bg-gradient-to-r ${c.bar} rounded-full transition-all duration-1000`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-[11px] font-bold text-gray-900 dark:text-white">{u.count}</p>
-                      <p className="text-[8px] text-gray-400">{pct}%</p>
-                    </div>
-                    <ChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
-                  </div>
-                );
-              })}
-              <button onClick={() => navigate(`/questions?paper=${paper}`)}
-                className={`w-full mt-2 p-2 rounded-lg border border-dashed ${c.bdr} ${c.txt} text-[10px] font-semibold flex items-center justify-center gap-1 hover:bg-gray-50 dark:hover:bg-gray-700/50`}>
-                <Eye className="w-3 h-3" />{l === 'hi' ? 'सभी देखें' : 'View All'}<ArrowRight className="w-3 h-3" />
-              </button>
-            </div>
-          ) : (
-            <div className="text-center py-6">
-              <FileQuestion className="w-8 h-8 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
-              <p className="text-[10px] text-gray-400 mb-2">No questions</p>
-              <button onClick={() => navigate('/import')} className={`inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r ${c.grad} text-white text-[10px] font-semibold rounded-lg`}><Upload className="w-3 h-3" />Import</button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ════════════════════════════════════════════════════════════
-//  ACHIEVEMENTS + STREAK + QUOTE + QUICK ACTIONS
-// ════════════════════════════════════════════════════════════
-const iconMap = { Layers, Crown, Play, Flame, Medal, Star, Target, PlusCircle };
-
-const AchievementCard = ({ achievements, language: l }) => {
-  const un = achievements.filter(a => a.unlocked).length;
-  const cM = {
-    amber: { bg: 'bg-amber-100 dark:bg-amber-900/30', t: 'text-amber-600 dark:text-amber-400', b: 'border-amber-200 dark:border-amber-800' },
-    purple: { bg: 'bg-purple-100 dark:bg-purple-900/30', t: 'text-purple-600 dark:text-purple-400', b: 'border-purple-200 dark:border-purple-800' },
-    blue: { bg: 'bg-blue-100 dark:bg-blue-900/30', t: 'text-blue-600 dark:text-blue-400', b: 'border-blue-200 dark:border-blue-800' },
-    orange: { bg: 'bg-orange-100 dark:bg-orange-900/30', t: 'text-orange-600 dark:text-orange-400', b: 'border-orange-200 dark:border-orange-800' },
-    emerald: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', t: 'text-emerald-600 dark:text-emerald-400', b: 'border-emerald-200 dark:border-emerald-800' },
-    indigo: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', t: 'text-indigo-600 dark:text-indigo-400', b: 'border-indigo-200 dark:border-indigo-800' },
-    gray: { bg: 'bg-gray-100 dark:bg-gray-800', t: 'text-gray-400 dark:text-gray-600', b: 'border-gray-200 dark:border-gray-700' }
-  };
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm"><Award className="w-5 h-5 text-amber-500" />{l === 'hi' ? 'उपलब्धियाँ' : 'Achievements'}</h3>
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">{un}/{achievements.length}</span>
-      </div>
-      <div className="grid grid-cols-4 gap-2">
-        {achievements.map((a, i) => {
-          const c = cM[a.color] || cM.gray;
-          const Ic = iconMap[a.icon] || Star;
+      <div className="p-3 grid grid-cols-2 gap-2">
+        {data.map((u, i) => {
+          const ll = lvl[u.level] || lvl.not_started;
           return (
-            <div key={i} className={`relative flex flex-col items-center gap-1 p-2 rounded-xl border transition-all ${a.unlocked ? `${c.bg} ${c.b}` : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 opacity-50'}`} title={a.desc}>
-              {a.unlocked
-                ? <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full flex items-center justify-center"><CheckCircle className="w-2.5 h-2.5 text-white" /></div>
-                : <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-gray-400 dark:bg-gray-600 rounded-full flex items-center justify-center"><Lock className="w-2 h-2 text-white" /></div>}
-              <Ic className={`w-4 h-4 ${a.unlocked ? c.t : 'text-gray-400'}`} />
-              <span className={`text-[8px] font-bold text-center leading-tight ${a.unlocked ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'}`}>{a.label}</span>
-              {!a.unlocked && a.progress !== undefined && (
-                <div className="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-indigo-400 rounded-full transition-all duration-1000" style={{ width: `${Math.min(a.progress * 100, 100)}%` }} />
+            <div key={i} className={`p-2.5 rounded-xl border-2 transition-all hover:shadow-lg ${ll.border}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[8px] font-bold text-gray-500 uppercase">{u.unit}</span>
+                {u.accuracy > 0 && <span className={`text-[7px] font-bold px-1 py-0.5 rounded-full ${ll.color} text-white`}>{u.accuracy}%</span>}
+              </div>
+              <p className="text-[10px] font-semibold text-gray-800 dark:text-gray-200 truncate mb-1">{u.name}</p>
+              <div className="flex items-center gap-1.5 text-[8px] text-gray-500 mb-1">
+                <span><ClipboardList className="w-2.5 h-2.5 inline" />{u.attemptedCount}/{u.totalTests}</span>
+                {u.bestScore > 0 && <span><Trophy className="w-2.5 h-2.5 inline text-amber-500" />{u.bestScore}%</span>}
+              </div>
+              {u.testTypeBreakdown && Object.keys(u.testTypeBreakdown).length > 0 && (
+                <div className="flex flex-wrap gap-0.5 mb-1">
+                  {Object.entries(u.testTypeBreakdown).map(([ty, td]) => (
+                    <span key={ty} className={`text-[6px] font-bold px-1 py-0.5 rounded ${td.attempted >= td.total ? 'bg-emerald-100 text-emerald-700' : td.attempted > 0 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>{ttl[ty] || ty}: {td.attempted}/{td.total}</span>
+                  ))}
                 </div>
               )}
+              <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all" style={{ width: `${u.totalTests > 0 ? Math.round((u.attemptedCount / u.totalTests) * 100) : 0}%`, backgroundColor: u.color }} />
+              </div>
             </div>
           );
         })}
       </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════
+//  SPEED, RECOMMENDATIONS, SCORES, RECORDS, TIME, HEATMAP,
+//  WEEKLY, TRENDS, ERROR, RADAR, ATTENTION, PENDING,
+//  ACTIVITY, PAPER, ACHIEVEMENTS, STREAK, QUOTE, ACTIONS
+//  (Keeping same as before with minor fixes)
+// ════════════════════════════════════════════════════════════
+const SpeedAnalyticsCard = ({ data, language: l }) => {
+  if (!data || data.speedTrend.length === 0) return null;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <div className="flex items-center gap-2"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow"><Zap className="w-4 h-4 text-white" /></div><div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गति विश्लेषण' : 'Speed Analytics'}</h3></div></div>
+        <div className="text-right"><p className="text-lg font-black text-gray-900 dark:text-white">{data.avgTimePerQ}s</p><p className="text-[8px] text-gray-400">avg/Q</p></div>
+      </div>
+      <div className="p-4">
+        <div style={{ height: 140 }}><ResponsiveContainer width="100%" height="100%"><LineChart data={data.speedTrend} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}><CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" /><XAxis dataKey="name" tick={{ fontSize: 9 }} stroke="#94a3b8" /><YAxis tick={{ fontSize: 9 }} stroke="#94a3b8" /><Tooltip content={<CTooltip />} /><Line type="monotone" dataKey="speed" stroke="#06b6d4" strokeWidth={2} dot={{ r: 2 }} name="Speed(s)" /><Line type="monotone" dataKey="accuracy" stroke="#22c55e" strokeWidth={2} dot={{ r: 2 }} name="Acc%" /></LineChart></ResponsiveContainer></div>
+        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+          {[{ l: l === 'hi' ? 'तेज' : 'Fast', v: `${data.fastestTest?.avgTime || 0}s`, c: 'text-emerald-500' }, { l: 'Avg', v: `${data.avgTimePerQ}s`, c: 'text-blue-500' }, { l: l === 'hi' ? 'धीमा' : 'Slow', v: `${data.slowestTest?.avgTime || 0}s`, c: 'text-amber-500' }].map((m, i) => (
+            <div key={i} className="text-center"><p className={`text-xs font-bold ${m.c}`}>{m.v}</p><p className="text-[7px] text-gray-400 uppercase">{m.l}</p></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const StudyRecommendations = ({ recommendations, language: l }) => {
+  if (!recommendations?.length) return null;
+  const iconMap = { AlertTriangle, BookOpen, Target, TrendingDown, Clock, Flame, BarChart2, Zap, Lightbulb };
+  const colorBg = { red: 'from-red-500 to-rose-600', orange: 'from-orange-500 to-amber-600', blue: 'from-blue-500 to-indigo-600', purple: 'from-purple-500 to-violet-600', amber: 'from-amber-500 to-yellow-600', cyan: 'from-cyan-500 to-teal-600' };
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow"><Lightbulb className="w-4 h-4 text-white" /></div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'सुझाव' : 'Recommendations'}</h3></div>
+      <div className="p-3 space-y-1.5">
+        {recommendations.map((r, i) => { const I = iconMap[r.icon] || Lightbulb; return (
+          <div key={i} className="flex items-start gap-2 p-2 rounded-xl border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
+            <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${colorBg[r.color] || colorBg.blue} flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5`}><I className="w-3.5 h-3.5 text-white" /></div>
+            <div className="flex-1 min-w-0"><p className="text-[11px] font-semibold text-gray-900 dark:text-white">{l === 'hi' ? r.titleHi : r.title}</p><p className="text-[9px] text-gray-500 mt-0.5">{l === 'hi' ? r.detailHi : r.detail}</p></div>
+            <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${r.priority === 'critical' ? 'bg-red-100 text-red-600' : r.priority === 'high' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>{r.priority}</span>
+          </div>
+        ); })}
+      </div>
+    </div>
+  );
+};
+
+const ScoreDistributionCard = ({ data, language: l }) => {
+  if (!data?.length) return null;
+  const mx = Math.max(...data.map(d => d.count), 1);
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow"><BarChart2 className="w-4 h-4 text-white" /></div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'स्कोर वितरण' : 'Score Distribution'}</h3></div>
+      <div className="flex items-end gap-2" style={{ height: 80 }}>
+        {data.map((d, i) => (<div key={i} className="flex-1 flex flex-col items-center"><span className="text-[8px] font-bold text-gray-600 dark:text-gray-300 mb-1">{d.count}</span><div className="w-full rounded-t-lg transition-all" style={{ height: `${Math.max((d.count / mx) * 100, 5)}%`, backgroundColor: d.color }} /><span className="text-[8px] text-gray-400 mt-1">{d.range}%</span></div>))}
+      </div>
+    </div>
+  );
+};
+
+const PersonalRecords = ({ records, language: l }) => {
+  if (!records?.highestScore) return null;
+  const items = [
+    { icon: Trophy, label: l === 'hi' ? 'सर्वश्रेष्ठ' : 'Best', value: `${records.highestScore?.pct || 0}%`, sub: records.highestScore?.title, color: 'from-amber-500 to-yellow-600' },
+    { icon: Target, label: l === 'hi' ? 'सटीकता' : 'Accuracy', value: `${records.bestAccuracy?.accuracy || 0}%`, color: 'from-emerald-500 to-green-600' },
+    { icon: Flame, label: l === 'hi' ? 'स्ट्रीक' : 'Streak', value: `${records.longestStreak || 0}d`, sub: `Now: ${records.currentStreak}d`, color: 'from-orange-500 to-red-600' },
+    { icon: Calendar, label: l === 'hi' ? 'दिन' : 'Best Day', value: records.bestDay?.count || 0, color: 'from-blue-500 to-indigo-600' },
+    { icon: Clock, label: l === 'hi' ? 'समय' : 'Time', value: fmtTime(records.totalStudyTime || 0), color: 'from-purple-500 to-violet-600' },
+  ];
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow"><Crown className="w-4 h-4 text-white" /></div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'रिकॉर्ड' : 'Records'}</h3></div>
+      <div className="grid grid-cols-5 gap-2">
+        {items.map((it, i) => (<div key={i} className="text-center p-2 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700"><div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${it.color} flex items-center justify-center mx-auto mb-1`}><it.icon className="w-3 h-3 text-white" /></div><p className="text-xs font-black text-gray-900 dark:text-white">{it.value}</p><p className="text-[7px] text-gray-400">{it.label}</p></div>))}
+      </div>
+    </div>
+  );
+};
+
+const TimeOfDayCard = ({ data, language: l }) => {
+  if (!data?.bestPeriod) return null;
+  const pI = { Sun, Coffee, Sunset, Moon };
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow"><Clock className="w-4 h-4 text-white" /></div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'समय विश्लेषण' : 'Best Study Time'}</h3></div>
+      <div className="grid grid-cols-4 gap-1.5">
+        {data.periodData.map((p, i) => { const PI = pI[p.icon] || Sun; const iB = p.name === data.bestPeriod?.name; return (
+          <div key={i} className={`text-center p-2 rounded-xl border ${iB ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-900/20 ring-1 ring-indigo-200' : 'border-gray-100 dark:border-gray-700'}`}>
+            <PI className={`w-4 h-4 mx-auto mb-1 ${iB ? 'text-indigo-600' : 'text-gray-400'}`} /><p className={`text-xs font-bold ${iB ? 'text-indigo-700' : 'text-gray-700 dark:text-gray-300'}`}>{p.avgScore}%</p><p className="text-[7px] text-gray-400">{l === 'hi' ? p.nameHi : p.name}</p>{iB && <span className="text-[6px] font-bold text-indigo-600">BEST</span>}
+          </div>
+        ); })}
+      </div>
+    </div>
+  );
+};
+
+const ActivityHeatmap = ({ activityMap: am, language: l }) => {
+  const [hov, setHov] = useState(null);
+  const days = useMemo(() => { const r = []; const t = new Date(); for (let i = 89; i >= 0; i--) { const d = new Date(t); d.setDate(d.getDate() - i); const k = d.toISOString().split('T')[0]; const data = am[k]; r.push({ date: k, day: d.getDate(), dayOfWeek: d.getDay(), count: data?.count || 0, avgScore: data?.avgScore || 0 }); } return r; }, [am]);
+  const mx = Math.max(...days.map(d => d.count), 1);
+  const gc = (c) => c === 0 ? 'bg-gray-100 dark:bg-gray-800' : c / mx > 0.75 ? 'bg-emerald-600' : c / mx > 0.5 ? 'bg-emerald-500' : c / mx > 0.25 ? 'bg-emerald-400' : 'bg-emerald-200 dark:bg-emerald-800';
+  const weeks = []; let cw = [];
+  days.forEach((d, i) => { cw.push(d); if (d.dayOfWeek === 6 || i === days.length - 1) { weeks.push([...cw]); cw = []; } });
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow"><Calendar className="w-4 h-4 text-white" /></div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गतिविधि' : 'Activity'}</h3></div><div className="flex items-center gap-0.5"><span className="text-[7px] text-gray-400 mr-1">Less</span>{['bg-gray-100', 'bg-emerald-200', 'bg-emerald-400', 'bg-emerald-500', 'bg-emerald-600'].map((c, i) => <div key={i} className={`w-2.5 h-2.5 rounded-sm ${c}`} />)}<span className="text-[7px] text-gray-400 ml-1">More</span></div></div>
+      <div className="flex gap-0.5 overflow-x-auto pb-1">{weeks.map((w, wi) => (<div key={wi} className="flex flex-col gap-0.5">{w.map((d, di) => (<div key={di} className="relative" onMouseEnter={() => setHov(d)} onMouseLeave={() => setHov(null)}><div className={`w-3 h-3 rounded-sm ${gc(d.count)} hover:ring-1 hover:ring-gray-400 cursor-pointer`} />{hov?.date === d.date && <div className="absolute z-50 bottom-5 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[8px] px-2 py-1 rounded-lg shadow-xl whitespace-nowrap"><p className="font-bold">{new Date(d.date).toLocaleDateString('en', { day: 'numeric', month: 'short' })}</p><p>{d.count} tests {d.count > 0 ? `| ${d.avgScore}%` : ''}</p></div>}</div>))}</div>))}</div>
+    </div>
+  );
+};
+
+const WeeklyComparison = ({ data, language: l }) => (
+  <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+    <div className="flex items-center gap-2 mb-3"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow"><Activity className="w-4 h-4 text-white" /></div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'साप्ताहिक' : 'Weekly'}</h3></div>
+    <div className="grid grid-cols-2 gap-3">
+      <div className="bg-indigo-50 dark:bg-indigo-900/10 rounded-xl p-3 border border-indigo-200/50"><p className="text-[9px] font-bold text-indigo-600 uppercase mb-1">{l === 'hi' ? 'इस हफ्ते' : 'This Week'}</p><p className="text-2xl font-black text-indigo-900 dark:text-indigo-200">{data.thisWeek.tests}</p><p className="text-[9px] text-indigo-500">{data.thisWeek.avgScore}% avg</p></div>
+      <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-3 border border-gray-200"><p className="text-[9px] font-bold text-gray-500 uppercase mb-1">{l === 'hi' ? 'पिछला' : 'Last Week'}</p><p className="text-2xl font-black text-gray-700 dark:text-gray-300">{data.lastWeek.tests}</p><p className="text-[9px] text-gray-400">{data.lastWeek.avgScore}% avg</p></div>
+    </div>
+    <div className="mt-2 flex items-center justify-center gap-2">
+      <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${data.change > 0 ? 'bg-emerald-100 text-emerald-700' : data.change < 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>{data.change > 0 ? <ArrowUp className="w-3 h-3" /> : data.change < 0 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}{Math.abs(data.change)} tests</span>
+      <span className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${data.scoreChange > 0 ? 'bg-emerald-100 text-emerald-700' : data.scoreChange < 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>{data.scoreChange > 0 ? '+' : ''}{data.scoreChange}%</span>
+    </div>
+  </div>
+);
+
+const PaperTrendCard = ({ title, icon: Icon, color, data, trend, predicted, avgScore, accuracy, language: l }) => {
+  const cM = { blue: { stroke: '#3b82f6', grad: 'from-blue-600 to-cyan-600', border: 'border-blue-200/50 dark:border-blue-800/30', light: 'bg-blue-50 dark:bg-blue-900/10' }, purple: { stroke: '#8b5cf6', grad: 'from-purple-600 to-violet-600', border: 'border-purple-200/50 dark:border-purple-800/30', light: 'bg-purple-50 dark:bg-purple-900/10' } };
+  const c = cM[color] || cM.blue;
+  const avg = data.length > 0 ? Math.round(data.reduce((s, d) => s + d.score, 0) / data.length) : 0;
+  const best = data.length > 0 ? Math.max(...data.map(d => d.score)) : 0;
+  return (
+    <div className={`bg-white dark:bg-gray-800 rounded-2xl border-2 ${c.border} overflow-hidden`}>
+      <div className={`${c.light} px-4 py-3 border-b ${c.border} flex items-center justify-between`}>
+        <div className="flex items-center gap-2"><div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${c.grad} flex items-center justify-center shadow`}><Icon className="w-4 h-4 text-white" /></div><div><h4 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h4><p className="text-[9px] text-gray-500">{data.length} tests</p></div></div>
+        <div className="flex items-center gap-1.5">{predicted !== null && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30">Pred: {predicted}%</span>}<TrendBadge direction={trend} /></div>
+      </div>
+      <div className="p-4">
+        {data.length > 0 ? (<><div style={{ height: 140 }}><ResponsiveContainer width="100%" height="100%"><AreaChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}><defs><linearGradient id={`g_${color}`} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={c.stroke} stopOpacity={0.3} /><stop offset="95%" stopColor={c.stroke} stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" /><XAxis dataKey="name" tick={{ fontSize: 9 }} stroke="#94a3b8" /><YAxis domain={[0, 100]} tick={{ fontSize: 9 }} stroke="#94a3b8" /><Tooltip content={<CTooltip />} /><Area type="monotone" dataKey="score" stroke={c.stroke} strokeWidth={2.5} fill={`url(#g_${color})`} dot={{ r: 3, fill: c.stroke }} /></AreaChart></ResponsiveContainer></div>
+          <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+            {[{ l: 'Avg', v: `${avg}%`, c: 'text-blue-500' }, { l: 'Best', v: `${best}%`, c: 'text-emerald-500' }, { l: 'Acc', v: `${accuracy}%`, c: 'text-violet-500' }, { l: 'Tests', v: data.length, c: 'text-amber-500' }].map((m, i) => (<div key={i} className="text-center"><p className={`text-xs font-bold ${m.c}`}>{m.v}</p><p className="text-[7px] text-gray-400 uppercase">{m.l}</p></div>))}
+          </div></>
+        ) : <div className="text-center py-8"><BarChart3 className="w-8 h-8 mx-auto mb-2 text-gray-200" /><p className="text-[10px] text-gray-400">No data</p></div>}
+      </div>
+    </div>
+  );
+};
+
+const ErrorAnalysisCard = ({ data, language: l }) => {
+  if (!data?.unitPerformance?.length) return null;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow"><AlertTriangle className="w-4 h-4 text-white" /></div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गलती विश्लेषण' : 'Error Analysis'}</h3></div><span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{data.errorRate}%</span></div>
+      <div className="p-4">
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="bg-red-50 dark:bg-red-900/10 rounded-xl p-2.5 border border-red-200/50"><p className="text-[9px] font-bold text-red-700 mb-1">{l === 'hi' ? 'कमजोर' : 'Weak'} ({data.weakUnits.length})</p>{data.weakUnits.slice(0, 3).map((u, i) => <p key={i} className="text-[8px] text-red-600/70 truncate">{u.unit}: {u.accuracy}%</p>)}</div>
+          <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-xl p-2.5 border border-emerald-200/50"><p className="text-[9px] font-bold text-emerald-700 mb-1">{l === 'hi' ? 'मजबूत' : 'Strong'} ({data.strongUnits.length})</p>{data.strongUnits.slice(0, 3).map((u, i) => <p key={i} className="text-[8px] text-emerald-600/70 truncate">{u.unit}: {u.accuracy}%</p>)}</div>
+        </div>
+        <div className="space-y-1 max-h-[180px] overflow-y-auto">
+          {data.unitPerformance.slice(0, 10).map((u, i) => (<div key={i} className="flex items-center gap-2"><span className="text-[9px] text-gray-600 w-24 truncate flex-shrink-0">{u.unit}</span><div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${u.accuracy}%`, background: u.accuracy >= 70 ? '#22c55e' : u.accuracy >= 50 ? '#3b82f6' : u.accuracy >= 30 ? '#f59e0b' : '#ef4444' }} /></div><span className="text-[9px] font-bold w-8 text-right">{u.accuracy}%</span></div>))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const TopicMasteryRadar = ({ data, language: l }) => {
+  if (!data?.length) return null;
+  const rd = data.slice(0, 8).map(d => ({ ...d, subject: d.unit?.replace(/UNIT\s*/i, 'U').substring(0, 12) || 'Other' }));
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center gap-2 mb-3"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow"><Crosshair className="w-4 h-4 text-white" /></div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'विषय दक्षता' : 'Topic Mastery'}</h3></div>
+      <div style={{ height: 200 }}><ResponsiveContainer width="100%" height="100%"><RadarChart data={rd}><PolarGrid stroke="#e2e8f0" /><PolarAngleAxis dataKey="subject" tick={{ fontSize: 8, fill: '#94a3b8' }} /><PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 7 }} axisLine={false} /><Radar name="Accuracy" dataKey="accuracy" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.2} strokeWidth={2} /></RadarChart></ResponsiveContainer></div>
+    </div>
+  );
+};
+
+const NeedsAttentionCard = ({ tests, language: l, navigate }) => {
+  if (!tests?.length) return null;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-red-200/50 dark:border-red-800/30 overflow-hidden">
+      <div className="bg-red-50 dark:bg-red-900/10 px-4 py-3 border-b border-red-200/50 flex items-center justify-between"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow"><AlertTriangle className="w-4 h-4 text-white" /></div><h3 className="text-sm font-bold text-red-800 dark:text-red-300">{l === 'hi' ? 'ध्यान दें' : 'Needs Attention'}</h3></div><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{tests.length}</span></div>
+      <div className="p-3 space-y-1.5 max-h-[250px] overflow-y-auto">
+        {tests.slice(0, 5).map((t, i) => { const { g, c } = grd(t.bestScore); return (
+          <div key={i} onClick={() => navigate?.(`/results/${t.lastAttempt?._id}`)} className="group flex items-center gap-2.5 p-2.5 rounded-xl bg-red-50/50 dark:bg-red-900/5 border border-red-100 dark:border-red-900/20 hover:bg-white hover:shadow-lg cursor-pointer transition-all">
+            <div className={`w-9 h-9 rounded-lg border flex items-center justify-center font-black text-sm ${GC[c]}`}>{g}</div>
+            <div className="flex-1 min-w-0"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.test?.title || 'Test'}</h4><p className="text-[9px] text-gray-500">Best: {t.bestScore}% | {t.attempts} att</p></div>
+            <p className="text-lg font-black text-red-600 flex-shrink-0">{t.bestScore}%</p>
+            <button onClick={e => { e.stopPropagation(); navigate?.(`/test/${t.testId}`); }} className="p-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200"><RefreshCw className="w-3.5 h-3.5" /></button>
+          </div>
+        ); })}
+      </div>
+    </div>
+  );
+};
+
+const PendingTimeline = ({ notAttemptedTests, paper1NotAttempted, paper2NotAttempted, language: l, navigate }) => {
+  const [tab, setTab] = useState('all');
+  const sorted = useMemo(() => {
+    const base = tab === 'paper1' ? paper1NotAttempted : tab === 'paper2' ? paper2NotAttempted : notAttemptedTests;
+    return [...base].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  }, [notAttemptedTests, paper1NotAttempted, paper2NotAttempted, tab]);
+  if (notAttemptedTests.length === 0) return null;
+  const getDO = d => Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow"><Calendar className="w-4 h-4 text-white" /></div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'बाकी टेस्ट' : 'Pending'}</h3></div></div>
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
+          {[{ id: 'all', l: l === 'hi' ? 'सभी' : 'All', c: notAttemptedTests.length }, { id: 'paper1', l: 'P1', c: paper1NotAttempted.length }, { id: 'paper2', l: 'P2', c: paper2NotAttempted.length }].map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} className={`flex-1 px-2 py-1.5 rounded-md text-[10px] font-bold transition-all ${tab === t.id ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>{t.l} <span className="text-[8px] ml-0.5 px-1 rounded-full bg-gray-200 dark:bg-gray-600">{t.c}</span></button>
+          ))}
+        </div>
+        {sorted[0] && <button onClick={() => navigate?.(`/test/${sorted[0]._id}`)} className="w-full mt-2 p-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white flex items-center justify-center gap-2 hover:shadow-xl"><Rocket className="w-3.5 h-3.5" /><span className="text-[10px] font-bold">{l === 'hi' ? 'मैराथन' : 'Marathon'}</span></button>}
+      </div>
+      <div className="p-3 max-h-[350px] overflow-y-auto space-y-1.5">
+        {sorted.slice(0, 10).map((t, i) => { const d = getDO(t.createdAt); return (
+          <div key={t._id || i} className={`flex items-center gap-2.5 p-2.5 rounded-xl border hover:shadow-lg transition-all ${d >= 14 ? 'border-red-200 bg-red-50/30' : d >= 7 ? 'border-orange-200 bg-orange-50/20' : 'border-gray-100 bg-gray-50/30'}`}>
+            <div className="text-center w-8 flex-shrink-0"><p className="text-sm font-black text-gray-900 dark:text-white">{new Date(t.createdAt).getDate()}</p><p className="text-[7px] text-gray-400">{new Date(t.createdAt).toLocaleDateString('en', { month: 'short' })}</p></div>
+            <div className="flex-1 min-w-0"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title || 'Untitled'}</h4><div className="flex items-center gap-2 text-[8px] text-gray-500"><span>{t.totalQuestions || 0}Q</span><span>{t.duration || 0}m</span><span className={d >= 14 ? 'text-red-500 font-bold' : ''}>{d}d ago</span></div></div>
+            <button onClick={() => navigate?.(`/test/${t._id}`)} className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-lg flex-shrink-0"><Play className="w-3 h-3 inline mr-0.5" />{l === 'hi' ? 'दें' : 'Take'}</button>
+          </div>
+        ); })}
+      </div>
+    </div>
+  );
+};
+
+const PaperTabbedActivity = ({ allAttempts, paper1Attempts, paper2Attempts, allTests, paper1Tests, paper2Tests, notAttemptedTests, paper1NotAttempted, paper2NotAttempted, language: l, loading: la }) => {
+  const [mT, setMT] = useState('attempted');
+  const [pF, setPF] = useState('all');
+  const navigate = useNavigate();
+  const fA = pF === 'paper1' ? paper1Attempts : pF === 'paper2' ? paper2Attempts : allAttempts;
+  const fT = pF === 'paper1' ? paper1Tests : pF === 'paper2' ? paper2Tests : allTests;
+  const fN = pF === 'paper1' ? paper1NotAttempted : pF === 'paper2' ? paper2NotAttempted : notAttemptedTests;
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className="flex items-center justify-between px-4 pt-3 pb-1"><h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5"><History className="w-4 h-4 text-indigo-500" />{l === 'hi' ? 'गतिविधि' : 'Activity'}</h3><div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">{[{ id: 'all', l: 'All' }, { id: 'paper1', l: 'P1' }, { id: 'paper2', l: 'P2' }].map(p => (<button key={p.id} onClick={() => setPF(p.id)} className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${pF === p.id ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>{p.l}</button>))}</div></div>
+      <div className="flex border-b border-gray-100 dark:border-gray-700 px-1">{[{ id: 'attempted', l: l === 'hi' ? 'दिए' : 'Taken', I: CheckCircle, c: fA.length }, { id: 'created', l: l === 'hi' ? 'बनाए' : 'Created', I: PlusCircle, c: fT.length }, { id: 'pending', l: l === 'hi' ? 'बाकी' : 'Pending', I: Clock, c: fN.length }].map(t => (<button key={t.id} onClick={() => setMT(t.id)} className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 text-[11px] font-semibold ${mT === t.id ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}><t.I className="w-3 h-3" />{t.l}<span className="text-[8px] px-1 rounded-full bg-gray-100 dark:bg-gray-700">{t.c}</span></button>))}</div>
+      <div className="p-3 max-h-[350px] overflow-y-auto">
+        {mT === 'attempted' && (la ? <div className="space-y-2">{[1, 2, 3].map(i => <Sk key={i} className="h-14 w-full" />)}</div>
+          : fA.length > 0 ? <div className="space-y-1.5">{fA.slice(0, 10).map((a, i) => { const pct = a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0; const { g, c } = grd(pct); return (
+            <div key={a._id || i} onClick={() => navigate(`/results/${a._id}`)} className="group flex items-center gap-2 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700/50 hover:shadow-lg cursor-pointer transition-all">
+              <div className={`w-9 h-9 rounded-lg border flex items-center justify-center font-black text-sm ${GC[c]}`}>{g}</div>
+              <div className="flex-1 min-w-0"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{a.testId?.title || 'Test'}</h4><div className="flex items-center gap-2 text-[9px] text-gray-500"><span>✓{a.correctCount || 0}</span><span>✗{a.wrongCount || 0}</span><span>{tAgo(a.completedAt, l)}</span></div></div>
+              <p className="text-base font-black text-gray-900 dark:text-white">{pct}%</p><ChevronRight className="w-3 h-3 text-gray-300" />
+            </div>
+          ); })}<Link to="/results" className="flex items-center justify-center gap-1 p-2 rounded-xl border border-dashed text-[10px] font-semibold text-gray-500 hover:text-indigo-600"><History className="w-3 h-3" />{l === 'hi' ? 'सभी' : 'All'}<ArrowRight className="w-3 h-3" /></Link></div>
+          : <div className="text-center py-8"><ClipboardList className="w-10 h-10 mx-auto mb-2 text-gray-200" /><p className="text-xs text-gray-400">No tests</p><button onClick={() => navigate('/tests')} className="mt-2 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-semibold rounded-lg"><Play className="w-3 h-3 inline mr-1" />Take Test</button></div>
+        )}
+        {mT === 'created' && (fT.length > 0 ? <div className="space-y-1.5">{fT.slice(0, 10).map((t, i) => (<div key={t._id || i} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700/50 hover:shadow-lg transition-all"><div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow"><FileText className="w-4 h-4 text-white" /></div><div className="flex-1 min-w-0"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title || 'Untitled'}</h4><p className="text-[9px] text-gray-500">{t.totalQuestions || 0}Q | {tAgo(t.createdAt, l)}</p></div><button onClick={() => navigate(`/test/${t._id}`)} className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100"><Play className="w-3 h-3" /></button></div>))}</div> : <div className="text-center py-8"><PlusCircle className="w-10 h-10 mx-auto mb-2 text-gray-200" /><p className="text-xs text-gray-400">None</p></div>)}
+        {mT === 'pending' && (fN.length > 0 ? <div className="space-y-1.5">{fN.slice(0, 10).map((t, i) => (<div key={t._id || i} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-amber-50/30 border border-amber-100 dark:border-amber-900/20 hover:shadow-lg"><div className="w-9 h-9 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center"><Clock className="w-4 h-4 text-amber-600" /></div><div className="flex-1 min-w-0"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title}</h4><p className="text-[9px] text-gray-500">{t.totalQuestions || 0}Q</p></div><button onClick={() => navigate(`/test/${t._id}`)} className="px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold rounded-lg"><Play className="w-3 h-3 inline mr-0.5" />{l === 'hi' ? 'दें' : 'Take'}</button></div>))}</div> : <div className="text-center py-8"><CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-200" /><p className="text-xs text-gray-400">All done!</p></div>)}
+      </div>
+    </div>
+  );
+};
+
+const PaperSection = ({ paper, title, subtitle, Icon, color, units, total, language: l, navigate }) => {
+  const [open, setOpen] = useState(true);
+  const sorted = [...units].sort((a, b) => b.count - a.count);
+  const c = color === 'blue' ? { grad: 'from-blue-600 to-cyan-600', gradL: 'from-blue-50 to-cyan-50 dark:from-blue-900/10 dark:to-cyan-900/10', bdr: 'border-blue-200/50 dark:border-blue-800/30', txt: 'text-blue-600 dark:text-blue-400', bar: 'from-blue-500 to-cyan-400', iconBg: 'from-blue-500 to-cyan-500' } : { grad: 'from-purple-600 to-violet-600', gradL: 'from-purple-50 to-violet-50 dark:from-purple-900/10 dark:to-violet-900/10', bdr: 'border-purple-200/50 dark:border-purple-800/30', txt: 'text-purple-600 dark:text-purple-400', bar: 'from-purple-500 to-violet-400', iconBg: 'from-purple-500 to-violet-500' };
+  return (
+    <div className={`bg-white dark:bg-gray-800 rounded-2xl border-2 ${c.bdr} overflow-hidden`}>
+      <div className={`bg-gradient-to-r ${c.gradL} p-4 border-b ${c.bdr}`}><div className="flex items-center justify-between"><div className="flex items-center gap-2.5"><div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${c.iconBg} flex items-center justify-center shadow-lg`}><Icon className="w-5 h-5 text-white" /></div><div><h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">{title}<span className={`text-[9px] px-1.5 py-0.5 rounded-full bg-white/80 dark:bg-gray-700/80 ${c.txt}`}>{total} Qs</span></h3><p className="text-[10px] text-gray-500">{subtitle}</p></div></div><button onClick={() => setOpen(!open)} className="p-1 rounded-lg hover:bg-white/60">{open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}</button></div></div>
+      {open && <div className="p-3">{sorted.length > 0 ? <div className="space-y-1">{sorted.map((u, i) => { const pct = total > 0 ? Math.round((u.count / total) * 100) : 0; return (<div key={i} onClick={() => navigate?.(`/questions?paper=${paper}&unit=${encodeURIComponent(u._id?.unit || '')}`)} className="group flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-all"><div className={`w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center ${i === 0 ? `bg-gradient-to-br ${c.grad} text-white shadow` : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>{i + 1}</div><div className="flex-1 min-w-0"><p className="text-[11px] font-semibold text-gray-800 dark:text-gray-200 truncate">{u._id?.unit || '?'}</p><div className="h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"><div className={`h-full bg-gradient-to-r ${c.bar} rounded-full`} style={{ width: `${pct}%` }} /></div></div><div className="text-right flex-shrink-0"><p className="text-[11px] font-bold text-gray-900 dark:text-white">{u.count}</p><p className="text-[8px] text-gray-400">{pct}%</p></div><ChevronRight className="w-3 h-3 text-gray-300" /></div>); })}</div> : <div className="text-center py-6"><FileQuestion className="w-8 h-8 mx-auto mb-2 text-gray-200" /><p className="text-[10px] text-gray-400">No questions</p></div>}</div>}
+    </div>
+  );
+};
+
+// ── Small components ──
+const iconMapA = { Layers, Crown, Play, Flame, Medal, Star, Target, PlusCircle };
+const AchievementCard = ({ achievements, language: l }) => {
+  const un = achievements.filter(a => a.unlocked).length;
+  const cm = { amber: 'bg-amber-100 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400', purple: 'bg-purple-100 text-purple-600 border-purple-200 dark:bg-purple-900/30', blue: 'bg-blue-100 text-blue-600 border-blue-200 dark:bg-blue-900/30', orange: 'bg-orange-100 text-orange-600 border-orange-200 dark:bg-orange-900/30', emerald: 'bg-emerald-100 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30', gray: 'bg-gray-100 text-gray-400 border-gray-200 dark:bg-gray-800 dark:text-gray-600' };
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
+      <div className="flex items-center justify-between mb-3"><h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm"><Award className="w-5 h-5 text-amber-500" />{l === 'hi' ? 'उपलब्धियाँ' : 'Achievements'}</h3><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">{un}/{achievements.length}</span></div>
+      <div className="grid grid-cols-4 gap-2">{achievements.map((a, i) => { const c = cm[a.color] || cm.gray; const Ic = iconMapA[a.icon] || Star; return (<div key={i} className={`relative flex flex-col items-center gap-1 p-2 rounded-xl border ${a.unlocked ? c : 'bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700 opacity-50'}`} title={a.desc}>{a.unlocked ? <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full flex items-center justify-center"><CheckCircle className="w-2.5 h-2.5 text-white" /></div> : <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-gray-400 rounded-full flex items-center justify-center"><Lock className="w-2 h-2 text-white" /></div>}<Ic className="w-4 h-4" /><span className="text-[8px] font-bold text-center leading-tight">{a.label}</span>{!a.unlocked && a.progress !== undefined && <div className="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"><div className="h-full bg-indigo-400 rounded-full" style={{ width: `${Math.min(a.progress * 100, 100)}%` }} /></div>}</div>); })}</div>
     </div>
   );
 };
 
 const StreakCard = ({ streak, longestStreak, language: l }) => {
-  const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-  const today = new Date().getDay();
+  const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'], today = new Date().getDay();
   return (
     <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-4 text-white">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-1.5"><Flame className="w-4 h-4 text-yellow-300" /><span className="font-bold text-xs">{l === 'hi' ? 'स्ट्रीक' : 'Streak'}</span></div>
-        <div className="text-right">
-          <span className="text-xl font-black">{streak}<span className="text-[9px] font-normal text-white/60 ml-0.5">d</span></span>
-          {longestStreak > 0 && <p className="text-[8px] text-white/40">{l === 'hi' ? 'सर्वश्रेष्ठ' : 'Best'}: {longestStreak}d</p>}
-        </div>
-      </div>
-      <div className="flex justify-between gap-1">
-        {days.map((d, i) => (
-          <div key={i} className={`w-6 h-6 rounded-md flex items-center justify-center text-[9px] font-bold
-            ${i <= today && streak > 0 ? 'bg-white text-orange-600 shadow-sm' : 'bg-white/15 text-white/50'}`}>{d}</div>
-        ))}
-      </div>
+      <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-1.5"><Flame className="w-4 h-4 text-yellow-300" /><span className="font-bold text-xs">{l === 'hi' ? 'स्ट्रीक' : 'Streak'}</span></div><div className="text-right"><span className="text-xl font-black">{streak}d</span>{longestStreak > 0 && <p className="text-[8px] text-white/40">Best: {longestStreak}d</p>}</div></div>
+      <div className="flex justify-between gap-1">{days.map((d, i) => (<div key={i} className={`w-6 h-6 rounded-md flex items-center justify-center text-[9px] font-bold ${i <= today && streak > 0 ? 'bg-white text-orange-600 shadow-sm' : 'bg-white/15 text-white/50'}`}>{d}</div>))}</div>
     </div>
   );
 };
 
-const quotes = [
-  { t: "Success is not final, failure is not fatal.", a: "Churchill" },
-  { t: "The only way to do great work is to love what you do.", a: "Jobs" },
-  { t: "Education is the most powerful weapon.", a: "Mandela" },
-  { t: "It does not matter how slowly you go.", a: "Confucius" },
-  { t: "Believe you can and you're halfway there.", a: "Roosevelt" },
-  { t: "The expert in anything was once a beginner.", a: "Hayes" },
-  { t: "Hard work beats talent when talent doesn't work hard.", a: "Notah" },
-];
-
-const QuoteCard = () => {
-  const [q] = useState(() => quotes[Math.floor(Math.random() * quotes.length)]);
-  return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-4 text-white">
-      <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-3xl" />
-      <Sparkles className="w-4 h-4 mb-2 text-yellow-300" />
-      <p className="text-xs font-medium leading-relaxed mb-2 italic opacity-95">"{q.t}"</p>
-      <p className="text-[9px] text-white/50">- {q.a}</p>
-    </div>
-  );
-};
+const quotes = [{ t: "Success is not final, failure is not fatal.", a: "Churchill" }, { t: "The only way to do great work is to love what you do.", a: "Jobs" }, { t: "Education is the most powerful weapon.", a: "Mandela" }, { t: "Believe you can and you're halfway there.", a: "Roosevelt" }, { t: "The expert in anything was once a beginner.", a: "Hayes" }];
+const QuoteCard = () => { const [q] = useState(() => quotes[Math.floor(Math.random() * quotes.length)]); return (<div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-4 text-white"><Sparkles className="w-4 h-4 mb-2 text-yellow-300" /><p className="text-xs font-medium italic opacity-95">"{q.t}"</p><p className="text-[9px] text-white/50 mt-1">- {q.a}</p></div>); };
 
 const QAction = ({ icon: Icon, title, desc, to, gradient, badge, delay = 0 }) => {
   const [v, setV] = useState(false);
   useEffect(() => { const t = setTimeout(() => setV(true), delay); return () => clearTimeout(t); }, [delay]);
-  return (
-    <Link to={to} className={`group relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-3.5 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 hover:border-transparent ${v ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-      <div className="relative z-10">
-        <div className="flex items-start justify-between mb-1.5">
-          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-all`}><Icon className="w-4 h-4 text-white" /></div>
-          {badge && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full">{badge}</span>}
-        </div>
-        <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-white text-xs">{title}</h3>
-        <p className="text-[9px] text-gray-500 group-hover:text-white/70 mt-0.5">{desc}</p>
-      </div>
-    </Link>
-  );
+  return (<Link to={to} className={`group relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-3.5 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 ${v ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}><div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-100 transition-opacity`} /><div className="relative z-10"><div className="flex items-start justify-between mb-1.5"><div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-all`}><Icon className="w-4 h-4 text-white" /></div>{badge && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-amber-100 text-amber-700 rounded-full">{badge}</span>}</div><h3 className="font-bold text-gray-900 dark:text-white group-hover:text-white text-xs">{title}</h3><p className="text-[9px] text-gray-500 group-hover:text-white/70 mt-0.5">{desc}</p></div></Link>);
 };
+
 // ════════════════════════════════════════════════════════════
-//               MAIN DASHBOARD COMPONENT
-//          (Section 3/3 - Paste below Section 2/3)
+//  DASHBOARD.JSX - PART 2 (Main Component)
+//  Paste directly below Part 1 in the SAME file
 // ════════════════════════════════════════════════════════════
 
 const Dashboard = ({ language: propLanguage, setLanguage }) => {
@@ -2138,7 +1449,7 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
           <div className="space-y-5 pb-8">
 
             {/* ═══════════════════════════════════════════════
-                 HERO SECTION (Enhanced)
+                 HERO SECTION
             ═══════════════════════════════════════════════ */}
             <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-5 md:p-6 text-white">
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl" />
@@ -2150,13 +1461,11 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                   <div className="flex items-center gap-2">
                     <LiveClock />
-                    <SessionTimer language={l} />
+                    <SessionTimer />
                     {d.daysUntilExam !== null && d.daysUntilExam > 0 && (
                       <div className="flex items-center gap-1.5 bg-white/10 rounded-lg px-2.5 py-1.5 border border-white/10">
                         <CalendarDays className="w-3 h-3 text-rose-400" />
-                        <span className="text-xs font-mono font-bold text-white tabular-nums">
-                          {d.daysUntilExam}d
-                        </span>
+                        <span className="text-xs font-mono font-bold text-white tabular-nums">{d.daysUntilExam}d</span>
                       </div>
                     )}
                   </div>
@@ -2171,7 +1480,7 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
                   </div>
                 </div>
 
-                {/* Main hero content */}
+                {/* Main hero */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
                   <div className="flex-1">
                     <div className="flex items-center gap-2.5 mb-2">
@@ -2190,29 +1499,42 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
                       {l === 'hi' ? 'नियमित अभ्यास सफलता की कुंजी है। आज का लक्ष्य पूरा करें!' : 'Consistent practice is the key. Complete today\'s goals!'}
                     </p>
 
-                    {/* JRF quick badge in hero */}
+                    {/* JRF quick badge */}
                     {d.jrfProbability.dataPoints >= 3 && (
-                      <div className="flex items-center gap-2 mb-4">
+                      <div className="flex items-center gap-2 mb-4 flex-wrap">
                         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border ${
                           d.jrfProbability.riskLevel === 'safe' ? 'bg-emerald-500/10 border-emerald-500/20' :
                           d.jrfProbability.riskLevel === 'moderate' ? 'bg-blue-500/10 border-blue-500/20' :
                           d.jrfProbability.riskLevel === 'risky' ? 'bg-amber-500/10 border-amber-500/20' :
-                          'bg-red-500/10 border-red-500/20'
-                        }`}>
+                          'bg-red-500/10 border-red-500/20'}`}>
                           <Brain className="w-3.5 h-3.5 text-indigo-300" />
-                          <span className="text-[10px] font-bold">
-                            JRF: {d.jrfProbability.jrfProbability}%
-                          </span>
+                          <span className="text-[10px] font-bold">JRF: {d.jrfProbability.jrfProbability}%</span>
                           <span className="text-[8px] text-indigo-300/50">|</span>
-                          <span className="text-[10px] font-bold">
-                            NET: {d.jrfProbability.netProbability}%
-                          </span>
+                          <span className="text-[10px] font-bold">NET: {d.jrfProbability.netProbability}%</span>
                         </div>
                         {d.todayActivity.count > 0 && (
                           <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                             <CheckCircle className="w-3 h-3 text-emerald-400" />
                             <span className="text-[9px] font-bold text-emerald-300">
-                              {l === 'hi' ? `आज ${d.todayActivity.count} टेस्ट` : `${d.todayActivity.count} tests today`}
+                              {l === 'hi' ? `आज ${d.todayActivity.count} टेस्ट` : `${d.todayActivity.count} today`}
+                            </span>
+                          </div>
+                        )}
+                        {/* Readiness badge */}
+                        {d.examCommandCenter?.readiness && (
+                          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                            <Gauge className="w-3 h-3 text-indigo-300" />
+                            <span className="text-[9px] font-bold text-indigo-300">
+                              {l === 'hi' ? 'तैयारी' : 'Ready'}: {d.examCommandCenter.readiness.overall}%
+                            </span>
+                          </div>
+                        )}
+                        {/* Revision due badge */}
+                        {d.smartRevision?.stats?.dueToday > 0 && (
+                          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                            <RotateCcw className="w-3 h-3 text-rose-300" />
+                            <span className="text-[9px] font-bold text-rose-300">
+                              {d.smartRevision.stats.dueToday} {l === 'hi' ? 'रिवीज़न बाकी' : 'revision due'}
                             </span>
                           </div>
                         )}
@@ -2228,6 +1550,12 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
                         className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/10 border border-white/20 font-semibold text-xs rounded-xl hover:bg-white/20 transition-all">
                         <Upload className="w-3.5 h-3.5" />{l === 'hi' ? 'आयात' : 'Import'}
                       </button>
+                      {d.smartRevision?.marathonQueue?.length > 0 && (
+                        <button onClick={() => navigate(`/test/${d.smartRevision.marathonQueue[0].testId}`)}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-rose-500 to-pink-600 font-bold text-xs rounded-xl hover:shadow-xl transition-all">
+                          <RotateCcw className="w-3.5 h-3.5" />{l === 'hi' ? 'रिवीज़न' : 'Revise'}
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -2250,7 +1578,6 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
                         </div>
                       ))}
                     </div>
-
                     <Ring pct={d.overallAccuracy} size={120} sw={8} color="#22c55e" bg="rgba(255,255,255,0.08)">
                       <div className="text-center">
                         <p className="text-2xl font-black">{d.overallAccuracy}%</p>
@@ -2263,7 +1590,7 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
             </div>
 
             {/* ═══════════════════════════════════════════════
-                 STAT CARDS ROW
+                 STAT CARDS
             ═══════════════════════════════════════════════ */}
             {d.loading ? (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -2276,12 +1603,10 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
                   onClick={() => navigate('/questions')} delay={0} spark={[3, 7, 5, 12, 8, 15, 10]} />
                 <StatCard icon={BookOpen} label="Paper 1" value={d.paper1Count}
                   sub={`${d.paper1Accuracy}% acc`} gradient="from-emerald-500 to-green-500" iconBg="from-emerald-500 to-green-600"
-                  onClick={() => navigate('/questions?paper=paper1')} delay={80} spark={[2, 5, 3, 8, 6, 10, 7]}
-                  trend={d.paper1TrendDir} />
+                  onClick={() => navigate('/questions?paper=paper1')} delay={80} spark={[2, 5, 3, 8, 6, 10, 7]} trend={d.paper1TrendDir} />
                 <StatCard icon={Target} label="Paper 2" value={d.paper2Count}
                   sub={`${d.paper2Accuracy}% acc`} gradient="from-purple-500 to-violet-500" iconBg="from-purple-500 to-violet-600"
-                  onClick={() => navigate('/questions?paper=paper2')} delay={160} spark={[4, 6, 9, 5, 11, 8, 13]}
-                  trend={d.paper2TrendDir} />
+                  onClick={() => navigate('/questions?paper=paper2')} delay={160} spark={[4, 6, 9, 5, 11, 8, 13]} trend={d.paper2TrendDir} />
                 <StatCard icon={ClipboardList} label={l === 'hi' ? 'टेस्ट' : 'Tests'} value={d.testStats?.totalTests || 0}
                   sub={`${d.allCompletedAttempts.length} ${l === 'hi' ? 'दिए' : 'taken'}`} gradient="from-amber-500 to-orange-500" iconBg="from-amber-500 to-orange-600"
                   onClick={() => navigate('/tests')} delay={240} spark={[1, 3, 2, 5, 4, 7, 6]} />
@@ -2289,14 +1614,16 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
             )}
 
             {/* ═══════════════════════════════════════════════
-                 🆕 JRF PROBABILITY + GOALS + EXAM COUNTDOWN
+                 🆕 DAILY REPORT + JRF + GOALS
             ═══════════════════════════════════════════════ */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Column 1: JRF Probability */}
               <JRFProbabilityMeter data={d.jrfProbability} language={l} />
-                            <GoalTracker
+
+              {/* Column 2: Goals */}
+              <GoalTracker
                 goals={d.autoGeneratedGoals}
                 completionPct={d.goalCompletionPct}
-                todayActivity={d.todayActivity}
                 todayDetailed={d.todayDetailed}
                 yesterdayActivity={d.yesterdayActivity}
                 customTargets={d.customTargets}
@@ -2311,20 +1638,40 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
                 language={l}
                 navigate={navigate}
               />
+
+              {/* Column 3: Exam Countdown + Daily Report + Streak */}
               <div className="space-y-4">
-                <ExamCountdown
+                <ExamCommandCenter
+                  data={d.examCommandCenter}
                   examDate={d.examDate}
                   setExamDate={d.setExamDate}
-                  daysUntilExam={d.daysUntilExam}
-                  notAttemptedCount={d.notAttemptedTests.length}
                   language={l}
+                  navigate={navigate}
                 />
+                <DailyReportCard data={d.dailyReport} language={l} />
                 <StreakCard streak={d.streak} longestStreak={d.longestStreak} language={l} />
               </div>
             </div>
 
             {/* ═══════════════════════════════════════════════
-                 🆕 PERSONAL RECORDS
+                 🆕 SMART REVISION + WEEKLY CHAPTER MATRIX
+            ═══════════════════════════════════════════════ */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <RotateCcw className="w-5 h-5 text-rose-500" />
+                <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+                  {l === 'hi' ? 'रिवीज़न और साप्ताहिक विश्लेषण' : 'Revision & Weekly Analysis'}
+                </h2>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-2" />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <SmartRevisionHub data={d.smartRevision} language={l} navigate={navigate} />
+                <WeeklyChapterMatrix data={d.weeklyChapterMatrix} language={l} />
+              </div>
+            </div>
+
+            {/* ═══════════════════════════════════════════════
+                 PERSONAL RECORDS
             ═══════════════════════════════════════════════ */}
             {d.allCompletedAttempts.length > 0 && (
               <PersonalRecords records={d.personalRecords} language={l} />
@@ -2337,43 +1684,55 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
               <div className="flex items-center gap-2 mb-3">
                 <BarChart3 className="w-5 h-5 text-indigo-500" />
                 <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-                  {l === 'hi' ? 'पेपर-वार स्कोर ट्रेंड' : 'Paper-wise Score Trends'}
+                  {l === 'hi' ? 'पेपर-वार ट्रेंड' : 'Paper-wise Trends'}
                 </h2>
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-2" />
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <PaperTrendCard title={l === 'hi' ? 'पेपर 1 ट्रेंड' : 'Paper 1 Trend'} icon={BookOpen} color="blue"
+                <PaperTrendCard title={l === 'hi' ? 'पेपर 1' : 'Paper 1'} icon={BookOpen} color="blue"
                   data={d.paper1Trend} trend={d.paper1TrendDir} predicted={d.paper1Predicted}
                   avgScore={d.paper1AvgScore} accuracy={d.paper1Accuracy} language={l} />
-                <PaperTrendCard title={l === 'hi' ? 'पेपर 2 ट्रेंड' : 'Paper 2 Trend'} icon={Target} color="purple"
+                <PaperTrendCard title={l === 'hi' ? 'पेपर 2' : 'Paper 2'} icon={Target} color="purple"
                   data={d.paper2Trend} trend={d.paper2TrendDir} predicted={d.paper2Predicted}
                   avgScore={d.paper2AvgScore} accuracy={d.paper2Accuracy} language={l} />
               </div>
             </div>
 
             {/* ═══════════════════════════════════════════════
-                 🆕 SYLLABUS COVERAGE + SPEED + RECOMMENDATIONS
+                 SYLLABUS + RECOMMENDATIONS
             ═══════════════════════════════════════════════ */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2">
                 <SyllabusCoverageMap coverage={d.syllabusCoverage} language={l} />
               </div>
               <div className="space-y-4">
-                <StudyRecommendations recommendations={d.studyRecommendations} language={l} navigate={navigate} />
+                <StudyRecommendations recommendations={d.studyRecommendations} language={l} />
               </div>
             </div>
 
             {/* ═══════════════════════════════════════════════
-                 🆕 ERROR ANALYSIS + TOPIC MASTERY + SPEED
+                 🆕 MISTAKE JOURNAL + ERROR + TOPIC + SPEED
             ═══════════════════════════════════════════════ */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <ErrorAnalysisCard data={d.errorPatterns} language={l} navigate={navigate} />
-              <TopicMasteryRadar data={d.topicPerformance} language={l} />
-              <SpeedAnalyticsCard data={d.speedAnalytics} language={l} />
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <NotebookPen className="w-5 h-5 text-red-500" />
+                <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+                  {l === 'hi' ? 'गलती और विश्लेषण' : 'Mistakes & Analytics'}
+                </h2>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-2" />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <MistakeJournal data={d.mistakeJournal} language={l} />
+                <ErrorAnalysisCard data={d.errorPatterns} language={l} />
+                <div className="space-y-4">
+                  <TopicMasteryRadar data={d.topicPerformance} language={l} />
+                  <SpeedAnalyticsCard data={d.speedAnalytics} language={l} />
+                </div>
+              </div>
             </div>
 
             {/* ═══════════════════════════════════════════════
-                 🆕 ACTIVITY HEATMAP + WEEKLY + SCORE DIST
+                 ACTIVITY HEATMAP + WEEKLY + SCORES
             ═══════════════════════════════════════════════ */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2">
@@ -2386,9 +1745,9 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
             </div>
 
             {/* ═══════════════════════════════════════════════
-                 🆕 TIME OF DAY ANALYSIS
+                 TIME OF DAY
             ═══════════════════════════════════════════════ */}
-            {d.timeOfDayAnalysis.bestPeriod && (
+            {d.timeOfDayAnalysis?.bestPeriod && (
               <TimeOfDayCard data={d.timeOfDayAnalysis} language={l} />
             )}
 
@@ -2414,39 +1773,30 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
             </div>
 
             {/* ═══════════════════════════════════════════════
-                 PENDING TIMELINE
+                 PENDING + NEEDS ATTENTION
             ═══════════════════════════════════════════════ */}
-            {d.notAttemptedTests.length > 0 && (
+            {(d.notAttemptedTests.length > 0 || d.needsAttentionTests.length > 0) && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <Calendar className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                  <AlertTriangle className="w-5 h-5 text-amber-500" />
                   <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-                    {l === 'hi' ? 'बाकी टेस्ट' : 'Pending Tests Timeline'}
+                    {l === 'hi' ? 'बाकी और ध्यान दें' : 'Pending & Attention'}
                   </h2>
                   <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-2" />
                 </div>
-                <PendingTimeline
-                  notAttemptedTests={d.notAttemptedTests}
-                  paper1NotAttempted={d.paper1NotAttempted}
-                  paper2NotAttempted={d.paper2NotAttempted}
-                  language={l} navigate={navigate}
-                />
-              </div>
-            )}
-
-            {/* ═══════════════════════════════════════════════
-                 NEEDS ATTENTION
-            ═══════════════════════════════════════════════ */}
-            {d.needsAttentionTests.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertTriangle className="w-5 h-5 text-red-500" />
-                  <h2 className="text-sm font-bold text-gray-900 dark:text-white">
-                    {l === 'hi' ? 'ध्यान दें' : 'Needs Attention'}
-                  </h2>
-                  <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-2" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {d.notAttemptedTests.length > 0 && (
+                    <PendingTimeline
+                      notAttemptedTests={d.notAttemptedTests}
+                      paper1NotAttempted={d.paper1NotAttempted}
+                      paper2NotAttempted={d.paper2NotAttempted}
+                      language={l} navigate={navigate}
+                    />
+                  )}
+                  {d.needsAttentionTests.length > 0 && (
+                    <NeedsAttentionCard tests={d.needsAttentionTests} language={l} navigate={navigate} />
+                  )}
                 </div>
-                <NeedsAttentionCard tests={d.needsAttentionTests} language={l} navigate={navigate} />
               </div>
             )}
 
@@ -2514,15 +1864,19 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
                     <h3 className="text-sm font-bold">{l === 'hi' ? 'UGC NET क्रैक करें' : 'Crack UGC NET'}</h3>
                     <p className="text-[10px] text-gray-400">
                       {d.jrfProbability.dataPoints >= 3
-                        ? (l === 'hi'
-                          ? `JRF संभावना: ${d.jrfProbability.jrfProbability}% | NET: ${d.jrfProbability.netProbability}%`
-                          : `JRF: ${d.jrfProbability.jrfProbability}% | NET: ${d.jrfProbability.netProbability}%`)
-                        : (l === 'hi' ? 'अभी शुरू करें!' : 'Start now!')
-                      }
+                        ? `JRF: ${d.jrfProbability.jrfProbability}% | NET: ${d.jrfProbability.netProbability}%`
+                        + (d.examCommandCenter?.readiness ? ` | ${l === 'hi' ? 'तैयारी' : 'Ready'}: ${d.examCommandCenter.readiness.overall}%` : '')
+                        : (l === 'hi' ? 'अभी शुरू करें!' : 'Start now!')}
                     </p>
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  {d.smartRevision?.stats?.dueToday > 0 && (
+                    <button onClick={() => d.smartRevision.marathonQueue[0] && navigate(`/test/${d.smartRevision.marathonQueue[0].testId}`)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-rose-500 to-pink-600 font-bold text-xs rounded-xl hover:shadow-xl transition-all">
+                      <RotateCcw className="w-3.5 h-3.5" />{d.smartRevision.stats.dueToday} {l === 'hi' ? 'रिवीज़न' : 'Revisions'}
+                    </button>
+                  )}
                   <button onClick={() => navigate('/tests')}
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 font-bold text-xs rounded-xl hover:shadow-xl transition-all">
                     <Play className="w-3.5 h-3.5" />{l === 'hi' ? 'टेस्ट' : 'Tests'}
