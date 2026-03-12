@@ -2335,6 +2335,7 @@ const QuickActionCard = ({ icon: Icon, title, description, to, gradient, badge, 
 const WeeklyChapterMatrix = ({ data, language: l }) => {
   if (!data?.currentWeek) return null;
   const cw = data.currentWeek;
+  const chapters = Array.isArray(cw.chapters) ? cw.chapters : [];
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -2343,7 +2344,7 @@ const WeeklyChapterMatrix = ({ data, language: l }) => {
         <span className="text-[9px] text-gray-400">{cw.dateRange}</span>
       </div>
       <div className="space-y-1.5">
-        {cw.chapters.slice(0, 8).map((ch, i) => (
+        {chapters.slice(0, 8).map((ch, i) => (
           <div key={i} className="flex items-center gap-2 text-[10px]">
             <div className="w-20 truncate text-gray-600 dark:text-gray-400 font-semibold">{ch.name}</div>
             <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -2424,7 +2425,7 @@ const SpeedAnalyticsCard = ({ data, language: l }) => {
 };
 
 const StudyRecommendations = ({ data, language: l, navigate }) => {
-  const data_items = data || [];
+  const data_items = Array.isArray(data) ? data : [];
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -2451,6 +2452,7 @@ const StudyRecommendations = ({ data, language: l, navigate }) => {
 };
 
 const ScoreDistributionCard = ({ data, language: l }) => {
+  const chartData = Array.isArray(data) ? data : [];
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -2458,7 +2460,7 @@ const ScoreDistributionCard = ({ data, language: l }) => {
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'स्कोर वितरण' : 'Scores'}</h3>
       </div>
       <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={data || []}>
+        <BarChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis dataKey="range" tick={{ fontSize: 10 }} />
           <YAxis tick={{ fontSize: 10 }} />
@@ -2500,7 +2502,8 @@ const PersonalRecords = ({ data, language: l }) => {
 };
 
 const TimeOfDayCard = ({ data, language: l }) => {
-  if (!data?.periodData) return null;
+  const periodData = Array.isArray(data?.periodData) ? data.periodData : [];
+  if (periodData.length === 0) return null;
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -2508,14 +2511,15 @@ const TimeOfDayCard = ({ data, language: l }) => {
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'समय विश्लेषण' : 'Best Time'}</h3>
       </div>
       <ResponsiveContainer width="100%" height={180}>
-        <RadarChart data={data.periodData}><PolarGrid /><PolarAngleAxis dataKey="name" tick={{ fontSize: 8 }} /><PolarRadiusAxis /><Radar name="Avg Score" dataKey="avgScore" stroke="#22c55e" fill="#22c55e" fillOpacity={0.6} /></RadarChart>
+        <RadarChart data={periodData}><PolarGrid /><PolarAngleAxis dataKey="name" tick={{ fontSize: 8 }} /><PolarRadiusAxis /><Radar name="Avg Score" dataKey="avgScore" stroke="#22c55e" fill="#22c55e" fillOpacity={0.6} /></RadarChart>
       </ResponsiveContainer>
     </div>
   );
 };
 
 const ActivityHeatmap = ({ data, language: l }) => {
-  if (!data || data.length === 0) return null;
+  const heatmapData = Array.isArray(data) ? data : [];
+  if (heatmapData.length === 0) return null;
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -2523,7 +2527,7 @@ const ActivityHeatmap = ({ data, language: l }) => {
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गतिविधि' : 'Activity'}</h3>
       </div>
       <div className="grid grid-cols-7 gap-1">
-        {data.slice(-35).map((day, i) => (
+        {heatmapData.slice(-35).map((day, i) => (
           <div key={i} className={`w-4 h-4 rounded-sm transition-all cursor-pointer ${
             day.value === 0 ? 'bg-gray-100 dark:bg-gray-700' :
             day.value === 1 ? 'bg-emerald-100 dark:bg-emerald-900/30' :
@@ -2565,7 +2569,12 @@ const WeeklyComparison = ({ data, language: l }) => {
 };
 
 const PaperTrendCard = ({ paper1Trend, paper2Trend, language: l }) => {
-  const buildChartData = (trend) => trend.slice(-15).map((t, i) => ({ name: t.dateFormatted || `T${i}`, score: t.score, accuracy: t.accuracy }));
+  const buildChartData = (trend) => {
+    const trendArray = Array.isArray(trend) ? trend : [];
+    return trendArray.slice(-15).map((t, i) => ({ name: t.dateFormatted || `T${i}`, score: t.score, accuracy: t.accuracy }));
+  };
+  const p1Array = Array.isArray(paper1Trend) ? paper1Trend : [];
+  const p2Array = Array.isArray(paper2Trend) ? paper2Trend : [];
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -2573,7 +2582,7 @@ const PaperTrendCard = ({ paper1Trend, paper2Trend, language: l }) => {
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'प्रवृत्ति' : 'Trends'}</h3>
       </div>
       <ResponsiveContainer width="100%" height={220}>
-        <ComposedChart data={buildChartData(paper1Trend.length >= paper2Trend.length ? paper1Trend : paper2Trend)}>
+        <ComposedChart data={buildChartData(p1Array.length >= p2Array.length ? p1Array : p2Array)}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis dataKey="name" tick={{ fontSize: 8 }} />
           <YAxis tick={{ fontSize: 8 }} />
@@ -2588,7 +2597,8 @@ const PaperTrendCard = ({ paper1Trend, paper2Trend, language: l }) => {
 };
 
 const ErrorAnalysisCard = ({ data, language: l }) => {
-  if (!data?.weakUnits) return null;
+  const weakUnits = Array.isArray(data?.weakUnits) ? data.weakUnits : [];
+  if (weakUnits.length === 0) return null;
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -2596,7 +2606,7 @@ const ErrorAnalysisCard = ({ data, language: l }) => {
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'त्रुटि विश्लेषण' : 'Errors'}</h3>
       </div>
       <div className="space-y-2">
-        {data.weakUnits.slice(0, 4).map((unit, i) => (
+        {weakUnits.slice(0, 4).map((unit, i) => (
           <div key={i} className="p-2 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200 dark:border-red-800">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] font-bold text-red-700 dark:text-red-400">{unit.name}</span>
@@ -2611,7 +2621,8 @@ const ErrorAnalysisCard = ({ data, language: l }) => {
 };
 
 const TopicMasteryRadar = ({ data, language: l }) => {
-  if (!data || data.length === 0) return null;
+  const radarData = Array.isArray(data) ? data : [];
+  if (radarData.length === 0) return null;
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -2619,7 +2630,7 @@ const TopicMasteryRadar = ({ data, language: l }) => {
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'विषय दक्षता' : 'Topics'}</h3>
       </div>
       <ResponsiveContainer width="100%" height={240}>
-        <RadarChart data={data.slice(0, 8)}>
+        <RadarChart data={radarData.slice(0, 8)}>
           <PolarGrid />
           <PolarAngleAxis dataKey="unit" tick={{ fontSize: 8 }} />
           <PolarRadiusAxis tick={{ fontSize: 8 }} />
@@ -2631,7 +2642,8 @@ const TopicMasteryRadar = ({ data, language: l }) => {
 };
 
 const NeedsAttentionCard = ({ data, language: l, navigate }) => {
-  if (!data || data.length === 0) return null;
+  const tests = Array.isArray(data) ? data : [];
+  if (tests.length === 0) return null;
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -2639,7 +2651,7 @@ const NeedsAttentionCard = ({ data, language: l, navigate }) => {
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'ध्यान दें' : 'Attention'}</h3>
       </div>
       <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
-        {data.slice(0, 8).map((test, i) => (
+        {tests.slice(0, 8).map((test, i) => (
           <button key={i} onClick={() => navigate?.(`/results/${test.lastAttempt?._id}`)} className="w-full text-left p-2 rounded-lg bg-orange-50 dark:bg-orange-900/10 hover:bg-orange-100 dark:hover:bg-orange-900/20 transition-all border border-orange-200 dark:border-orange-800">
             <div className="flex justify-between items-center">
               <div className="flex-1 min-w-0">
@@ -2656,7 +2668,8 @@ const NeedsAttentionCard = ({ data, language: l, navigate }) => {
 };
 
 const PendingTimeline = ({ data, language: l, navigate }) => {
-  if (!data || data.length === 0) return null;
+  const tests = Array.isArray(data) ? data : [];
+  if (tests.length === 0) return null;
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -2664,7 +2677,7 @@ const PendingTimeline = ({ data, language: l, navigate }) => {
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'बाकी टेस्ट' : 'Pending'}</h3>
       </div>
       <div className="space-y-1.5">
-        {data.slice(0, 6).map((test, i) => (
+        {tests.slice(0, 6).map((test, i) => (
           <button key={i} onClick={() => navigate?.(`/test/${test.testId}`)} className="w-full text-left p-2 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all">
             <div className="flex justify-between items-center">
               <div className="flex-1 min-w-0">
@@ -2681,7 +2694,8 @@ const PendingTimeline = ({ data, language: l, navigate }) => {
 };
 
 const AchievementCard = ({ data, language: l }) => {
-  if (!data || data.length === 0) return null;
+  const achievements = Array.isArray(data) ? data : [];
+  if (achievements.length === 0) return null;
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -2689,7 +2703,7 @@ const AchievementCard = ({ data, language: l }) => {
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'उपलब्धियां' : 'Achievements'}</h3>
       </div>
       <div className="grid grid-cols-4 gap-2">
-        {data.slice(0, 8).map((ach, i) => (
+        {achievements.slice(0, 8).map((ach, i) => (
           <div key={i} className={`p-3 rounded-lg text-center transition-all  ${ach.unlocked ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800' : 'bg-gray-100 dark:bg-gray-700 opacity-50'}`}>
             <div className="text-xl mb-1">{ach.icon === 'medal' ? '🏅' : ach.icon === 'flame' ? '🔥' : ach.icon === 'target' ? '🎯' : ach.icon === 'bolt' ? '⚡' : '⭐'}</div>
             <p className="text-[8px] font-bold text-gray-900 dark:text-white line-clamp-2">{ach.label}</p>
@@ -2713,7 +2727,8 @@ const QuoteCard = ({ quotes, language: l }) => {
 };
 
 const MistakeJournal = ({ data, language: l }) => {
-  if (!data || data.length === 0) return null;
+  const mistakes = Array.isArray(data) ? data : [];
+  if (mistakes.length === 0) return null;
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -2721,7 +2736,7 @@ const MistakeJournal = ({ data, language: l }) => {
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'सामान्य त्रुटियां' : 'Mistakes'}</h3>
       </div>
       <div className="space-y-2">
-        {data.slice(0, 5).map((mistake, i) => (
+        {mistakes.slice(0, 5).map((mistake, i) => (
           <div key={i} className="p-2 bg-rose-50 dark:bg-rose-900/10 rounded-lg border border-rose-200 dark:border-rose-800">
             <div className="flex justify-between items-start">
               <div className="flex-1">
