@@ -1,59 +1,51 @@
 // client/src/pages/Dashboard.jsx
 // ═══════════════════════════════════════════════════════════════
-//  NETPREP ULTIMATE DASHBOARD - PART 2 & 3 INTEGRATED
-//  All sections saved in ONE file: client/src/pages/Dashboard.jsx
+//  NETPREP ULTIMATE DASHBOARD - FIXED (Hoisted & Cleaned)
 // ═══════════════════════════════════════════════════════════════
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid,
-  LineChart, Line, Legend,
+  AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, LineChart, Line
 } from 'recharts';
 import {
   FileQuestion, ClipboardList, BarChart3, TrendingUp, Upload,
   PlusCircle, Clock, Target, BookOpen, Award, ArrowRight,
   Calendar, Zap, Trophy, Flame, Star, ChevronRight, Play,
-  Timer, CheckCircle, XCircle, SkipForward,
-  Activity, TrendingDown, RefreshCw, Layers, Eye,
-  PieChart as PieChartIcon, History, Sparkles, GraduationCap,
-  ChevronUp, ChevronDown, Hash, Crown, BarChart2,
+  Timer, CheckCircle, XCircle, Activity, TrendingDown, RefreshCw, Layers, Eye,
+  History, Sparkles, GraduationCap, ChevronUp, ChevronDown, Hash, Crown, BarChart2,
   Sun, Moon, Coffee, Sunset, Gauge, Medal, Lock,
   Lightbulb, AlertTriangle, Info, Rocket, Crosshair,
-  Swords, FileText, LayoutGrid, AlertCircle, Shield,
-  ArrowUpDown, Hourglass, ListOrdered,
-  Flag, CircleDot, Brain, Percent, MapPin, Radar as RadarIcon,
-  Milestone, CalendarDays, CalendarClock, Workflow,
-  TreePine, Grid3X3, Cpu, Dumbbell, HeartPulse,
-  ArrowUp, ArrowDown, Minus, Settings, X,
+  FileText, AlertCircle, Shield, Hourglass, CircleDot, Brain,
+  CalendarDays, CalendarClock, Grid3X3, HeartPulse,
+  ArrowUp, ArrowDown, Minus, Settings
 } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import useDashboard from '../hooks/useDashboard';
 
 // ════════════════════════════════════════════════════════════
-//                    UTILITIES
+//                    UTILITIES (Hoisted)
 // ════════════════════════════════════════════════════════════
-const getGreeting = () => {
+function getGreeting() {
   const h = new Date().getHours();
   if (h < 6) return { I: Moon, en: 'Late Night Study', hi: 'देर रात अध्ययन', g: 'from-indigo-600 to-purple-700' };
   if (h < 12) return { I: Sun, en: 'Good Morning', hi: 'सुप्रभात', g: 'from-amber-500 to-orange-600' };
   if (h < 17) return { I: Coffee, en: 'Good Afternoon', hi: 'नमस्ते', g: 'from-blue-600 to-indigo-600' };
   if (h < 21) return { I: Sunset, en: 'Good Evening', hi: 'शुभ संध्या', g: 'from-orange-600 to-rose-600' };
   return { I: Moon, en: 'Good Night', hi: 'शुभ रात्रि', g: 'from-indigo-600 to-purple-700' };
-};
+}
 
-const tAgo = (d, l) => {
+function tAgo(d, l) {
   const m = Math.floor((Date.now() - new Date(d)) / 60000);
   if (m < 1) return l === 'hi' ? 'अभी' : 'Now';
   if (m < 60) return `${m}m`;
   if (m < 1440) return `${Math.floor(m / 60)}h`;
   if (m < 10080) return `${Math.floor(m / 1440)}d`;
   return new Date(d).toLocaleDateString(l === 'hi' ? 'hi-IN' : 'en', { day: 'numeric', month: 'short' });
-};
+}
 
-const grd = (p) => {
+function getGradeInfo(p) {
   if (p >= 90) return { g: 'A+', c: 'emerald' };
   if (p >= 80) return { g: 'A', c: 'emerald' };
   if (p >= 70) return { g: 'B+', c: 'blue' };
@@ -61,28 +53,31 @@ const grd = (p) => {
   if (p >= 50) return { g: 'C', c: 'amber' };
   if (p >= 40) return { g: 'D', c: 'orange' };
   return { g: 'F', c: 'red' };
-};
+}
 
-const GC = {
-  emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800',
-  blue: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
-  amber: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800',
-  orange: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800',
-  red: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
-};
+function getGradeColor(c) {
+  const GRADE_COLORS = {
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800',
+    blue: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
+    amber: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800',
+    orange: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800',
+    red: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
+  };
+  return GRADE_COLORS[c] || GRADE_COLORS.blue;
+}
 
-const fmtTime = (seconds) => {
+function fmtTime(seconds) {
   if (!seconds) return '0m';
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
-};
+}
 
 // ════════════════════════════════════════════════════════════
 //                    MICRO COMPONENTS
 // ════════════════════════════════════════════════════════════
-const Cnt = ({ end, sfx = '', decimals = 0 }) => {
+function Cnt({ end, sfx = '', decimals = 0 }) {
   const [c, setC] = useState(0);
   useEffect(() => {
     if (!end && end !== 0) { setC(0); return; }
@@ -99,9 +94,9 @@ const Cnt = ({ end, sfx = '', decimals = 0 }) => {
     return () => cancelAnimationFrame(f);
   }, [end, decimals]);
   return <>{typeof c === 'number' ? c.toLocaleString() : c}{sfx}</>;
-};
+}
 
-const Ring = ({ pct, size = 100, sw = 7, color = '#3b82f6', bg, children }) => {
+function Ring({ pct, size = 100, sw = 7, color = '#3b82f6', bg, children }) {
   const [a, setA] = useState(0);
   const r = (size - sw) / 2, C = 2 * Math.PI * r;
   useEffect(() => {
@@ -118,13 +113,13 @@ const Ring = ({ pct, size = 100, sw = 7, color = '#3b82f6', bg, children }) => {
       <div className="absolute inset-0 flex items-center justify-center">{children}</div>
     </div>
   );
-};
+}
 
-const Sk = ({ className = '' }) => (
-  <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg ${className}`} />
-);
+function Sk({ className = '' }) {
+  return <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg ${className}`} />;
+}
 
-const LiveClock = () => {
+function LiveClock() {
   const [t, setT] = useState(new Date());
   useEffect(() => { const i = setInterval(() => setT(new Date()), 1000); return () => clearInterval(i); }, []);
   return (
@@ -135,9 +130,9 @@ const LiveClock = () => {
       </span>
     </div>
   );
-};
+}
 
-const SessionTimer = ({ language: l }) => {
+function SessionTimer({ language: l }) {
   const [s, setS] = useState(0);
   useEffect(() => { const i = setInterval(() => setS(p => p + 1), 1000); return () => clearInterval(i); }, []);
   const pad = n => String(n).padStart(2, '0');
@@ -149,9 +144,9 @@ const SessionTimer = ({ language: l }) => {
       </span>
     </div>
   );
-};
+}
 
-const CTooltip = ({ active, payload, label }) => {
+function CTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl p-3 text-xs">
@@ -164,19 +159,19 @@ const CTooltip = ({ active, payload, label }) => {
       ))}
     </div>
   );
-};
+}
 
-const TrendBadge = ({ direction, size = 'sm' }) => {
+function TrendBadge({ direction, size = 'sm' }) {
   const cls = size === 'sm' ? 'text-[8px] px-1.5 py-0.5' : 'text-[10px] px-2 py-1';
   if (direction === 'up') return <span className={`${cls} rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold flex items-center gap-0.5`}><ArrowUp className="w-2.5 h-2.5" />Up</span>;
   if (direction === 'down') return <span className={`${cls} rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-bold flex items-center gap-0.5`}><ArrowDown className="w-2.5 h-2.5" />Down</span>;
   return <span className={`${cls} rounded-full bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 font-bold flex items-center gap-0.5`}><Minus className="w-2.5 h-2.5" />Stable</span>;
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//                    STAT CARD (Enhanced)
+//                    STAT CARD
 // ════════════════════════════════════════════════════════════
-const StatCard = ({ icon: Icon, label, value, sub, gradient, iconBg, onClick, delay = 0, spark, trend }) => {
+function StatCard({ icon: Icon, label, value, sub, gradient, iconBg, onClick, delay = 0, spark, trend }) {
   const [v, setV] = useState(false);
   useEffect(() => { const t = setTimeout(() => setV(true), delay); return () => clearTimeout(t); }, [delay]);
   const mx = spark ? Math.max(...spark, 1) : 1;
@@ -212,12 +207,12 @@ const StatCard = ({ icon: Icon, label, value, sub, gradient, iconBg, onClick, de
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//   🆕 JRF PROBABILITY METER
+//   JRF PROBABILITY METER
 // ════════════════════════════════════════════════════════════
-const JRFProbabilityMeter = ({ data, language }) => {
+function JRFProbabilityMeter({ data, language }) {
   const l = language;
   if (!data || data.confidence === 'low' && data.dataPoints < 3) {
     return (
@@ -382,12 +377,12 @@ const JRFProbabilityMeter = ({ data, language }) => {
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//  🆕 ADVANCED EXAM COUNTDOWN (Replaces old ExamCountdown)
+//   ADVANCED EXAM COUNTDOWN
 // ════════════════════════════════════════════════════════════
-const AdvancedExamCountdown = ({ examDate, setExamDate, countdown, language }) => {
+function AdvancedExamCountdown({ examDate, setExamDate, countdown, language }) {
   const [editing, setEditing] = useState(false);
   const [tempDate, setTempDate] = useState(examDate);
   const l = language;
@@ -528,12 +523,12 @@ const AdvancedExamCountdown = ({ examDate, setExamDate, countdown, language }) =
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//  🆕 REVISION QUEUE CARD (Lowest % tests for revision)
+//   REVISION QUEUE CARD
 // ════════════════════════════════════════════════════════════
-const RevisionQueueCard = ({ queue, language, navigate }) => {
+function RevisionQueueCard({ queue, language, navigate }) {
   const l = language;
   if (!queue || queue.length === 0) return null;
 
@@ -632,12 +627,12 @@ const RevisionQueueCard = ({ queue, language, navigate }) => {
       )}
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//  🆕 WEAK CHAPTERS CARD
+//   WEAK CHAPTERS CARD
 // ════════════════════════════════════════════════════════════
-const WeakChaptersCard = ({ chapters, language, navigate }) => {
+function WeakChaptersCard({ chapters, language, navigate }) {
   const l = language;
   if (!chapters || chapters.length === 0) return null;
 
@@ -731,12 +726,12 @@ const WeakChaptersCard = ({ chapters, language, navigate }) => {
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//  🆕 FORGETTING CURVE CARD
+//   FORGETTING CURVE CARD
 // ════════════════════════════════════════════════════════════
-const ForgettingCurveCard = ({ data, language, navigate }) => {
+function ForgettingCurveCard({ data, language, navigate }) {
   const l = language;
   if (!data || data.totalTopics === 0) return null;
 
@@ -820,25 +815,25 @@ const ForgettingCurveCard = ({ data, language, navigate }) => {
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//  🆕 DAILY CHALLENGE CARD
+//   DAILY CHALLENGE CARD
 // ════════════════════════════════════════════════════════════
-const DailyChallengeCard = ({ challenge, language }) => {
+function DailyChallengeCard({ challenge, language }) {
   const l = language;
   if (!challenge) return null;
 
-  const iconMap2 = { Star, Zap, Target, Flame, Shield, RefreshCw, BarChart2, Timer };
-  const Icon = iconMap2[challenge.icon] || Star;
+  const challengeIcons = { Star, Zap, Target, Flame, Shield, RefreshCw, BarChart2, Timer };
+  const Icon = challengeIcons[challenge.icon] || Star;
 
-  const colorMap2 = {
+  const challengeColorBgs = {
     amber: 'from-amber-500 to-yellow-600', cyan: 'from-cyan-500 to-blue-600',
     emerald: 'from-emerald-500 to-green-600', orange: 'from-orange-500 to-red-600',
     blue: 'from-blue-500 to-indigo-600', red: 'from-red-500 to-rose-600',
     indigo: 'from-indigo-500 to-purple-600', purple: 'from-purple-500 to-violet-600',
   };
-  const grad = colorMap2[challenge.color] || colorMap2.amber;
+  const grad = challengeColorBgs[challenge.color] || challengeColorBgs.amber;
 
   return (
     <div className={`bg-gradient-to-br ${grad} rounded-2xl p-4 text-white relative overflow-hidden`}>
@@ -882,16 +877,16 @@ const DailyChallengeCard = ({ challenge, language }) => {
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//  🆕 PLAYER LEVEL CARD
+//   PLAYER LEVEL CARD
 // ════════════════════════════════════════════════════════════
-const PlayerLevelCard = ({ level, language }) => {
+function PlayerLevelCard({ level, language }) {
   const l = language;
   if (!level) return null;
 
-  const colorBgs = {
+  const playerLevelColors = {
     gray: 'from-gray-500 to-slate-600', blue: 'from-blue-500 to-indigo-600',
     green: 'from-emerald-500 to-green-600', purple: 'from-purple-500 to-violet-600',
     indigo: 'from-indigo-500 to-blue-700', amber: 'from-amber-500 to-yellow-600',
@@ -899,7 +894,7 @@ const PlayerLevelCard = ({ level, language }) => {
   };
 
   return (
-    <div className={`bg-gradient-to-br ${colorBgs[level.current.color] || colorBgs.blue} rounded-2xl p-4 text-white relative overflow-hidden`}>
+    <div className={`bg-gradient-to-br ${playerLevelColors[level.current.color] || playerLevelColors.blue} rounded-2xl p-4 text-white relative overflow-hidden`}>
       <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full blur-3xl" />
       <div className="relative">
         <div className="flex items-center justify-between mb-2">
@@ -939,12 +934,12 @@ const PlayerLevelCard = ({ level, language }) => {
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//  🆕 FATIGUE ANALYSIS CARD
+//   FATIGUE ANALYSIS CARD
 // ════════════════════════════════════════════════════════════
-const FatigueCard = ({ data, language }) => {
+function FatigueCard({ data, language }) {
   const l = language;
   if (!data || data.chart.length < 2) return null;
 
@@ -1024,12 +1019,12 @@ const FatigueCard = ({ data, language }) => {
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//  🆕 WEEKLY REPORT CARD
+//   WEEKLY REPORT CARD
 // ════════════════════════════════════════════════════════════
-const WeeklyReportCard = ({ data, language }) => {
+function WeeklyReportCard({ data, language }) {
   const l = language;
   if (!data || data.totalTests === 0) return null;
 
@@ -1087,12 +1082,12 @@ const WeeklyReportCard = ({ data, language }) => {
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//  🆕 NEGATIVE MARKING IMPACT CARD
+//   NEGATIVE MARKING IMPACT CARD
 // ════════════════════════════════════════════════════════════
-const NegativeMarkingCard = ({ data, language }) => {
+function NegativeMarkingCard({ data, language }) {
   const l = language;
   if (!data) return null;
 
@@ -1133,23 +1128,22 @@ const NegativeMarkingCard = ({ data, language }) => {
       </div>
     </div>
   );
-};
+}
 
 
 // ════════════════════════════════════════════════════════════
-//   ADVANCED GOAL TRACKER (Fully Working + Pressure)
+//   ADVANCED GOAL TRACKER
 // ════════════════════════════════════════════════════════════
-const GoalTracker = ({
+function GoalTracker({
   goals, completionPct, todayActivity, todayDetailed, yesterdayActivity,
   customTargets, updateCustomTargets, dayProgress, goalStreak,
   goalsCompleted, totalGoals, pressureMessage, todayXP, streak,
   language, navigate
-}) => {
+}) {
   const l = language;
   const [showSettings, setShowSettings] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
 
-  // Celebration effect when all goals done
   useEffect(() => {
     if (completionPct === 100 && todayDetailed?.count > 0 && !celebrating) {
       setCelebrating(true);
@@ -1158,31 +1152,28 @@ const GoalTracker = ({
     }
   }, [completionPct, todayDetailed]);
 
-  const iconMap = {
-    ClipboardList, Target, TrendingUp, Clock, RefreshCw, Flame,
-    Timer, BarChart2, Hash, Zap,
+  const goalIcons = { ClipboardList, Target, TrendingUp, Clock, RefreshCw, Flame, Timer, BarChart2, Hash, Zap };
+
+  const goalColors = {
+    blue: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400', bar: 'bg-blue-500' },
+    emerald: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400', bar: 'bg-emerald-500' },
+    purple: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400', bar: 'bg-purple-500' },
+    amber: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-600 dark:text-amber-400', bar: 'bg-amber-500' },
+    red: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400', bar: 'bg-red-500' },
+    orange: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-600 dark:text-orange-400', bar: 'bg-orange-500' },
+    cyan: { bg: 'bg-cyan-100 dark:bg-cyan-900/30', text: 'text-cyan-600 dark:text-cyan-400', bar: 'bg-cyan-500' },
+    indigo: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-600 dark:text-indigo-400', bar: 'bg-indigo-500' },
+    teal: { bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-600 dark:text-teal-400', bar: 'bg-teal-500' },
   };
 
-  const colorMap = {
-    blue: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400', bar: 'bg-blue-500', ring: '#3b82f6', glow: 'shadow-blue-500/20' },
-    emerald: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400', bar: 'bg-emerald-500', ring: '#22c55e', glow: 'shadow-emerald-500/20' },
-    purple: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400', bar: 'bg-purple-500', ring: '#8b5cf6', glow: 'shadow-purple-500/20' },
-    amber: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-600 dark:text-amber-400', bar: 'bg-amber-500', ring: '#f59e0b', glow: 'shadow-amber-500/20' },
-    red: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400', bar: 'bg-red-500', ring: '#ef4444', glow: 'shadow-red-500/20' },
-    orange: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-600 dark:text-orange-400', bar: 'bg-orange-500', ring: '#f97316', glow: 'shadow-orange-500/20' },
-    cyan: { bg: 'bg-cyan-100 dark:bg-cyan-900/30', text: 'text-cyan-600 dark:text-cyan-400', bar: 'bg-cyan-500', ring: '#06b6d4', glow: 'shadow-cyan-500/20' },
-    indigo: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-600 dark:text-indigo-400', bar: 'bg-indigo-500', ring: '#6366f1', glow: 'shadow-indigo-500/20' },
-    teal: { bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-600 dark:text-teal-400', bar: 'bg-teal-500', ring: '#14b8a6', glow: 'shadow-teal-500/20' },
-  };
-
-  const urgencyColors = {
+  const goalUrgencyColors = {
     critical: 'bg-red-500 animate-pulse',
     high: 'bg-orange-500',
     medium: 'bg-amber-400',
     normal: 'bg-gray-300 dark:bg-gray-600',
   };
 
-  const pressureColors = {
+  const goalPressureColors = {
     celebration: { bg: 'bg-emerald-50 dark:bg-emerald-900/10', border: 'border-emerald-300 dark:border-emerald-800', text: 'text-emerald-700 dark:text-emerald-400', icon: Trophy },
     critical: { bg: 'bg-red-50 dark:bg-red-900/10', border: 'border-red-300 dark:border-red-800', text: 'text-red-700 dark:text-red-400', icon: AlertTriangle },
     warning: { bg: 'bg-amber-50 dark:bg-amber-900/10', border: 'border-amber-300 dark:border-amber-800', text: 'text-amber-700 dark:text-amber-400', icon: AlertCircle },
@@ -1192,13 +1183,11 @@ const GoalTracker = ({
 
   const dp = dayProgress || { pct: 0, remainingHours: 0, remainingMins: 0, isAlmostOver: false, isPastHalf: false };
   const pm = pressureMessage || { type: 'info', en: '', hi: '' };
-  const pmStyle = pressureColors[pm.type] || pressureColors.info;
+  const pmStyle = goalPressureColors[pm.type] || goalPressureColors.info;
   const PMIcon = pmStyle.icon;
 
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden ${celebrating ? 'ring-2 ring-emerald-400 shadow-lg shadow-emerald-500/20' : ''}`}>
-
-      {/* ── HEADER ── */}
       <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/10 dark:to-purple-900/10 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
@@ -1217,42 +1206,29 @@ const GoalTracker = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* XP Badge */}
             <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800">
               <Zap className="w-3 h-3 text-amber-600 dark:text-amber-400" />
               <span className="text-[9px] font-black text-amber-700 dark:text-amber-400">{todayXP} XP</span>
             </div>
-            <Ring pct={completionPct} size={36} sw={3}
-              color={completionPct === 100 ? '#22c55e' : completionPct >= 50 ? '#f59e0b' : '#ef4444'}>
+            <Ring pct={completionPct} size={36} sw={3} color={completionPct === 100 ? '#22c55e' : completionPct >= 50 ? '#f59e0b' : '#ef4444'}>
               <span className="text-[7px] font-bold text-gray-600 dark:text-gray-300">{completionPct}%</span>
             </Ring>
-            <button onClick={() => setShowSettings(!showSettings)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <button onClick={() => setShowSettings(!showSettings)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
               <Settings className="w-3.5 h-3.5 text-gray-400" />
             </button>
           </div>
         </div>
 
-        {/* ── DAY PROGRESS BAR ── */}
         <div className="mb-2">
           <div className="flex items-center justify-between mb-0.5">
-            <span className="text-[8px] text-gray-500 flex items-center gap-1">
-              <Clock className="w-2.5 h-2.5" />
-              {l === 'hi' ? 'दिन की प्रगति' : 'Day Progress'}
-            </span>
+            <span className="text-[8px] text-gray-500 flex items-center gap-1"><Clock className="w-2.5 h-2.5" />{l === 'hi' ? 'दिन की प्रगति' : 'Day Progress'}</span>
             <span className={`text-[8px] font-bold ${dp.isAlmostOver ? 'text-red-600 dark:text-red-400 animate-pulse' : dp.isPastHalf ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500'}`}>
               {dp.remainingHours}h {dp.remainingMins}m {l === 'hi' ? 'बाकी' : 'left'}
             </span>
           </div>
           <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
-            <div className="h-full rounded-full transition-all duration-1000"
-              style={{
-                width: `${dp.pct}%`,
-                background: dp.isAlmostOver ? 'linear-gradient(90deg, #ef4444, #f97316)' : dp.isPastHalf ? 'linear-gradient(90deg, #f59e0b, #eab308)' : 'linear-gradient(90deg, #3b82f6, #6366f1)',
-              }} />
-            {/* Goal completion overlay */}
-            <div className="absolute top-0 h-full rounded-full bg-emerald-500/30"
-              style={{ width: `${completionPct}%` }} />
+            <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${dp.pct}%`, background: dp.isAlmostOver ? 'linear-gradient(90deg, #ef4444, #f97316)' : dp.isPastHalf ? 'linear-gradient(90deg, #f59e0b, #eab308)' : 'linear-gradient(90deg, #3b82f6, #6366f1)' }} />
+            <div className="absolute top-0 h-full rounded-full bg-emerald-500/30" style={{ width: `${completionPct}%` }} />
           </div>
           <div className="flex items-center justify-between mt-0.5">
             <span className="text-[7px] text-gray-400">{dp.pct}% {l === 'hi' ? 'बीत चुका' : 'elapsed'}</span>
@@ -1260,193 +1236,87 @@ const GoalTracker = ({
           </div>
         </div>
 
-        {/* ── TODAY'S STATS STRIP ── */}
         <div className="flex items-center gap-2 text-[8px] flex-wrap">
-          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold">
-            <ClipboardList className="w-2.5 h-2.5" />{todayDetailed?.count || 0} {l === 'hi' ? 'टेस्ट' : 'tests'}
-          </span>
+          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold"><ClipboardList className="w-2.5 h-2.5" />{todayDetailed?.count || 0} {l === 'hi' ? 'टेस्ट' : 'tests'}</span>
           {(todayDetailed?.count || 0) > 0 && (
             <>
-              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-bold">
-                <Target className="w-2.5 h-2.5" />{todayDetailed?.accuracy || 0}%
-              </span>
-              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-bold">
-                <BarChart3 className="w-2.5 h-2.5" />{todayDetailed?.avgScore || 0}% avg
-              </span>
-              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-bold">
-                <Timer className="w-2.5 h-2.5" />{Math.round((todayDetailed?.timeSpent || 0) / 60)}m
-              </span>
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-bold"><Target className="w-2.5 h-2.5" />{todayDetailed?.accuracy || 0}%</span>
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-bold"><BarChart3 className="w-2.5 h-2.5" />{todayDetailed?.avgScore || 0}% avg</span>
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-bold"><Timer className="w-2.5 h-2.5" />{Math.round((todayDetailed?.timeSpent || 0) / 60)}m</span>
             </>
           )}
-          {/* Yesterday comparison */}
           {(yesterdayActivity?.count || 0) > 0 && (
-            <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded font-bold
-              ${(todayDetailed?.count || 0) > yesterdayActivity.count
-                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-                : (todayDetailed?.count || 0) < yesterdayActivity.count
-                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-              }`}>
-              {(todayDetailed?.count || 0) >= yesterdayActivity.count
-                ? <ArrowUp className="w-2.5 h-2.5" />
-                : <ArrowDown className="w-2.5 h-2.5" />}
+            <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded font-bold ${(todayDetailed?.count || 0) > yesterdayActivity.count ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : (todayDetailed?.count || 0) < yesterdayActivity.count ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}`}>
+              {(todayDetailed?.count || 0) >= yesterdayActivity.count ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />}
               vs {l === 'hi' ? 'कल' : 'yday'}: {yesterdayActivity.count}
             </span>
           )}
         </div>
       </div>
 
-      {/* ── PRESSURE MESSAGE ── */}
       <div className={`px-4 py-2 border-b border-gray-100 dark:border-gray-700 ${pmStyle.bg} border-l-4 ${pmStyle.border}`}>
-        <div className="flex items-center gap-2">
-          <PMIcon className={`w-3.5 h-3.5 flex-shrink-0 ${pmStyle.text} ${pm.type === 'critical' ? 'animate-pulse' : ''}`} />
-          <p className={`text-[10px] font-semibold ${pmStyle.text}`}>
-            {l === 'hi' ? pm.hi : pm.en}
-          </p>
-        </div>
+        <div className="flex items-center gap-2"><PMIcon className={`w-3.5 h-3.5 flex-shrink-0 ${pmStyle.text} ${pm.type === 'critical' ? 'animate-pulse' : ''}`} /><p className={`text-[10px] font-semibold ${pmStyle.text}`}>{l === 'hi' ? pm.hi : pm.en}</p></div>
       </div>
 
-      {/* ── SETTINGS PANEL ── */}
       {showSettings && (
         <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700">
           <p className="text-[10px] font-bold text-gray-600 dark:text-gray-300 mb-2">{l === 'hi' ? 'लक्ष्य सेटिंग्स' : 'Goal Settings'}</p>
           <div className="grid grid-cols-2 gap-2">
-            {[
-              { key: 'dailyTests', label: l === 'hi' ? 'दैनिक टेस्ट' : 'Daily Tests', min: 1, max: 20 },
-              { key: 'dailyAccuracy', label: l === 'hi' ? 'सटीकता %' : 'Accuracy %', min: 30, max: 100 },
-              { key: 'targetScore', label: l === 'hi' ? 'लक्ष्य स्कोर %' : 'Target Score %', min: 40, max: 100 },
-            ].map(s => (
-              <div key={s.key}>
-                <label className="text-[9px] text-gray-500">{s.label}</label>
-                <input type="number" value={customTargets[s.key]} min={s.min} max={s.max}
-                  onChange={e => updateCustomTargets({ ...customTargets, [s.key]: parseInt(e.target.value) || s.min })}
-                  className="w-full px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
-              </div>
+            {[{ key: 'dailyTests', label: l === 'hi' ? 'दैनिक टेस्ट' : 'Daily Tests', min: 1, max: 20 }, { key: 'dailyAccuracy', label: l === 'hi' ? 'सटीकता %' : 'Accuracy %', min: 30, max: 100 }, { key: 'targetScore', label: l === 'hi' ? 'लक्ष्य स्कोर %' : 'Target Score %', min: 40, max: 100 }].map(s => (
+              <div key={s.key}><label className="text-[9px] text-gray-500">{s.label}</label><input type="number" value={customTargets[s.key]} min={s.min} max={s.max} onChange={e => updateCustomTargets({ ...customTargets, [s.key]: parseInt(e.target.value) || s.min })} className="w-full px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white" /></div>
             ))}
           </div>
         </div>
       )}
 
-      {/* ── GOALS LIST ── */}
       <div className="p-3 space-y-1.5 max-h-[400px] overflow-y-auto">
         {goals.map((goal, i) => {
-          const Icon = iconMap[goal.icon] || Target;
-          const cc = colorMap[goal.color] || colorMap.blue;
+          const Icon = goalIcons[goal.icon] || Target;
+          const cc = goalColors[goal.color] || goalColors.blue;
           const pct = Math.min(100, Math.round((goal.current / Math.max(goal.target, 1)) * 100));
           const done = goal.current >= goal.target;
           const isOverAchieved = goal.current > goal.target;
-          const urgDot = urgencyColors[goal.urgency] || urgencyColors.normal;
+          const urgDot = goalUrgencyColors[goal.urgency] || goalUrgencyColors.normal;
 
           return (
-            <div key={goal.id || i}
-              className={`relative flex items-start gap-2.5 p-2.5 rounded-xl border transition-all
-                ${done
-                  ? `bg-emerald-50/50 border-emerald-200 dark:bg-emerald-900/10 dark:border-emerald-800/30 ${isOverAchieved ? 'ring-1 ring-emerald-300 dark:ring-emerald-700' : ''}`
-                  : goal.urgency === 'critical'
-                  ? 'bg-red-50/30 border-red-200 dark:bg-red-900/5 dark:border-red-900/30'
-                  : goal.urgency === 'high'
-                  ? 'bg-orange-50/30 border-orange-200 dark:bg-orange-900/5 dark:border-orange-900/30'
-                  : 'bg-gray-50/50 border-gray-100 dark:bg-gray-700/20 dark:border-gray-700/50'
-                }`}>
-
-              {/* Urgency dot */}
-              {!done && goal.urgency !== 'normal' && (
-                <div className={`absolute top-2 right-2 w-2 h-2 rounded-full ${urgDot}`} />
-              )}
-
-              {/* Icon */}
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 transition-all
-                ${done ? 'bg-emerald-100 dark:bg-emerald-900/30 shadow-sm' : cc.bg}`}>
-                {done
-                  ? <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  : <Icon className={`w-4 h-4 ${cc.text}`} />}
-              </div>
-
-              {/* Content */}
+            <div key={goal.id || i} className={`relative flex items-start gap-2.5 p-2.5 rounded-xl border transition-all ${done ? `bg-emerald-50/50 border-emerald-200 dark:bg-emerald-900/10 dark:border-emerald-800/30 ${isOverAchieved ? 'ring-1 ring-emerald-300 dark:ring-emerald-700' : ''}` : goal.urgency === 'critical' ? 'bg-red-50/30 border-red-200 dark:bg-red-900/5 dark:border-red-900/30' : goal.urgency === 'high' ? 'bg-orange-50/30 border-orange-200 dark:bg-orange-900/5 dark:border-orange-900/30' : 'bg-gray-50/50 border-gray-100 dark:bg-gray-700/20 dark:border-gray-700/50'}`}>
+              {!done && goal.urgency !== 'normal' && <div className={`absolute top-2 right-2 w-2 h-2 rounded-full ${urgDot}`} />}
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${done ? 'bg-emerald-100 dark:bg-emerald-900/30 shadow-sm' : cc.bg}`}>{done ? <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Icon className={`w-4 h-4 ${cc.text}`} />}</div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
-                  <p className={`text-[11px] font-semibold truncate pr-4
-                    ${done ? 'text-emerald-700 dark:text-emerald-400 line-through' : 'text-gray-900 dark:text-white'}`}>
-                    {l === 'hi' ? goal.titleHi : goal.title}
-                  </p>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <span className={`text-[9px] font-black
-                      ${done ? 'text-emerald-600 dark:text-emerald-400' : pct >= 50 ? cc.text : 'text-gray-500'}`}>
-                      {goal.current}{goal.type === 'percentage' ? '%' : ''}/{goal.target}{goal.type === 'percentage' ? '%' : ''}
-                    </span>
-                    {/* XP badge */}
-                    {done && (
-                      <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                        +{goal.xp}XP
-                      </span>
-                    )}
-                  </div>
+                  <p className={`text-[11px] font-semibold truncate pr-4 ${done ? 'text-emerald-700 dark:text-emerald-400 line-through' : 'text-gray-900 dark:text-white'}`}>{l === 'hi' ? goal.titleHi : goal.title}</p>
+                  <div className="flex items-center gap-1 flex-shrink-0"><span className={`text-[9px] font-black ${done ? 'text-emerald-600 dark:text-emerald-400' : pct >= 50 ? cc.text : 'text-gray-500'}`}>{goal.current}{goal.type === 'percentage' ? '%' : ''}/{goal.target}{goal.type === 'percentage' ? '%' : ''}</span>{done && <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">+{goal.xp}XP</span>}</div>
                 </div>
-
-                {/* Description */}
-                <p className={`text-[8px] mb-1 ${done ? 'text-emerald-600/60 dark:text-emerald-400/60' : 'text-gray-500'}`}>
-                  {l === 'hi' ? goal.descriptionHi : goal.description}
-                </p>
-
-                {/* Progress bar */}
-                <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-1000 ${done ? 'bg-emerald-500' : cc.bar}`}
-                    style={{ width: `${pct}%` }} />
-                </div>
-
-                {/* Priority badge */}
-                {!done && (
-                  <div className="flex items-center justify-between mt-1">
-                    <span className={`text-[7px] font-bold uppercase tracking-wider
-                      ${goal.priority === 'critical' ? 'text-red-500' :
-                      goal.priority === 'high' ? 'text-orange-500' :
-                      goal.priority === 'medium' ? 'text-blue-500' : 'text-gray-400'}`}>
-                      {goal.priority}
-                    </span>
-                    <span className="text-[7px] text-gray-400">{pct}%</span>
-                  </div>
-                )}
+                <p className={`text-[8px] mb-1 ${done ? 'text-emerald-600/60 dark:text-emerald-400/60' : 'text-gray-500'}`}>{l === 'hi' ? goal.descriptionHi : goal.description}</p>
+                <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"><div className={`h-full rounded-full transition-all duration-1000 ${done ? 'bg-emerald-500' : cc.bar}`} style={{ width: `${pct}%` }} /></div>
+                {!done && <div className="flex items-center justify-between mt-1"><span className={`text-[7px] font-bold uppercase tracking-wider ${goal.priority === 'critical' ? 'text-red-500' : goal.priority === 'high' ? 'text-orange-500' : goal.priority === 'medium' ? 'text-blue-500' : 'text-gray-400'}`}>{goal.priority}</span><span className="text-[7px] text-gray-400">{pct}%</span></div>}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* ── FOOTER ── */}
       <div className="px-4 py-2.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-[8px] text-gray-400">
-              {l === 'hi' ? 'गोल स्ट्रीक' : 'Goal Streak'}: <b className="text-amber-600 dark:text-amber-400">{goalStreak}d</b>
-            </span>
-            <span className="text-[8px] text-gray-400">|</span>
-            <span className="text-[8px] text-gray-400">
-              XP: <b className="text-indigo-600 dark:text-indigo-400">{todayXP}</b>
-            </span>
-          </div>
-          {(todayDetailed?.count || 0) === 0 && (
-            <button onClick={() => navigate && navigate('/tests')}
-              className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[9px] font-bold rounded-lg hover:shadow-lg transition-all">
-              <Play className="w-3 h-3" />{l === 'hi' ? 'शुरू करो!' : 'Start Now!'}
-            </button>
-          )}
+          <div className="flex items-center gap-2"><span className="text-[8px] text-gray-400">{l === 'hi' ? 'गोल स्ट्रीक' : 'Goal Streak'}: <b className="text-amber-600 dark:text-amber-400">{goalStreak}d</b></span><span className="text-[8px] text-gray-400">|</span><span className="text-[8px] text-gray-400">XP: <b className="text-indigo-600 dark:text-indigo-400">{todayXP}</b></span></div>
+          {(todayDetailed?.count || 0) === 0 && <button onClick={() => navigate && navigate('/tests')} className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[9px] font-bold rounded-lg hover:shadow-lg transition-all"><Play className="w-3 h-3" />{l === 'hi' ? 'शुरू करो!' : 'Start Now!'}</button>}
         </div>
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//   SYLLABUS COVERAGE HEATMAP (FIXED)
+//   SYLLABUS COVERAGE HEATMAP
 // ════════════════════════════════════════════════════════════
-const SyllabusCoverageMap = ({ coverage, language }) => {
+function SyllabusCoverageMap({ coverage, language }) {
   const l = language;
   const [activeTab, setActiveTab] = useState('paper1');
 
   const data = activeTab === 'paper1' ? coverage.paper1 : coverage.paper2;
   const summary = activeTab === 'paper1' ? coverage.paper1Summary : coverage.paper2Summary;
 
-  const levelLabels = {
+  const coverageLevelLabels = {
     mastered: { en: 'Mastered', hi: 'माहिर', color: 'bg-emerald-500', textColor: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/10' },
     learning: { en: 'Learning', hi: 'सीख रहे', color: 'bg-blue-500', textColor: 'text-blue-700 dark:text-blue-400', border: 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/10' },
     in_progress: { en: 'In Progress', hi: 'प्रगति में', color: 'bg-amber-500', textColor: 'text-amber-700 dark:text-amber-400', border: 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/10' },
@@ -1455,192 +1325,66 @@ const SyllabusCoverageMap = ({ coverage, language }) => {
     no_tests: { en: 'No Tests', hi: 'कोई टेस्ट नहीं', color: 'bg-gray-300 dark:bg-gray-600', textColor: 'text-gray-400 dark:text-gray-500', border: 'border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/30' },
   };
 
-  // Map summary keys to levelLabels keys
-  const summaryKeyMap = {
-    mastered: 'mastered',
-    learning: 'learning',
-    in_progress: 'inProgress',
-    weak: 'weak',
-    not_started: 'notStarted',
-    no_tests: 'noTests',
-  };
-
-  // Test type display labels
-  const testTypeLabels = {
-    dpp: 'DPP', topic_test: 'Topic', chapter_test: 'Chapter',
-    unit_test: 'Unit', practice: 'Practice', pyq_year: 'PYQ',
-    full_mock_p1: 'Mock P1', full_mock_p2: 'Mock P2', full_mock_combined: 'Mock',
-  };
+  const coverageSummaryKeys = { mastered: 'mastered', learning: 'learning', in_progress: 'inProgress', weak: 'weak', not_started: 'notStarted', no_tests: 'noTests' };
+  const coverageTestLabels = { dpp: 'DPP', topic_test: 'Topic', chapter_test: 'Chapter', unit_test: 'Unit', practice: 'Practice', pyq_year: 'PYQ', full_mock_p1: 'Mock P1', full_mock_p2: 'Mock P2', full_mock_combined: 'Mock' };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      {/* Header */}
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center shadow">
-              <Grid3X3 className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-                {l === 'hi' ? 'सिलेबस कवरेज' : 'Syllabus Coverage'}
-              </h3>
-              <p className="text-[9px] text-gray-500">
-                {l === 'hi' ? 'टेस्ट आधारित प्रगति' : 'Test-based progress'}
-              </p>
-            </div>
-          </div>
-          <Ring pct={coverage.overallPct} size={40} sw={3.5} color="#14b8a6">
-            <span className="text-[8px] font-bold text-gray-600 dark:text-gray-300">{coverage.overallPct}%</span>
-          </Ring>
+          <div className="flex items-center gap-2"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center shadow"><Grid3X3 className="w-4 h-4 text-white" /></div><div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'सिलेबस कवरेज' : 'Syllabus Coverage'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'टेस्ट आधारित प्रगति' : 'Test-based progress'}</p></div></div>
+          <Ring pct={coverage.overallPct} size={40} sw={3.5} color="#14b8a6"><span className="text-[8px] font-bold text-gray-600 dark:text-gray-300">{coverage.overallPct}%</span></Ring>
         </div>
-
-        {/* Paper tabs */}
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
           {['paper1', 'paper2'].map(tab => {
             const tabSummary = tab === 'paper1' ? coverage.paper1Summary : coverage.paper2Summary;
-            return (
-              <button key={tab} onClick={() => setActiveTab(tab)}
-                className={`flex-1 px-3 py-1.5 rounded-md text-[10px] font-bold transition-all
-                  ${activeTab === tab ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                {tab === 'paper1' ? 'Paper 1' : 'Paper 2'}
-                <span className={`ml-1 text-[8px] px-1 rounded-full ${activeTab === tab ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' : 'bg-gray-200 dark:bg-gray-600'}`}>
-                  {tabSummary.overallPct}%
-                </span>
-              </button>
-            );
+            return <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 px-3 py-1.5 rounded-md text-[10px] font-bold transition-all ${activeTab === tab ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{tab === 'paper1' ? 'Paper 1' : 'Paper 2'}<span className={`ml-1 text-[8px] px-1 rounded-full ${activeTab === tab ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' : 'bg-gray-200 dark:bg-gray-600'}`}>{tabSummary.overallPct}%</span></button>;
           })}
         </div>
       </div>
-
-      {/* Summary strip */}
       <div className="px-4 py-2 bg-gray-50/50 dark:bg-gray-700/20 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center gap-2 flex-wrap">
-          {Object.entries(levelLabels).map(([key, val]) => {
-            const summaryField = summaryKeyMap[key];
+          {Object.entries(coverageLevelLabels).map(([key, val]) => {
+            const summaryField = coverageSummaryKeys[key];
             const count = summaryField ? (summary[summaryField] || 0) : 0;
-            return (
-              <div key={key} className="flex items-center gap-1">
-                <div className={`w-2 h-2 rounded-sm ${val.color}`} />
-                <span className="text-[8px] text-gray-500">{val[l] || val.en}: {count}</span>
-              </div>
-            );
+            return <div key={key} className="flex items-center gap-1"><div className={`w-2 h-2 rounded-sm ${val.color}`} /><span className="text-[8px] text-gray-500">{val[l] || val.en}: {count}</span></div>;
           })}
         </div>
-        {/* Test counts */}
-        <div className="flex items-center gap-3 mt-1 text-[8px] text-gray-400">
-          <span>{l === 'hi' ? 'बनाए' : 'Created'}: {summary.totalTestsCreated || 0}</span>
-          <span>{l === 'hi' ? 'दिए' : 'Attempted'}: {summary.totalTestsAttempted || 0}</span>
-          <span>{l === 'hi' ? 'बाकी' : 'Pending'}: {summary.totalTestsPending || 0}</span>
-        </div>
+        <div className="flex items-center gap-3 mt-1 text-[8px] text-gray-400"><span>{l === 'hi' ? 'बनाए' : 'Created'}: {summary.totalTestsCreated || 0}</span><span>{l === 'hi' ? 'दिए' : 'Attempted'}: {summary.totalTestsAttempted || 0}</span><span>{l === 'hi' ? 'बाकी' : 'Pending'}: {summary.totalTestsPending || 0}</span></div>
       </div>
-
-      {/* Heatmap Grid */}
       <div className="p-3">
         <div className="grid grid-cols-2 gap-2">
           {data.map((unit, i) => {
-            const ll = levelLabels[unit.level] || levelLabels.not_started;
+            const ll = coverageLevelLabels[unit.level] || coverageLevelLabels.not_started;
             const borderClass = ll.border || 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-700/20';
-
             return (
               <div key={i} className="relative group">
                 <div className={`p-2.5 rounded-xl border-2 transition-all hover:shadow-lg cursor-pointer ${borderClass}`}>
-                  {/* Unit header */}
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[8px] font-bold text-gray-500 uppercase">{unit.unit}</span>
-                    <div className="flex items-center gap-1">
-                      {unit.accuracy > 0 && (
-                        <span className={`text-[7px] font-bold px-1 py-0.5 rounded-full ${ll.color} text-white`}>
-                          {unit.accuracy}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Unit name */}
-                  <p className="text-[10px] font-semibold text-gray-800 dark:text-gray-200 truncate mb-1.5">
-                    {unit.name}
-                  </p>
-
-                  {/* Test stats */}
-                  <div className="flex items-center gap-1.5 text-[8px] text-gray-500 mb-1">
-                    <span className="flex items-center gap-0.5">
-                      <ClipboardList className="w-2.5 h-2.5" />
-                      {unit.attemptedCount}/{unit.totalTests}
-                    </span>
-                    {unit.questionsAttempted > 0 && (
-                      <span className="flex items-center gap-0.5">
-                        <FileQuestion className="w-2.5 h-2.5" />
-                        {unit.questionsAttempted}Q
-                      </span>
-                    )}
-                    {unit.bestScore > 0 && (
-                      <span className="flex items-center gap-0.5">
-                        <Trophy className="w-2.5 h-2.5 text-amber-500" />
-                        {unit.bestScore}%
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Test type badges */}
+                  <div className="flex items-center justify-between mb-1"><span className="text-[8px] font-bold text-gray-500 uppercase">{unit.unit}</span><div className="flex items-center gap-1">{unit.accuracy > 0 && <span className={`text-[7px] font-bold px-1 py-0.5 rounded-full ${ll.color} text-white`}>{unit.accuracy}%</span>}</div></div>
+                  <p className="text-[10px] font-semibold text-gray-800 dark:text-gray-200 truncate mb-1.5">{unit.name}</p>
+                  <div className="flex items-center gap-1.5 text-[8px] text-gray-500 mb-1"><span className="flex items-center gap-0.5"><ClipboardList className="w-2.5 h-2.5" />{unit.attemptedCount}/{unit.totalTests}</span>{unit.questionsAttempted > 0 && <span className="flex items-center gap-0.5"><FileQuestion className="w-2.5 h-2.5" />{unit.questionsAttempted}Q</span>}{unit.bestScore > 0 && <span className="flex items-center gap-0.5"><Trophy className="w-2.5 h-2.5 text-amber-500" />{unit.bestScore}%</span>}</div>
                   {unit.testTypeBreakdown && Object.keys(unit.testTypeBreakdown).length > 0 && (
                     <div className="flex flex-wrap gap-0.5 mb-1.5">
-                      {Object.entries(unit.testTypeBreakdown).map(([type, td]) => (
-                        <span key={type} className={`text-[6px] font-bold px-1 py-0.5 rounded
-                          ${td.attempted >= td.total
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                            : td.attempted > 0
-                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                            : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
-                          }`}>
-                          {testTypeLabels[type] || type}: {td.attempted}/{td.total}
-                        </span>
-                      ))}
+                      {Object.entries(unit.testTypeBreakdown).map(([type, td]) => <span key={type} className={`text-[6px] font-bold px-1 py-0.5 rounded ${td.attempted >= td.total ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : td.attempted > 0 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>{coverageTestLabels[type] || type}: {td.attempted}/{td.total}</span>)}
                     </div>
                   )}
-
-                  {/* Coverage progress bar */}
-                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-1000"
-                      style={{
-                        width: `${unit.totalTests > 0 ? Math.round((unit.attemptedCount / unit.totalTests) * 100) : 0}%`,
-                        backgroundColor: unit.color || '#d1d5db'
-                      }} />
-                  </div>
-
-                  {/* Level label */}
-                  <div className="flex items-center justify-between mt-1">
-                    <span className={`text-[7px] font-bold ${ll.textColor}`}>
-                      {ll[l] || ll.en}
-                    </span>
-                    {unit.totalTests > 0 && (
-                      <span className="text-[7px] text-gray-400">
-                        {Math.round((unit.attemptedCount / unit.totalTests) * 100)}%
-                      </span>
-                    )}
-                  </div>
+                  <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all duration-1000" style={{ width: `${unit.totalTests > 0 ? Math.round((unit.attemptedCount / unit.totalTests) * 100) : 0}%`, backgroundColor: unit.color || '#d1d5db' }} /></div>
+                  <div className="flex items-center justify-between mt-1"><span className={`text-[7px] font-bold ${ll.textColor}`}>{ll[l] || ll.en}</span>{unit.totalTests > 0 && <span className="text-[7px] text-gray-400">{Math.round((unit.attemptedCount / unit.totalTests) * 100)}%</span>}</div>
                 </div>
               </div>
             );
           })}
         </div>
-
-        {/* No data message */}
-        {data.length === 0 && (
-          <div className="text-center py-8">
-            <Grid3X3 className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
-            <p className="text-xs text-gray-400">{l === 'hi' ? 'कोई डेटा नहीं' : 'No data available'}</p>
-          </div>
-        )}
+        {data.length === 0 && <div className="text-center py-8"><Grid3X3 className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" /><p className="text-xs text-gray-400">{l === 'hi' ? 'कोई डेटा नहीं' : 'No data available'}</p></div>}
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
 //   SPEED ANALYTICS CARD
 // ════════════════════════════════════════════════════════════
-const SpeedAnalyticsCard = ({ data, language }) => {
+function SpeedAnalyticsCard({ data, language }) {
   const l = language;
   if (!data || data.speedTrend.length === 0) return null;
 
@@ -1661,9 +1405,7 @@ const SpeedAnalyticsCard = ({ data, language }) => {
           <p className="text-[8px] text-gray-400">{l === 'hi' ? 'औसत' : 'avg'}/Q</p>
         </div>
       </div>
-
       <div className="p-4">
-        {/* Speed vs Accuracy Chart */}
         <div style={{ height: 160 }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data.speedTrend} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}>
@@ -1676,27 +1418,11 @@ const SpeedAnalyticsCard = ({ data, language }) => {
             </LineChart>
           </ResponsiveContainer>
         </div>
-
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-          <div className="text-center">
-            <Zap className="w-3 h-3 mx-auto mb-0.5 text-emerald-500" />
-            <p className="text-xs font-bold text-gray-900 dark:text-white">{data.fastestTest?.avgTime || 0}s</p>
-            <p className="text-[7px] text-gray-400 uppercase">{l === 'hi' ? 'सबसे तेज' : 'Fastest'}</p>
-          </div>
-          <div className="text-center">
-            <Timer className="w-3 h-3 mx-auto mb-0.5 text-blue-500" />
-            <p className="text-xs font-bold text-gray-900 dark:text-white">{data.avgTimePerQ}s</p>
-            <p className="text-[7px] text-gray-400 uppercase">{l === 'hi' ? 'औसत' : 'Average'}</p>
-          </div>
-          <div className="text-center">
-            <Hourglass className="w-3 h-3 mx-auto mb-0.5 text-amber-500" />
-            <p className="text-xs font-bold text-gray-900 dark:text-white">{data.slowestTest?.avgTime || 0}s</p>
-            <p className="text-[7px] text-gray-400 uppercase">{l === 'hi' ? 'सबसे धीमा' : 'Slowest'}</p>
-          </div>
+          <div className="text-center"><Zap className="w-3 h-3 mx-auto mb-0.5 text-emerald-500" /><p className="text-xs font-bold text-gray-900 dark:text-white">{data.fastestTest?.avgTime || 0}s</p><p className="text-[7px] text-gray-400 uppercase">{l === 'hi' ? 'सबसे तेज' : 'Fastest'}</p></div>
+          <div className="text-center"><Timer className="w-3 h-3 mx-auto mb-0.5 text-blue-500" /><p className="text-xs font-bold text-gray-900 dark:text-white">{data.avgTimePerQ}s</p><p className="text-[7px] text-gray-400 uppercase">{l === 'hi' ? 'औसत' : 'Average'}</p></div>
+          <div className="text-center"><Hourglass className="w-3 h-3 mx-auto mb-0.5 text-amber-500" /><p className="text-xs font-bold text-gray-900 dark:text-white">{data.slowestTest?.avgTime || 0}s</p><p className="text-[7px] text-gray-400 uppercase">{l === 'hi' ? 'सबसे धीमा' : 'Slowest'}</p></div>
         </div>
-
-        {/* Time Distribution */}
         <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
           <p className="text-[9px] font-bold text-gray-500 mb-2 uppercase">{l === 'hi' ? 'समय वितरण' : 'Time Distribution'}</p>
           <div className="flex items-end gap-1" style={{ height: 40 }}>
@@ -1704,8 +1430,7 @@ const SpeedAnalyticsCard = ({ data, language }) => {
               const maxVal = Math.max(...data.timeDistribution.map(d => d.value), 1);
               return (
                 <div key={i} className="flex-1 flex flex-col items-center">
-                  <div className="w-full rounded-t-sm bg-gradient-to-t from-cyan-500 to-blue-400 transition-all duration-700"
-                    style={{ height: `${Math.max((b.value / maxVal) * 100, 5)}%` }} />
+                  <div className="w-full rounded-t-sm bg-gradient-to-t from-cyan-500 to-blue-400 transition-all duration-700" style={{ height: `${Math.max((b.value / maxVal) * 100, 5)}%` }} />
                   <span className="text-[6px] text-gray-400 mt-0.5">{b.name}</span>
                 </div>
               );
@@ -1715,27 +1440,23 @@ const SpeedAnalyticsCard = ({ data, language }) => {
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
 //   STUDY RECOMMENDATIONS
 // ════════════════════════════════════════════════════════════
-const StudyRecommendations = ({ recommendations, language, navigate }) => {
+function StudyRecommendations({ recommendations, language, navigate }) {
   const l = language;
   if (!recommendations || recommendations.length === 0) return null;
 
-  const iconMap = {
-    AlertTriangle, BookOpen, Target, TrendingDown, Clock, Flame, BarChart2, Zap, Lightbulb,
-  };
-
-  const priorityColors = {
+  const recIcons = { AlertTriangle, BookOpen, Target, TrendingDown, Clock, Flame, BarChart2, Zap, Lightbulb };
+  const recPriorityColors = {
     critical: 'border-red-300 bg-red-50/50 dark:border-red-800/30 dark:bg-red-900/5',
     high: 'border-orange-300 bg-orange-50/50 dark:border-orange-800/30 dark:bg-orange-900/5',
     medium: 'border-blue-300 bg-blue-50/50 dark:border-blue-800/30 dark:bg-blue-900/5',
     low: 'border-gray-200 bg-gray-50/50 dark:border-gray-700/30 dark:bg-gray-700/10',
   };
-
-  const colorBg = {
+  const recColorBg = {
     red: 'from-red-500 to-rose-600', orange: 'from-orange-500 to-amber-600',
     blue: 'from-blue-500 to-indigo-600', purple: 'from-purple-500 to-violet-600',
     amber: 'from-amber-500 to-yellow-600', cyan: 'from-cyan-500 to-teal-600',
@@ -1748,50 +1469,34 @@ const StudyRecommendations = ({ recommendations, language, navigate }) => {
           <Lightbulb className="w-4 h-4 text-white" />
         </div>
         <div>
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-            {l === 'hi' ? 'स्मार्ट सुझाव' : 'Smart Recommendations'}
-          </h3>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'स्मार्ट सुझाव' : 'Smart Recommendations'}</h3>
           <p className="text-[9px] text-gray-500">{l === 'hi' ? 'आपके डेटा पर आधारित' : 'Based on your data'}</p>
         </div>
       </div>
-
       <div className="p-3 space-y-1.5">
         {recommendations.map((rec, i) => {
-          const Icon = iconMap[rec.icon] || Lightbulb;
-          const bgGrad = colorBg[rec.color] || colorBg.blue;
+          const Icon = recIcons[rec.icon] || Lightbulb;
+          const bgGrad = recColorBg[rec.color] || recColorBg.blue;
           return (
-            <div key={rec.id || i}
-              className={`flex items-start gap-2.5 p-2.5 rounded-xl border transition-all hover:shadow-md ${priorityColors[rec.priority] || priorityColors.medium}`}>
-              <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${bgGrad} flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5`}>
-                <Icon className="w-3.5 h-3.5 text-white" />
-              </div>
+            <div key={rec.id || i} className={`flex items-start gap-2.5 p-2.5 rounded-xl border transition-all hover:shadow-md ${recPriorityColors[rec.priority] || recPriorityColors.medium}`}>
+              <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${bgGrad} flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5`}><Icon className="w-3.5 h-3.5 text-white" /></div>
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-semibold text-gray-900 dark:text-white">
-                  {l === 'hi' ? rec.titleHi : rec.title}
-                </p>
-                <p className="text-[9px] text-gray-500 mt-0.5">
-                  {l === 'hi' ? rec.detailHi : rec.detail}
-                </p>
+                <p className="text-[11px] font-semibold text-gray-900 dark:text-white">{l === 'hi' ? rec.titleHi : rec.title}</p>
+                <p className="text-[9px] text-gray-500 mt-0.5">{l === 'hi' ? rec.detailHi : rec.detail}</p>
               </div>
-              <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0
-                ${rec.priority === 'critical' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
-                rec.priority === 'high' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' :
-                rec.priority === 'medium' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' :
-                'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
-                {rec.priority}
-              </span>
+              <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${rec.priority === 'critical' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : rec.priority === 'high' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' : rec.priority === 'medium' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>{rec.priority}</span>
             </div>
           );
         })}
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
 //   SCORE DISTRIBUTION CHART
 // ════════════════════════════════════════════════════════════
-const ScoreDistributionCard = ({ data, language }) => {
+function ScoreDistributionCard({ data, language }) {
   const l = language;
   if (!data || data.length === 0) return null;
   const maxCount = Math.max(...data.map(d => d.count), 1);
@@ -1807,18 +1512,12 @@ const ScoreDistributionCard = ({ data, language }) => {
           <p className="text-[9px] text-gray-500">{l === 'hi' ? 'सभी टेस्ट' : 'All tests'}</p>
         </div>
       </div>
-
       <div className="flex items-end gap-2" style={{ height: 100 }}>
         {data.map((d, i) => (
           <div key={i} className="flex-1 flex flex-col items-center">
             <span className="text-[8px] font-bold text-gray-600 dark:text-gray-300 mb-1">{d.count}</span>
-            <div className="w-full rounded-t-lg transition-all duration-1000 relative group" style={{
-              height: `${Math.max((d.count / maxCount) * 100, 5)}%`,
-              backgroundColor: d.color,
-            }}>
-              <div className="absolute -top-6 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-[8px] px-1.5 py-0.5 rounded whitespace-nowrap">
-                {d.pct}%
-              </div>
+            <div className="w-full rounded-t-lg transition-all duration-1000 relative group" style={{ height: `${Math.max((d.count / maxCount) * 100, 5)}%`, backgroundColor: d.color }}>
+              <div className="absolute -top-6 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-[8px] px-1.5 py-0.5 rounded whitespace-nowrap">{d.pct}%</div>
             </div>
             <span className="text-[8px] text-gray-400 mt-1 font-medium">{d.range}%</span>
           </div>
@@ -1826,12 +1525,12 @@ const ScoreDistributionCard = ({ data, language }) => {
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
 //   PERSONAL RECORDS BOARD
 // ════════════════════════════════════════════════════════════
-const PersonalRecords = ({ records, language }) => {
+function PersonalRecords({ records, language }) {
   const l = language;
   if (!records || !records.highestScore) return null;
 
@@ -1854,9 +1553,7 @@ const PersonalRecords = ({ records, language }) => {
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
         {items.map((item, i) => (
           <div key={i} className="text-center p-2 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
-            <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center shadow-sm mx-auto mb-1.5`}>
-              <item.icon className="w-3.5 h-3.5 text-white" />
-            </div>
+            <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center shadow-sm mx-auto mb-1.5`}><item.icon className="w-3.5 h-3.5 text-white" /></div>
             <p className="text-sm font-black text-gray-900 dark:text-white">{item.value}</p>
             <p className="text-[8px] text-gray-400 uppercase">{item.label}</p>
             {item.sub && <p className="text-[7px] text-gray-400 truncate mt-0.5">{item.sub}</p>}
@@ -1865,16 +1562,15 @@ const PersonalRecords = ({ records, language }) => {
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
 //   TIME OF DAY ANALYSIS
 // ════════════════════════════════════════════════════════════
-const TimeOfDayCard = ({ data, language }) => {
+function TimeOfDayCard({ data, language }) {
   const l = language;
   if (!data || !data.bestPeriod) return null;
-
-  const periodIcons = { Sun, Coffee, Sunset, Moon };
+  const todIcons = { Sun, Coffee, Sunset, Moon };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
@@ -1889,19 +1585,14 @@ const TimeOfDayCard = ({ data, language }) => {
           </div>
         </div>
       </div>
-
-      {/* Period cards */}
       <div className="grid grid-cols-4 gap-1.5 mb-3">
         {data.periodData.map((p, i) => {
-          const PIcon = periodIcons[p.icon] || Sun;
+          const PIcon = todIcons[p.icon] || Sun;
           const isBest = p.name === data.bestPeriod?.name;
           return (
-            <div key={i} className={`text-center p-2 rounded-xl border transition-all
-              ${isBest ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-900/20 ring-1 ring-indigo-200 dark:ring-indigo-800' : 'border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20'}`}>
+            <div key={i} className={`text-center p-2 rounded-xl border transition-all ${isBest ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-900/20 ring-1 ring-indigo-200 dark:ring-indigo-800' : 'border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20'}`}>
               <PIcon className={`w-4 h-4 mx-auto mb-1 ${isBest ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`} />
-              <p className={`text-xs font-bold ${isBest ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'}`}>
-                {p.avgScore}%
-              </p>
+              <p className={`text-xs font-bold ${isBest ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'}`}>{p.avgScore}%</p>
               <p className="text-[7px] text-gray-400">{l === 'hi' ? p.nameHi : p.name}</p>
               <p className="text-[7px] text-gray-400">{p.count} tests</p>
               {isBest && <span className="text-[6px] font-bold text-indigo-600 dark:text-indigo-400">BEST</span>}
@@ -1909,26 +1600,22 @@ const TimeOfDayCard = ({ data, language }) => {
           );
         })}
       </div>
-
       {data.bestHour && (
         <div className="bg-indigo-50 dark:bg-indigo-900/10 rounded-lg p-2 border border-indigo-200/50 dark:border-indigo-800/30">
-          <p className="text-[9px] text-indigo-600 dark:text-indigo-400 font-semibold">
-            {l === 'hi' ? `सबसे अच्छा समय: ${data.bestHour.label} (${data.bestHour.avgScore}% avg)` : `Peak time: ${data.bestHour.label} (${data.bestHour.avgScore}% avg)`}
-          </p>
+          <p className="text-[9px] text-indigo-600 dark:text-indigo-400 font-semibold">{l === 'hi' ? `सबसे अच्छा समय: ${data.bestHour.label} (${data.bestHour.avgScore}% avg)` : `Peak time: ${data.bestHour.label} (${data.bestHour.avgScore}% avg)`}</p>
         </div>
       )}
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
 //   ACTIVITY HEATMAP CALENDAR
 // ════════════════════════════════════════════════════════════
-const ActivityHeatmap = ({ activityMap, language }) => {
+function ActivityHeatmap({ activityMap, language }) {
   const l = language;
   const [hoveredDay, setHoveredDay] = useState(null);
 
-  // Generate last 90 days
   const days = useMemo(() => {
     const result = [];
     const today = new Date();
@@ -1937,21 +1624,12 @@ const ActivityHeatmap = ({ activityMap, language }) => {
       d.setDate(d.getDate() - i);
       const key = d.toISOString().split('T')[0];
       const data = activityMap[key];
-      result.push({
-        date: key,
-        day: d.getDate(),
-        month: d.getMonth(),
-        dayOfWeek: d.getDay(),
-        count: data?.count || 0,
-        avgScore: data?.avgScore || 0,
-        avgAccuracy: data?.avgAccuracy || 0,
-      });
+      result.push({ date: key, day: d.getDate(), month: d.getMonth(), dayOfWeek: d.getDay(), count: data?.count || 0, avgScore: data?.avgScore || 0, avgAccuracy: data?.avgAccuracy || 0 });
     }
     return result;
   }, [activityMap]);
 
   const maxCount = Math.max(...days.map(d => d.count), 1);
-
   const getColor = (count) => {
     if (count === 0) return 'bg-gray-100 dark:bg-gray-800';
     const intensity = count / maxCount;
@@ -1961,46 +1639,31 @@ const ActivityHeatmap = ({ activityMap, language }) => {
     return 'bg-emerald-200 dark:bg-emerald-800';
   };
 
-  // Group by weeks
   const weeks = [];
   let currentWeek = [];
   days.forEach((d, i) => {
     currentWeek.push(d);
-    if (d.dayOfWeek === 6 || i === days.length - 1) {
-      weeks.push([...currentWeek]);
-      currentWeek = [];
-    }
+    if (d.dayOfWeek === 6 || i === days.length - 1) { weeks.push([...currentWeek]); currentWeek = []; }
   });
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow">
-            <Calendar className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गतिविधि कैलेंडर' : 'Activity Calendar'}</h3>
-            <p className="text-[9px] text-gray-500">{l === 'hi' ? 'पिछले 90 दिन' : 'Last 90 days'}</p>
-          </div>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow"><Calendar className="w-4 h-4 text-white" /></div>
+          <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गतिविधि कैलेंडर' : 'Activity Calendar'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'पिछले 90 दिन' : 'Last 90 days'}</p></div>
         </div>
         <div className="flex items-center gap-0.5">
           <span className="text-[7px] text-gray-400 mr-1">{l === 'hi' ? 'कम' : 'Less'}</span>
-          {['bg-gray-100 dark:bg-gray-800', 'bg-emerald-200 dark:bg-emerald-800', 'bg-emerald-400 dark:bg-emerald-700', 'bg-emerald-500 dark:bg-emerald-600', 'bg-emerald-600 dark:bg-emerald-500'].map((c, i) => (
-            <div key={i} className={`w-2.5 h-2.5 rounded-sm ${c}`} />
-          ))}
+          {['bg-gray-100 dark:bg-gray-800', 'bg-emerald-200 dark:bg-emerald-800', 'bg-emerald-400 dark:bg-emerald-700', 'bg-emerald-500 dark:bg-emerald-600', 'bg-emerald-600 dark:bg-emerald-500'].map((c, i) => <div key={i} className={`w-2.5 h-2.5 rounded-sm ${c}`} />)}
           <span className="text-[7px] text-gray-400 ml-1">{l === 'hi' ? 'ज्यादा' : 'More'}</span>
         </div>
       </div>
-
-      {/* Heatmap grid */}
       <div className="flex gap-0.5 overflow-x-auto pb-1">
         {weeks.map((week, wi) => (
           <div key={wi} className="flex flex-col gap-0.5">
             {week.map((day, di) => (
-              <div key={di} className="relative"
-                onMouseEnter={() => setHoveredDay(day)}
-                onMouseLeave={() => setHoveredDay(null)}>
+              <div key={di} className="relative" onMouseEnter={() => setHoveredDay(day)} onMouseLeave={() => setHoveredDay(null)}>
                 <div className={`w-3 h-3 rounded-sm ${getColor(day.count)} transition-all hover:ring-1 hover:ring-gray-400 cursor-pointer`} />
                 {hoveredDay?.date === day.date && (
                   <div className="absolute z-50 bottom-5 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-gray-700 text-white text-[8px] px-2 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
@@ -2016,66 +1679,52 @@ const ActivityHeatmap = ({ activityMap, language }) => {
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
 //   WEEKLY COMPARISON CARD
 // ════════════════════════════════════════════════════════════
-const WeeklyComparison = ({ data, language }) => {
+function WeeklyComparison({ data, language }) {
   const l = language;
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow">
-          <Activity className="w-4 h-4 text-white" />
-        </div>
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow"><Activity className="w-4 h-4 text-white" /></div>
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'साप्ताहिक तुलना' : 'Weekly Comparison'}</h3>
       </div>
-
       <div className="grid grid-cols-2 gap-3">
-        {/* This week */}
         <div className="bg-indigo-50 dark:bg-indigo-900/10 rounded-xl p-3 border border-indigo-200/50 dark:border-indigo-800/30">
           <p className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-1">{l === 'hi' ? 'इस हफ्ते' : 'This Week'}</p>
           <p className="text-2xl font-black text-indigo-900 dark:text-indigo-200">{data.thisWeek.tests}</p>
           <p className="text-[9px] text-indigo-500">{l === 'hi' ? 'टेस्ट' : 'tests'} | {data.thisWeek.avgScore}% avg</p>
         </div>
-        {/* Last week */}
         <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
           <p className="text-[9px] font-bold text-gray-500 uppercase mb-1">{l === 'hi' ? 'पिछला हफ्ता' : 'Last Week'}</p>
           <p className="text-2xl font-black text-gray-700 dark:text-gray-300">{data.lastWeek.tests}</p>
           <p className="text-[9px] text-gray-400">{l === 'hi' ? 'टेस्ट' : 'tests'} | {data.lastWeek.avgScore}% avg</p>
         </div>
       </div>
-
-      {/* Change indicator */}
       <div className="mt-2 flex items-center justify-center gap-2">
-        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold
-          ${data.change > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-          data.change < 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-          'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
-          {data.change > 0 ? <ArrowUp className="w-3 h-3" /> : data.change < 0 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-          {Math.abs(data.change)} {l === 'hi' ? 'टेस्ट' : 'tests'}
+        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${data.change > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : data.change < 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+          {data.change > 0 ? <ArrowUp className="w-3 h-3" /> : data.change < 0 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}{Math.abs(data.change)} {l === 'hi' ? 'टेस्ट' : 'tests'}
         </div>
-        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold
-          ${data.scoreChange > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-          data.scoreChange < 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-          'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${data.scoreChange > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : data.scoreChange < 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
           {data.scoreChange > 0 ? '+' : ''}{data.scoreChange}% score
         </div>
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//  PAPER-WISE SCORE TREND (Enhanced)
+//  PAPER-WISE SCORE TREND
 // ════════════════════════════════════════════════════════════
-const PaperTrendCard = ({ title, icon: Icon, color, data, trend, predicted, avgScore, accuracy, language }) => {
-  const cMap = {
+function PaperTrendCard({ title, icon: Icon, color, data, trend, predicted, avgScore, accuracy, language }) {
+  const trendColorMap = {
     blue: { stroke: '#3b82f6', grad: 'from-blue-600 to-cyan-600', badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', border: 'border-blue-200/50 dark:border-blue-800/30', light: 'bg-blue-50 dark:bg-blue-900/10' },
     purple: { stroke: '#8b5cf6', grad: 'from-purple-600 to-violet-600', badge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400', border: 'border-purple-200/50 dark:border-purple-800/30', light: 'bg-purple-50 dark:bg-purple-900/10' },
   };
-  const c = cMap[color];
+  const c = trendColorMap[color];
   const avg = data.length > 0 ? Math.round(data.reduce((s, d) => s + d.score, 0) / data.length) : 0;
   const best = data.length > 0 ? Math.max(...data.map(d => d.score)) : 0;
   const worst = data.length > 0 ? Math.min(...data.map(d => d.score)) : 0;
@@ -2085,20 +1734,11 @@ const PaperTrendCard = ({ title, icon: Icon, color, data, trend, predicted, avgS
     <div className={`bg-white dark:bg-gray-800 rounded-2xl border-2 ${c.border} overflow-hidden`}>
       <div className={`${c.light} px-4 py-3 border-b ${c.border} flex items-center justify-between`}>
         <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${c.grad} flex items-center justify-center shadow`}>
-            <Icon className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <h4 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h4>
-            <p className="text-[9px] text-gray-500">{data.length} {l === 'hi' ? 'टेस्ट दिए' : 'tests taken'}</p>
-          </div>
+          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${c.grad} flex items-center justify-center shadow`}><Icon className="w-4 h-4 text-white" /></div>
+          <div><h4 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h4><p className="text-[9px] text-gray-500">{data.length} {l === 'hi' ? 'टेस्ट दिए' : 'tests taken'}</p></div>
         </div>
         <div className="flex items-center gap-1.5">
-          {predicted !== null && (
-            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${c.badge}`}>
-              {l === 'hi' ? 'अनुमानित' : 'Pred'}: {predicted}%
-            </span>
-          )}
+          {predicted !== null && <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${c.badge}`}>{l === 'hi' ? 'अनुमानित' : 'Pred'}: {predicted}%</span>}
           <TrendBadge direction={trend} />
         </div>
       </div>
@@ -2124,35 +1764,23 @@ const PaperTrendCard = ({ title, icon: Icon, color, data, trend, predicted, avgS
               </ResponsiveContainer>
             </div>
             <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-              {[
-                { l: l === 'hi' ? 'औसत' : 'Avg', v: `${avg}%`, i: Gauge, cl: 'text-blue-500' },
-                { l: l === 'hi' ? 'सर्वश्रेष्ठ' : 'Best', v: `${best}%`, i: TrendingUp, cl: 'text-emerald-500' },
-                { l: l === 'hi' ? 'न्यूनतम' : 'Low', v: `${worst}%`, i: TrendingDown, cl: 'text-amber-500' },
-                { l: l === 'hi' ? 'सटीकता' : 'Acc', v: `${accuracy}%`, i: Target, cl: 'text-violet-500' },
-              ].map((m, i) => (
-                <div key={i} className="text-center">
-                  <m.i className={`w-3 h-3 mx-auto mb-0.5 ${m.cl}`} />
-                  <p className="text-xs font-bold text-gray-900 dark:text-white">{m.v}</p>
-                  <p className="text-[7px] text-gray-400 uppercase">{m.l}</p>
-                </div>
+              {[{ l: l === 'hi' ? 'औसत' : 'Avg', v: `${avg}%`, i: Gauge, cl: 'text-blue-500' }, { l: l === 'hi' ? 'सर्वश्रेष्ठ' : 'Best', v: `${best}%`, i: TrendingUp, cl: 'text-emerald-500' }, { l: l === 'hi' ? 'न्यूनतम' : 'Low', v: `${worst}%`, i: TrendingDown, cl: 'text-amber-500' }, { l: l === 'hi' ? 'सटीकता' : 'Acc', v: `${accuracy}%`, i: Target, cl: 'text-violet-500' }].map((m, i) => (
+                <div key={i} className="text-center"><m.i className={`w-3 h-3 mx-auto mb-0.5 ${m.cl}`} /><p className="text-xs font-bold text-gray-900 dark:text-white">{m.v}</p><p className="text-[7px] text-gray-400 uppercase">{m.l}</p></div>
               ))}
             </div>
           </>
         ) : (
-          <div className="text-center py-8">
-            <BarChart3 className="w-8 h-8 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
-            <p className="text-[10px] text-gray-400">{l === 'hi' ? 'कोई डेटा नहीं' : 'No data yet'}</p>
-          </div>
+          <div className="text-center py-8"><BarChart3 className="w-8 h-8 mx-auto mb-2 text-gray-200 dark:text-gray-700" /><p className="text-[10px] text-gray-400">{l === 'hi' ? 'कोई डेटा नहीं' : 'No data yet'}</p></div>
         )}
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
 //   ERROR ANALYSIS CARD
 // ════════════════════════════════════════════════════════════
-const ErrorAnalysisCard = ({ data, language, navigate }) => {
+function ErrorAnalysisCard({ data, language, navigate }) {
   const l = language;
   if (!data || data.unitPerformance?.length === 0) return null;
 
@@ -2160,118 +1788,61 @@ const ErrorAnalysisCard = ({ data, language, navigate }) => {
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow">
-            <AlertTriangle className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गलती विश्लेषण' : 'Error Analysis'}</h3>
-            <p className="text-[9px] text-gray-500">{l === 'hi' ? 'कमजोर क्षेत्र पहचानें' : 'Identify weak areas'}</p>
-          </div>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow"><AlertTriangle className="w-4 h-4 text-white" /></div>
+          <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गलती विश्लेषण' : 'Error Analysis'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'कमजोर क्षेत्र पहचानें' : 'Identify weak areas'}</p></div>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-            {l === 'hi' ? 'त्रुटि दर' : 'Error Rate'}: {data.errorRate}%
-          </span>
+          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">{l === 'hi' ? 'त्रुटि दर' : 'Error Rate'}: {data.errorRate}%</span>
         </div>
       </div>
-
       <div className="p-4">
-        {/* Weak vs Strong summary */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-red-50 dark:bg-red-900/10 rounded-xl p-2.5 border border-red-200/50 dark:border-red-800/30">
-            <div className="flex items-center gap-1 mb-1">
-              <TrendingDown className="w-3 h-3 text-red-500" />
-              <span className="text-[9px] font-bold text-red-700 dark:text-red-400">
-                {l === 'hi' ? 'कमजोर' : 'Weak Areas'} ({data.weakUnits.length})
-              </span>
-            </div>
-            {data.weakUnits.slice(0, 3).map((u, i) => (
-              <p key={i} className="text-[8px] text-red-600/70 dark:text-red-400/70 truncate">
-                {u.unit}: {u.accuracy}%
-              </p>
-            ))}
+            <div className="flex items-center gap-1 mb-1"><TrendingDown className="w-3 h-3 text-red-500" /><span className="text-[9px] font-bold text-red-700 dark:text-red-400">{l === 'hi' ? 'कमजोर' : 'Weak Areas'} ({data.weakUnits.length})</span></div>
+            {data.weakUnits.slice(0, 3).map((u, i) => <p key={i} className="text-[8px] text-red-600/70 dark:text-red-400/70 truncate">{u.unit}: {u.accuracy}%</p>)}
           </div>
           <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-xl p-2.5 border border-emerald-200/50 dark:border-emerald-800/30">
-            <div className="flex items-center gap-1 mb-1">
-              <TrendingUp className="w-3 h-3 text-emerald-500" />
-              <span className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400">
-                {l === 'hi' ? 'मजबूत' : 'Strong Areas'} ({data.strongUnits.length})
-              </span>
-            </div>
-            {data.strongUnits.slice(0, 3).map((u, i) => (
-              <p key={i} className="text-[8px] text-emerald-600/70 dark:text-emerald-400/70 truncate">
-                {u.unit}: {u.accuracy}%
-              </p>
-            ))}
+            <div className="flex items-center gap-1 mb-1"><TrendingUp className="w-3 h-3 text-emerald-500" /><span className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400">{l === 'hi' ? 'मजबूत' : 'Strong Areas'} ({data.strongUnits.length})</span></div>
+            {data.strongUnits.slice(0, 3).map((u, i) => <p key={i} className="text-[8px] text-emerald-600/70 dark:text-emerald-400/70 truncate">{u.unit}: {u.accuracy}%</p>)}
           </div>
         </div>
-
-        {/* Unit performance bars */}
         <p className="text-[9px] font-bold text-gray-500 uppercase mb-2">{l === 'hi' ? 'इकाई प्रदर्शन' : 'Unit Performance'}</p>
         <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
           {(data.unitPerformance || []).slice(0, 10).map((u, i) => (
             <div key={i} className="flex items-center gap-2">
               <span className="text-[9px] font-medium text-gray-600 dark:text-gray-400 w-28 truncate flex-shrink-0">{u.unit}</span>
-              <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-1000"
-                  style={{
-                    width: `${u.accuracy}%`,
-                    background: u.accuracy >= 70 ? '#22c55e' : u.accuracy >= 50 ? '#3b82f6' : u.accuracy >= 30 ? '#f59e0b' : '#ef4444'
-                  }} />
-              </div>
-              <span className={`text-[9px] font-bold w-8 text-right flex-shrink-0
-                ${u.accuracy >= 70 ? 'text-emerald-600' : u.accuracy >= 50 ? 'text-blue-600' : u.accuracy >= 30 ? 'text-amber-600' : 'text-red-600'}`}>
-                {u.accuracy}%
-              </span>
+              <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all duration-1000" style={{ width: `${u.accuracy}%`, background: u.accuracy >= 70 ? '#22c55e' : u.accuracy >= 50 ? '#3b82f6' : u.accuracy >= 30 ? '#f59e0b' : '#ef4444' }} /></div>
+              <span className={`text-[9px] font-bold w-8 text-right flex-shrink-0 ${u.accuracy >= 70 ? 'text-emerald-600' : u.accuracy >= 50 ? 'text-blue-600' : u.accuracy >= 30 ? 'text-amber-600' : 'text-red-600'}`}>{u.accuracy}%</span>
             </div>
           ))}
         </div>
-
-        {/* Improvement suggestions */}
         {data.improvementAreas.length > 0 && (
           <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
             <p className="text-[9px] font-bold text-gray-500 uppercase mb-1.5">{l === 'hi' ? 'सुधार क्षेत्र' : 'Improvement Areas'}</p>
             {data.improvementAreas.slice(0, 3).map((area, i) => (
-              <div key={i} className="flex items-start gap-1.5 mb-1">
-                <AlertCircle className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-[9px] font-semibold text-gray-700 dark:text-gray-300">{area.unit} ({area.accuracy}%)</p>
-                  <p className="text-[8px] text-gray-400">{area.suggestion}</p>
-                </div>
-              </div>
+              <div key={i} className="flex items-start gap-1.5 mb-1"><AlertCircle className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" /><div><p className="text-[9px] font-semibold text-gray-700 dark:text-gray-300">{area.unit} ({area.accuracy}%)</p><p className="text-[8px] text-gray-400">{area.suggestion}</p></div></div>
             ))}
           </div>
         )}
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
 //   TOPIC MASTERY RADAR
 // ════════════════════════════════════════════════════════════
-const TopicMasteryRadar = ({ data, language }) => {
+function TopicMasteryRadar({ data, language }) {
   const l = language;
   if (!data || data.length === 0) return null;
-
-  // Shorten unit names for radar
-  const radarData = data.slice(0, 8).map(d => ({
-    ...d,
-    subject: d.unit?.replace(/UNIT\s*/i, 'U').substring(0, 12) || 'Other',
-  }));
+  const radarData = data.slice(0, 8).map(d => ({ ...d, subject: d.unit?.replace(/UNIT\s*/i, 'U').substring(0, 12) || 'Other' }));
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow">
-          <Crosshair className="w-4 h-4 text-white" />
-        </div>
-        <div>
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'विषय दक्षता' : 'Topic Mastery'}</h3>
-          <p className="text-[9px] text-gray-500">{l === 'hi' ? 'रडार चार्ट' : 'Radar chart'}</p>
-        </div>
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow"><Crosshair className="w-4 h-4 text-white" /></div>
+        <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'विषय दक्षता' : 'Topic Mastery'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'रडार चार्ट' : 'Radar chart'}</p></div>
       </div>
-
       <div style={{ height: 220 }}>
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart data={radarData}>
@@ -2282,83 +1853,61 @@ const TopicMasteryRadar = ({ data, language }) => {
           </RadarChart>
         </ResponsiveContainer>
       </div>
-
-      {/* Legend */}
       <div className="grid grid-cols-2 gap-1 mt-2">
         {radarData.map((d, i) => (
-          <div key={i} className="flex items-center gap-1 text-[8px]">
-            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${d.accuracy >= 70 ? 'bg-emerald-500' : d.accuracy >= 50 ? 'bg-blue-500' : d.accuracy >= 30 ? 'bg-amber-500' : 'bg-red-500'}`} />
-            <span className="text-gray-500 truncate">{d.unit}</span>
-            <span className="font-bold text-gray-700 dark:text-gray-300 ml-auto flex-shrink-0">{d.accuracy}%</span>
-          </div>
+          <div key={i} className="flex items-center gap-1 text-[8px]"><div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${d.accuracy >= 70 ? 'bg-emerald-500' : d.accuracy >= 50 ? 'bg-blue-500' : d.accuracy >= 30 ? 'bg-amber-500' : 'bg-red-500'}`} /><span className="text-gray-500 truncate">{d.unit}</span><span className="font-bold text-gray-700 dark:text-gray-300 ml-auto flex-shrink-0">{d.accuracy}%</span></div>
         ))}
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//   NEEDS ATTENTION (low scores)
+//   NEEDS ATTENTION
 // ════════════════════════════════════════════════════════════
-const NeedsAttentionCard = ({ tests, language, navigate }) => {
+function NeedsAttentionCard({ tests, language, navigate }) {
   const l = language;
   if (!tests || tests.length === 0) return null;
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-red-200/50 dark:border-red-800/30 overflow-hidden">
       <div className="bg-red-50 dark:bg-red-900/10 px-4 py-3 border-b border-red-200/50 dark:border-red-800/30 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow">
-            <AlertTriangle className="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-red-800 dark:text-red-300">{l === 'hi' ? 'ध्यान दें - कम स्कोर' : 'Needs Attention'}</h3>
-            <p className="text-[9px] text-red-600/60">{l === 'hi' ? '50% से कम स्कोर' : 'Score below 50%'}</p>
-          </div>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow"><AlertTriangle className="w-4 h-4 text-white" /></div>
+          <div><h3 className="text-sm font-bold text-red-800 dark:text-red-300">{l === 'hi' ? 'ध्यान दें - कम स्कोर' : 'Needs Attention'}</h3><p className="text-[9px] text-red-600/60">{l === 'hi' ? '50% से कम स्कोर' : 'Score below 50%'}</p></div>
         </div>
         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">{tests.length}</span>
       </div>
       <div className="p-3 space-y-1.5 max-h-[300px] overflow-y-auto">
         {tests.slice(0, 5).map((t, i) => {
-          const { g, c } = grd(t.bestScore);
+          const { g, c } = getGradeInfo(t.bestScore);
+          const bgCol = getGradeColor(c);
           return (
-            <div key={i} onClick={() => navigate(`/results/${t.lastAttempt?._id}`)}
-              className="group flex items-center gap-2.5 p-2.5 rounded-xl bg-red-50/50 dark:bg-red-900/5 border border-red-100 dark:border-red-900/20 hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg cursor-pointer transition-all">
+            <div key={i} onClick={() => navigate(`/results/${t.lastAttempt?._id}`)} className="group flex items-center gap-2.5 p-2.5 rounded-xl bg-red-50/50 dark:bg-red-900/5 border border-red-100 dark:border-red-900/20 hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg cursor-pointer transition-all">
               <div className="relative flex-shrink-0"><div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /></div>
-              <div className={`w-9 h-9 rounded-lg border flex items-center justify-center font-black text-sm flex-shrink-0 ${GC[c]}`}>{g}</div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate group-hover:text-red-600 transition-colors">{t.test?.title || 'Test'}</h4>
-                <div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500">
-                  <span>Best: {t.bestScore}%</span>
-                  <span>{t.attempts} att</span>
-                </div>
-              </div>
+              <div className={`w-9 h-9 rounded-lg border flex items-center justify-center font-black text-sm flex-shrink-0 ${bgCol}`}>{g}</div>
+              <div className="flex-1 min-w-0"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate group-hover:text-red-600 transition-colors">{t.test?.title || 'Test'}</h4><div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500"><span>Best: {t.bestScore}%</span><span>{t.attempts} att</span></div></div>
               <p className="text-lg font-black text-red-600 dark:text-red-400 flex-shrink-0">{t.bestScore}%</p>
-              <button onClick={(e) => { e.stopPropagation(); navigate(`/test/${t.testId}`); }}
-                className="p-1.5 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 transition-colors flex-shrink-0">
-                <RefreshCw className="w-3.5 h-3.5" />
-              </button>
+              <button onClick={(e) => { e.stopPropagation(); navigate(`/test/${t.testId}`); }} className="p-1.5 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 transition-colors flex-shrink-0"><RefreshCw className="w-3.5 h-3.5" /></button>
             </div>
           );
         })}
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//   PENDING TESTS TIMELINE (Simplified but complete)
+//   PENDING TESTS TIMELINE
 // ════════════════════════════════════════════════════════════
-const PendingTimeline = ({ notAttemptedTests, paper1NotAttempted, paper2NotAttempted, language, navigate }) => {
+function PendingTimeline({ notAttemptedTests, paper1NotAttempted, paper2NotAttempted, language, navigate }) {
   const [activeTab, setActiveTab] = useState('all');
   const l = language;
-
   const sorted = useMemo(() => {
     const base = activeTab === 'paper1' ? paper1NotAttempted : activeTab === 'paper2' ? paper2NotAttempted : notAttemptedTests;
     return [...base].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   }, [notAttemptedTests, paper1NotAttempted, paper2NotAttempted, activeTab]);
 
   if (notAttemptedTests.length === 0) return null;
-
   const getDaysOld = (date) => Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
   const criticalCount = sorted.filter(t => getDaysOld(t.createdAt) >= 14).length;
 
@@ -2366,102 +1915,41 @@ const PendingTimeline = ({ notAttemptedTests, paper1NotAttempted, paper2NotAttem
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow">
-              <Calendar className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'बाकी टेस्ट' : 'Pending Tests'}</h3>
-              <p className="text-[9px] text-gray-500">{sorted.length} {l === 'hi' ? 'बाकी' : 'pending'}</p>
-            </div>
-          </div>
-          {criticalCount > 0 && (
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 flex items-center gap-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-              {criticalCount} {l === 'hi' ? 'जरूरी' : 'urgent'}
-            </span>
-          )}
+          <div className="flex items-center gap-2"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow"><Calendar className="w-4 h-4 text-white" /></div><div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'बाकी टेस्ट' : 'Pending Tests'}</h3><p className="text-[9px] text-gray-500">{sorted.length} {l === 'hi' ? 'बाकी' : 'pending'}</p></div></div>
+          {criticalCount > 0 && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />{criticalCount} {l === 'hi' ? 'जरूरी' : 'urgent'}</span>}
         </div>
-
-        {/* Tabs */}
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
-          {[
-            { id: 'all', label: l === 'hi' ? 'सभी' : 'All', count: notAttemptedTests.length },
-            { id: 'paper1', label: 'P1', count: paper1NotAttempted.length },
-            { id: 'paper2', label: 'P2', count: paper2NotAttempted.length },
-          ].map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-[10px] font-bold transition-all
-                ${activeTab === tab.id ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              {tab.label}
-              <span className={`text-[8px] px-1 rounded-full ${activeTab === tab.id ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-gray-200 text-gray-500 dark:bg-gray-600'}`}>{tab.count}</span>
-            </button>
+          {[{ id: 'all', label: l === 'hi' ? 'सभी' : 'All', count: notAttemptedTests.length }, { id: 'paper1', label: 'P1', count: paper1NotAttempted.length }, { id: 'paper2', label: 'P2', count: paper2NotAttempted.length }].map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-[10px] font-bold transition-all ${activeTab === tab.id ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{tab.label}<span className={`text-[8px] px-1 rounded-full ${activeTab === tab.id ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-gray-200 text-gray-500 dark:bg-gray-600'}`}>{tab.count}</span></button>
           ))}
         </div>
-
-        {/* Marathon button */}
-        {sorted[0] && (
-          <button onClick={() => navigate(`/test/${sorted[0]._id}`)}
-            className="w-full mt-2 p-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white flex items-center justify-center gap-2 hover:shadow-xl transition-all">
-            <Rocket className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-bold">{l === 'hi' ? 'मैराथन शुरू करें' : 'Start Marathon'}</span>
-            <ArrowRight className="w-3 h-3" />
-          </button>
-        )}
+        {sorted[0] && <button onClick={() => navigate(`/test/${sorted[0]._id}`)} className="w-full mt-2 p-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white flex items-center justify-center gap-2 hover:shadow-xl transition-all"><Rocket className="w-3.5 h-3.5" /><span className="text-[10px] font-bold">{l === 'hi' ? 'मैराथन शुरू करें' : 'Start Marathon'}</span><ArrowRight className="w-3 h-3" /></button>}
       </div>
-
       <div className="p-3 max-h-[400px] overflow-y-auto space-y-1.5">
         {sorted.slice(0, 15).map((test, idx) => {
           const days = getDaysOld(test.createdAt);
-          const urgClass = days >= 14 ? 'border-red-200 bg-red-50/30 dark:border-red-900/30 dark:bg-red-900/5'
-            : days >= 7 ? 'border-orange-200 bg-orange-50/20 dark:border-orange-900/20 dark:bg-orange-900/5'
-            : 'border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-700/20';
-
+          const urgClass = days >= 14 ? 'border-red-200 bg-red-50/30 dark:border-red-900/30 dark:bg-red-900/5' : days >= 7 ? 'border-orange-200 bg-orange-50/20 dark:border-orange-900/20 dark:bg-orange-900/5' : 'border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-700/20';
           return (
             <div key={test._id || idx} className={`group flex items-center gap-2.5 p-2.5 rounded-xl border hover:shadow-lg hover:bg-white dark:hover:bg-gray-700 transition-all ${urgClass}`}>
-              <div className="flex-shrink-0 text-center w-8">
-                <p className="text-sm font-black text-gray-900 dark:text-white leading-none">{new Date(test.createdAt).getDate()}</p>
-                <p className="text-[7px] text-gray-400 uppercase">{new Date(test.createdAt).toLocaleDateString('en', { month: 'short' })}</p>
-              </div>
+              <div className="flex-shrink-0 text-center w-8"><p className="text-sm font-black text-gray-900 dark:text-white leading-none">{new Date(test.createdAt).getDate()}</p><p className="text-[7px] text-gray-400 uppercase">{new Date(test.createdAt).toLocaleDateString('en', { month: 'short' })}</p></div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1">
-                  <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{test.title || 'Untitled'}</h4>
-                  {test.paper && (
-                    <span className={`px-1 rounded text-[7px] font-bold flex-shrink-0 ${test.paper === 'paper1' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'}`}>
-                      {test.paper === 'paper1' ? 'P1' : 'P2'}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 text-[8px] text-gray-500 mt-0.5">
-                  <span><Hash className="w-2.5 h-2.5 inline" />{test.totalQuestions || 0}</span>
-                  <span><Clock className="w-2.5 h-2.5 inline" />{test.duration || 0}m</span>
-                  <span className={`font-bold ${days >= 14 ? 'text-red-500' : days >= 7 ? 'text-orange-500' : 'text-gray-400'}`}>{days}d ago</span>
-                </div>
+                <div className="flex items-center gap-1"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{test.title || 'Untitled'}</h4>{test.paper && <span className={`px-1 rounded text-[7px] font-bold flex-shrink-0 ${test.paper === 'paper1' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'}`}>{test.paper === 'paper1' ? 'P1' : 'P2'}</span>}</div>
+                <div className="flex items-center gap-2 text-[8px] text-gray-500 mt-0.5"><span><Hash className="w-2.5 h-2.5 inline" />{test.totalQuestions || 0}</span><span><Clock className="w-2.5 h-2.5 inline" />{test.duration || 0}m</span><span className={`font-bold ${days >= 14 ? 'text-red-500' : days >= 7 ? 'text-orange-500' : 'text-gray-400'}`}>{days}d ago</span></div>
               </div>
-              <button onClick={() => navigate(`/test/${test._id}`)}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-white flex-shrink-0 bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-lg transition-all">
-                <Play className="w-3 h-3" />{l === 'hi' ? 'दें' : 'Take'}
-              </button>
+              <button onClick={() => navigate(`/test/${test._id}`)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-white flex-shrink-0 bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-lg transition-all"><Play className="w-3 h-3" />{l === 'hi' ? 'दें' : 'Take'}</button>
             </div>
           );
         })}
       </div>
-
-      {sorted.length > 15 && (
-        <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 text-center">
-          <button onClick={() => navigate('/tests')} className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center justify-center gap-1 mx-auto">
-            {l === 'hi' ? `सभी ${sorted.length} टेस्ट देखें` : `View all ${sorted.length} tests`} <ArrowRight className="w-3 h-3" />
-          </button>
-        </div>
-      )}
+      {sorted.length > 15 && <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 text-center"><button onClick={() => navigate('/tests')} className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center justify-center gap-1 mx-auto">{l === 'hi' ? `सभी ${sorted.length} टेस्ट देखें` : `View all ${sorted.length} tests`} <ArrowRight className="w-3 h-3" /></button></div>}
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
 //   PAPER TABBED ACTIVITY
 // ════════════════════════════════════════════════════════════
-const PaperTabbedActivity = ({ allAttempts, paper1Attempts, paper2Attempts, allTests, paper1Tests, paper2Tests, notAttemptedTests, paper1NotAttempted, paper2NotAttempted, language, loading: la }) => {
+function PaperTabbedActivity({ allAttempts, paper1Attempts, paper2Attempts, allTests, paper1Tests, paper2Tests, notAttemptedTests, paper1NotAttempted, paper2NotAttempted, language, loading: la }) {
   const [mainTab, setMainTab] = useState('attempted');
   const [paperFilter, setPaperFilter] = useState('all');
   const navigate = useNavigate();
@@ -2473,135 +1961,73 @@ const PaperTabbedActivity = ({ allAttempts, paper1Attempts, paper2Attempts, allT
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="flex items-center justify-between px-4 pt-3 pb-1">
-        <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-          <History className="w-4 h-4 text-indigo-500" />{l === 'hi' ? 'गतिविधि' : 'Activity'}
-        </h3>
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5"><History className="w-4 h-4 text-indigo-500" />{l === 'hi' ? 'गतिविधि' : 'Activity'}</h3>
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
           {[{ id: 'all', l: l === 'hi' ? 'सभी' : 'All' }, { id: 'paper1', l: 'P1' }, { id: 'paper2', l: 'P2' }].map(pt => (
-            <button key={pt.id} onClick={() => setPaperFilter(pt.id)}
-              className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${paperFilter === pt.id ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500'}`}>
-              {pt.l}
-            </button>
+            <button key={pt.id} onClick={() => setPaperFilter(pt.id)} className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${paperFilter === pt.id ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500'}`}>{pt.l}</button>
           ))}
         </div>
       </div>
       <div className="flex border-b border-gray-100 dark:border-gray-700 px-1">
-        {[
-          { id: 'attempted', label: l === 'hi' ? 'दिए गए' : 'Attempted', Icon: CheckCircle, count: fA.length },
-          { id: 'created', label: l === 'hi' ? 'बनाए' : 'Created', Icon: PlusCircle, count: fT.length },
-          { id: 'pending', label: l === 'hi' ? 'बाकी' : 'Pending', Icon: Clock, count: fN.length },
-        ].map(t => (
-          <button key={t.id} onClick={() => setMainTab(t.id)}
-            className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 text-[11px] font-semibold transition-all
-              ${mainTab === t.id ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10' : 'text-gray-500 hover:text-gray-700'}`}>
-            <t.Icon className="w-3 h-3" />{t.label}
-            <span className={`text-[8px] font-bold px-1 rounded-full ${mainTab === t.id ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700'}`}>{t.count}</span>
-          </button>
+        {[{ id: 'attempted', label: l === 'hi' ? 'दिए गए' : 'Attempted', Icon: CheckCircle, count: fA.length }, { id: 'created', label: l === 'hi' ? 'बनाए' : 'Created', Icon: PlusCircle, count: fT.length }, { id: 'pending', label: l === 'hi' ? 'बाकी' : 'Pending', Icon: Clock, count: fN.length }].map(t => (
+          <button key={t.id} onClick={() => setMainTab(t.id)} className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 text-[11px] font-semibold transition-all ${mainTab === t.id ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10' : 'text-gray-500 hover:text-gray-700'}`}><t.Icon className="w-3 h-3" />{t.label}<span className={`text-[8px] font-bold px-1 rounded-full ${mainTab === t.id ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700'}`}>{t.count}</span></button>
         ))}
       </div>
       <div className="p-3 max-h-[400px] overflow-y-auto">
-        {mainTab === 'attempted' && (la
-          ? <div className="space-y-2">{[1, 2, 3].map(i => <Sk key={i} className="h-14 w-full" />)}</div>
-          : fA.length > 0 ? (
-            <div className="space-y-1.5">
-              {fA.slice(0, 10).map((a, i) => {
-                const pct = a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0;
-                const { g, c } = grd(pct);
-                const isLow = pct < 50;
-                return (
-                  <div key={a._id || i} onClick={() => navigate(`/results/${a._id}`)}
-                    className={`group flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all hover:shadow-lg
-                      ${isLow ? 'border-red-200 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/5' : 'border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-700/30'} hover:bg-white dark:hover:bg-gray-700`}>
-                    <span className="text-[8px] font-bold text-gray-400 w-3 text-center">#{i + 1}</span>
-                    <div className={`w-9 h-9 rounded-lg border flex items-center justify-center font-black text-sm flex-shrink-0 ${GC[c]}`}>{g}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1">
-                        <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{a.testId?.title || 'Test'}</h4>
-                        {isLow && <AlertTriangle className="w-3 h-3 text-red-500 flex-shrink-0" />}
-                        {a.testId?.paper && <span className={`px-1 rounded text-[7px] font-bold flex-shrink-0 ${a.testId.paper === 'paper1' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{a.testId.paper === 'paper1' ? 'P1' : 'P2'}</span>}
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500">
-                        <span><CheckCircle className="w-2.5 h-2.5 text-emerald-500 inline" />{a.correctCount || 0}</span>
-                        <span><XCircle className="w-2.5 h-2.5 text-red-400 inline" />{a.wrongCount || 0}</span>
-                        <span><Clock className="w-2.5 h-2.5 inline" />{tAgo(a.completedAt, l)}</span>
-                      </div>
-                    </div>
-                    <p className={`text-base font-black flex-shrink-0 ${isLow ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>{pct}<span className="text-[9px] text-gray-400">%</span></p>
-                    <Ring pct={pct} size={26} sw={2.5} color={pct >= 70 ? '#22c55e' : pct >= 50 ? '#3b82f6' : '#ef4444'}>
-                      <span className="text-[6px] font-bold text-gray-500">{pct}</span>
-                    </Ring>
-                    <ChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
-                  </div>
-                );
-              })}
-              <Link to="/results" className="flex items-center justify-center gap-1 p-2 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 text-[10px] font-semibold text-gray-500 hover:text-indigo-600 transition-colors">
-                <History className="w-3 h-3" />{l === 'hi' ? 'सभी देखें' : 'View All'}<ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <ClipboardList className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
-              <p className="text-xs text-gray-400 mb-3">{l === 'hi' ? 'कोई टेस्ट नहीं' : 'No tests taken'}</p>
-              <button onClick={() => navigate('/tests')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-semibold rounded-lg">
-                <Play className="w-3 h-3" />Take Test
-              </button>
-            </div>
-          )
-        )}
+        {mainTab === 'attempted' && (la ? <div className="space-y-2">{[1, 2, 3].map(i => <Sk key={i} className="h-14 w-full" />)}</div> : fA.length > 0 ? (
+          <div className="space-y-1.5">
+            {fA.slice(0, 10).map((a, i) => {
+              const pct = a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0;
+              const { g, c } = getGradeInfo(pct);
+              const bgCol = getGradeColor(c);
+              const isLow = pct < 50;
+              return (
+                <div key={a._id || i} onClick={() => navigate(`/results/${a._id}`)} className={`group flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all hover:shadow-lg ${isLow ? 'border-red-200 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/5' : 'border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-700/30'} hover:bg-white dark:hover:bg-gray-700`}>
+                  <span className="text-[8px] font-bold text-gray-400 w-3 text-center">#{i + 1}</span>
+                  <div className={`w-9 h-9 rounded-lg border flex items-center justify-center font-black text-sm flex-shrink-0 ${bgCol}`}>{g}</div>
+                  <div className="flex-1 min-w-0"><div className="flex items-center gap-1"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{a.testId?.title || 'Test'}</h4>{isLow && <AlertTriangle className="w-3 h-3 text-red-500 flex-shrink-0" />}{a.testId?.paper && <span className={`px-1 rounded text-[7px] font-bold flex-shrink-0 ${a.testId.paper === 'paper1' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{a.testId.paper === 'paper1' ? 'P1' : 'P2'}</span>}</div><div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500"><span><CheckCircle className="w-2.5 h-2.5 text-emerald-500 inline" />{a.correctCount || 0}</span><span><XCircle className="w-2.5 h-2.5 text-red-400 inline" />{a.wrongCount || 0}</span><span><Clock className="w-2.5 h-2.5 inline" />{tAgo(a.completedAt, l)}</span></div></div>
+                  <p className={`text-base font-black flex-shrink-0 ${isLow ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>{pct}<span className="text-[9px] text-gray-400">%</span></p>
+                  <Ring pct={pct} size={26} sw={2.5} color={pct >= 70 ? '#22c55e' : pct >= 50 ? '#3b82f6' : '#ef4444'}><span className="text-[6px] font-bold text-gray-500">{pct}</span></Ring>
+                  <ChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
+                </div>
+              );
+            })}
+            <Link to="/results" className="flex items-center justify-center gap-1 p-2 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 text-[10px] font-semibold text-gray-500 hover:text-indigo-600 transition-colors"><History className="w-3 h-3" />{l === 'hi' ? 'सभी देखें' : 'View All'}<ArrowRight className="w-3 h-3" /></Link>
+          </div>
+        ) : <div className="text-center py-8"><ClipboardList className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" /><p className="text-xs text-gray-400 mb-3">{l === 'hi' ? 'कोई टेस्ट नहीं' : 'No tests taken'}</p><button onClick={() => navigate('/tests')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-semibold rounded-lg"><Play className="w-3 h-3" />Take Test</button></div>)}
 
         {mainTab === 'created' && (fT.length > 0 ? (
           <div className="space-y-1.5">
             {fT.slice(0, 10).map((t, i) => (
               <div key={t._id || i} className="group flex items-center gap-2.5 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-700/30 hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg transition-all">
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow flex-shrink-0"><FileText className="w-4 h-4 text-white" /></div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title || 'Untitled'}</h4>
-                  <div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500">
-                    <span><Hash className="w-2.5 h-2.5 inline" />{t.totalQuestions || 0}</span>
-                    <span><Clock className="w-2.5 h-2.5 inline" />{t.duration || 0}m</span>
-                    <span>{tAgo(t.createdAt, l)}</span>
-                  </div>
-                </div>
+                <div className="flex-1 min-w-0"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title || 'Untitled'}</h4><div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500"><span><Hash className="w-2.5 h-2.5 inline" />{t.totalQuestions || 0}</span><span><Clock className="w-2.5 h-2.5 inline" />{t.duration || 0}m</span><span>{tAgo(t.createdAt, l)}</span></div></div>
                 <button onClick={() => navigate(`/test/${t._id}`)} className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-100 transition-colors flex-shrink-0"><Play className="w-3 h-3" /></button>
               </div>
             ))}
           </div>
-        ) : (
-          <div className="text-center py-8">
-            <PlusCircle className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
-            <p className="text-xs text-gray-400 mb-3">No tests created</p>
-            <button onClick={() => navigate('/tests/create')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-semibold rounded-lg"><PlusCircle className="w-3 h-3" />Create</button>
-          </div>
-        ))}
+        ) : <div className="text-center py-8"><PlusCircle className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" /><p className="text-xs text-gray-400 mb-3">No tests created</p><button onClick={() => navigate('/tests/create')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-semibold rounded-lg"><PlusCircle className="w-3 h-3" />Create</button></div>)}
 
         {mainTab === 'pending' && (fN.length > 0 ? (
           <div className="space-y-1.5">
             {fN.slice(0, 10).map((t, i) => (
               <div key={t._id || i} className="group flex items-center gap-2.5 p-2.5 rounded-xl bg-amber-50/30 dark:bg-amber-900/5 border border-amber-100 dark:border-amber-900/20 hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg transition-all">
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 flex items-center justify-center border border-amber-200 dark:border-amber-800 flex-shrink-0"><Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" /></div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title}</h4>
-                  <div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500">
-                    <span><Hash className="w-2.5 h-2.5 inline" />{t.totalQuestions || 0}</span>
-                    <span><Clock className="w-2.5 h-2.5 inline" />{t.duration || 0}m</span>
-                  </div>
-                </div>
+                <div className="flex-1 min-w-0"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title}</h4><div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500"><span><Hash className="w-2.5 h-2.5 inline" />{t.totalQuestions || 0}</span><span><Clock className="w-2.5 h-2.5 inline" />{t.duration || 0}m</span></div></div>
                 <button onClick={() => navigate(`/test/${t._id}`)} className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold rounded-lg hover:shadow-lg transition-all flex-shrink-0"><Play className="w-3 h-3" />{l === 'hi' ? 'दें' : 'Take'}</button>
               </div>
             ))}
           </div>
-        ) : (
-          <div className="text-center py-8"><CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-200 dark:text-emerald-900" /><p className="text-xs text-gray-400">All attempted!</p></div>
-        ))}
+        ) : <div className="text-center py-8"><CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-200 dark:text-emerald-900" /><p className="text-xs text-gray-400">All attempted!</p></div>)}
       </div>
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
-//   PAPER SECTION (Unit breakdown)
+//   PAPER SECTION
 // ════════════════════════════════════════════════════════════
-const PaperSection = ({ paper, title, subtitle, Icon, color, units, total, language, navigate }) => {
+function PaperSection({ paper, title, subtitle, Icon, color, units, total, language, navigate }) {
   const [open, setOpen] = useState(true);
   const sorted = [...units].sort((a, b) => b.count - a.count);
   const l = language;
@@ -2632,52 +2058,34 @@ const PaperSection = ({ paper, title, subtitle, Icon, color, units, total, langu
               {sorted.map((u, idx) => {
                 const pct = total > 0 ? Math.round((u.count / total) * 100) : 0;
                 return (
-                  <div key={idx} onClick={() => navigate(`/questions?paper=${paper}&unit=${encodeURIComponent(u._id?.unit || '')}`)}
-                    className={`group flex items-center gap-2 p-2 rounded-lg ${c.hover} border border-transparent hover:border-gray-200 dark:hover:border-gray-700 cursor-pointer transition-all`}>
+                  <div key={idx} onClick={() => navigate(`/questions?paper=${paper}&unit=${encodeURIComponent(u._id?.unit || '')}`)} className={`group flex items-center gap-2 p-2 rounded-lg ${c.hover} border border-transparent hover:border-gray-200 dark:hover:border-gray-700 cursor-pointer transition-all`}>
                     <div className={`w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center ${idx === 0 ? `bg-gradient-to-br ${c.grad} text-white shadow` : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>{idx + 1}</div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <p className="text-[11px] font-semibold text-gray-800 dark:text-gray-200 truncate">{u._id?.unit || 'Unknown'}</p>
-                        {idx === 0 && <Crown className={`w-2.5 h-2.5 ${c.txt} flex-shrink-0`} />}
-                      </div>
-                      <div className="h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div className={`h-full bg-gradient-to-r ${c.bar} rounded-full transition-all duration-1000`} style={{ width: `${pct}%` }} />
-                      </div>
+                      <div className="flex items-center gap-1 mb-0.5"><p className="text-[11px] font-semibold text-gray-800 dark:text-gray-200 truncate">{u._id?.unit || 'Unknown'}</p>{idx === 0 && <Crown className={`w-2.5 h-2.5 ${c.txt} flex-shrink-0`} />}</div>
+                      <div className="h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"><div className={`h-full bg-gradient-to-r ${c.bar} rounded-full transition-all duration-1000`} style={{ width: `${pct}%` }} /></div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-[11px] font-bold text-gray-900 dark:text-white">{u.count}</p>
-                      <p className="text-[8px] text-gray-400">{pct}%</p>
-                    </div>
+                    <div className="text-right flex-shrink-0"><p className="text-[11px] font-bold text-gray-900 dark:text-white">{u.count}</p><p className="text-[8px] text-gray-400">{pct}%</p></div>
                     <ChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
                   </div>
                 );
               })}
-              <button onClick={() => navigate(`/questions?paper=${paper}`)}
-                className={`w-full mt-2 p-2 rounded-lg border border-dashed ${c.bdr} ${c.txt} text-[10px] font-semibold flex items-center justify-center gap-1 hover:bg-gray-50 dark:hover:bg-gray-700/50`}>
-                <Eye className="w-3 h-3" />{l === 'hi' ? 'सभी देखें' : 'View All'}<ArrowRight className="w-3 h-3" />
-              </button>
+              <button onClick={() => navigate(`/questions?paper=${paper}`)} className={`w-full mt-2 p-2 rounded-lg border border-dashed ${c.bdr} ${c.txt} text-[10px] font-semibold flex items-center justify-center gap-1 hover:bg-gray-50 dark:hover:bg-gray-700/50`}><Eye className="w-3 h-3" />{l === 'hi' ? 'सभी देखें' : 'View All'}<ArrowRight className="w-3 h-3" /></button>
             </div>
-          ) : (
-            <div className="text-center py-6">
-              <FileQuestion className="w-8 h-8 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
-              <p className="text-[10px] text-gray-400 mb-2">No questions</p>
-              <button onClick={() => navigate('/import')} className={`inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r ${c.grad} text-white text-[10px] font-semibold rounded-lg`}><Upload className="w-3 h-3" />Import</button>
-            </div>
-          )}
+          ) : <div className="text-center py-6"><FileQuestion className="w-8 h-8 mx-auto mb-2 text-gray-200 dark:text-gray-700" /><p className="text-[10px] text-gray-400 mb-2">No questions</p><button onClick={() => navigate('/import')} className={`inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r ${c.grad} text-white text-[10px] font-semibold rounded-lg`}><Upload className="w-3 h-3" />Import</button></div>}
         </div>
       )}
     </div>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
 //   ACHIEVEMENTS + STREAK + QUOTE + QUICK ACTIONS
 // ════════════════════════════════════════════════════════════
-const iconMap = { Layers, Crown, Play, Flame, Medal, Star, Target, PlusCircle };
-
-const AchievementCard = ({ achievements, language: l }) => {
+function AchievementCard({ achievements, language }) {
+  const l = language;
+  const achieveIcons = { Layers, Crown, Play, Flame, Medal, Star, Target, PlusCircle };
   const un = achievements.filter(a => a.unlocked).length;
-  const cM = {
+  const achieveColors = {
     amber: { bg: 'bg-amber-100 dark:bg-amber-900/30', t: 'text-amber-600 dark:text-amber-400', b: 'border-amber-200 dark:border-amber-800' },
     purple: { bg: 'bg-purple-100 dark:bg-purple-900/30', t: 'text-purple-600 dark:text-purple-400', b: 'border-purple-200 dark:border-purple-800' },
     blue: { bg: 'bg-blue-100 dark:bg-blue-900/30', t: 'text-blue-600 dark:text-blue-400', b: 'border-blue-200 dark:border-blue-800' },
@@ -2686,6 +2094,7 @@ const AchievementCard = ({ achievements, language: l }) => {
     indigo: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', t: 'text-indigo-600 dark:text-indigo-400', b: 'border-indigo-200 dark:border-indigo-800' },
     gray: { bg: 'bg-gray-100 dark:bg-gray-800', t: 'text-gray-400 dark:text-gray-600', b: 'border-gray-200 dark:border-gray-700' }
   };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center justify-between mb-3">
@@ -2694,8 +2103,8 @@ const AchievementCard = ({ achievements, language: l }) => {
       </div>
       <div className="grid grid-cols-4 gap-2">
         {achievements.map((a, i) => {
-          const c = cM[a.color] || cM.gray;
-          const Ic = iconMap[a.icon] || Star;
+          const c = achieveColors[a.color] || achieveColors.gray;
+          const Ic = achieveIcons[a.icon] || Star;
           return (
             <div key={i} className={`relative flex flex-col items-center gap-1 p-2 rounded-xl border transition-all ${a.unlocked ? `${c.bg} ${c.b}` : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 opacity-50'}`} title={a.desc}>
               {a.unlocked
@@ -2714,9 +2123,9 @@ const AchievementCard = ({ achievements, language: l }) => {
       </div>
     </div>
   );
-};
+}
 
-const StreakCard = ({ streak, longestStreak, language: l }) => {
+function StreakCard({ streak, longestStreak, language: l }) {
   const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   const today = new Date().getDay();
   return (
@@ -2736,20 +2145,22 @@ const StreakCard = ({ streak, longestStreak, language: l }) => {
       </div>
     </div>
   );
-};
+}
 
-const quotes = [
-  { t: "Success is not final, failure is not fatal.", a: "Churchill" },
-  { t: "The only way to do great work is to love what you do.", a: "Jobs" },
-  { t: "Education is the most powerful weapon.", a: "Mandela" },
-  { t: "It does not matter how slowly you go.", a: "Confucius" },
-  { t: "Believe you can and you're halfway there.", a: "Roosevelt" },
-  { t: "The expert in anything was once a beginner.", a: "Hayes" },
-  { t: "Hard work beats talent when talent doesn't work hard.", a: "Notah" },
-];
-
-const QuoteCard = () => {
-  const [q] = useState(() => quotes[Math.floor(Math.random() * quotes.length)]);
+function QuoteCard() {
+  const [q] = useState(() => {
+    const quotes = [
+      { t: "Success is not final, failure is not fatal.", a: "Churchill" },
+      { t: "The only way to do great work is to love what you do.", a: "Jobs" },
+      { t: "Education is the most powerful weapon.", a: "Mandela" },
+      { t: "It does not matter how slowly you go.", a: "Confucius" },
+      { t: "Believe you can and you're halfway there.", a: "Roosevelt" },
+      { t: "The expert in anything was once a beginner.", a: "Hayes" },
+      { t: "Hard work beats talent when talent doesn't work hard.", a: "Notah" },
+    ];
+    return quotes[Math.floor(Math.random() * quotes.length)];
+  });
+  
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-4 text-white">
       <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-3xl" />
@@ -2758,9 +2169,9 @@ const QuoteCard = () => {
       <p className="text-[9px] text-white/50">- {q.a}</p>
     </div>
   );
-};
+}
 
-const QAction = ({ icon: Icon, title, desc, to, gradient, badge, delay = 0 }) => {
+function QAction({ icon: Icon, title, desc, to, gradient, badge, delay = 0 }) {
   const [v, setV] = useState(false);
   useEffect(() => { const t = setTimeout(() => setV(true), delay); return () => clearTimeout(t); }, [delay]);
   return (
@@ -2776,12 +2187,12 @@ const QAction = ({ icon: Icon, title, desc, to, gradient, badge, delay = 0 }) =>
       </div>
     </Link>
   );
-};
+}
 
 // ════════════════════════════════════════════════════════════
 //             MAIN DASHBOARD COMPONENT
 // ════════════════════════════════════════════════════════════
-const Dashboard = ({ language: propLanguage, setLanguage }) => {
+function Dashboard({ language: propLanguage, setLanguage }) {
   const navigate = useNavigate();
   const d = useDashboard();
   const greeting = getGreeting();
@@ -3051,6 +2462,6 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
       }}
     </Layout>
   );
-};
+}
 
 export default Dashboard;
