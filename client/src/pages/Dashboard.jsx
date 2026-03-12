@@ -1,10 +1,17 @@
 // client/src/pages/Dashboard.jsx
 // ═══════════════════════════════════════════════════════════════
-//  NETPREP ULTIMATE DASHBOARD - COMPLETE FILE (Part 1/3)
+//  NETPREP ULTIMATE DASHBOARD - PART 2 (Section 1/3)
+//  Save all 3 sections in ONE file: client/src/pages/Dashboard.jsx
 // ═══════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid,
+  LineChart, Line, Legend,
+} from 'recharts';
 import {
   FileQuestion, ClipboardList, BarChart3, TrendingUp, Upload,
   PlusCircle, Clock, Target, BookOpen, Award, ArrowRight,
@@ -167,7 +174,7 @@ const TrendBadge = ({ direction, size = 'sm' }) => {
 };
 
 // ════════════════════════════════════════════════════════════
-//                   STAT CARD
+//                   STAT CARD (Enhanced)
 // ════════════════════════════════════════════════════════════
 const StatCard = ({ icon: Icon, label, value, sub, gradient, iconBg, onClick, delay = 0, spark, trend }) => {
   const [v, setV] = useState(false);
@@ -208,7 +215,7 @@ const StatCard = ({ icon: Icon, label, value, sub, gradient, iconBg, onClick, de
 };
 
 // ════════════════════════════════════════════════════════════
-//   JRF PROBABILITY METER
+//   🆕 JRF PROBABILITY METER
 // ════════════════════════════════════════════════════════════
 const JRFProbabilityMeter = ({ data, language }) => {
   const l = language;
@@ -236,12 +243,20 @@ const JRFProbabilityMeter = ({ data, language }) => {
     critical: { bg: 'from-red-500 to-rose-600', text: 'text-red-400', badge: 'bg-red-500/20 border-red-500/30' },
   };
   const rc = riskColors[data.riskLevel] || riskColors.moderate;
-  const riskLabels = { safe: { en: 'Safe Zone', hi: 'सुरक्षित' }, moderate: { en: 'Moderate', hi: 'मध्यम' }, risky: { en: 'Risky', hi: 'जोखिम' }, critical: { en: 'Critical', hi: 'गंभीर' } };
+
+  const riskLabels = {
+    safe: { en: 'Safe Zone', hi: 'सुरक्षित' },
+    moderate: { en: 'Moderate', hi: 'मध्यम' },
+    risky: { en: 'Risky', hi: 'जोखिम' },
+    critical: { en: 'Critical', hi: 'गंभीर' },
+  };
 
   return (
     <div className="bg-gradient-to-br from-slate-800 via-indigo-900 to-slate-900 rounded-2xl p-5 text-white relative overflow-hidden">
       <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl" />
       <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl" />
+
+      {/* Header */}
       <div className="relative flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
@@ -257,22 +272,39 @@ const JRFProbabilityMeter = ({ data, language }) => {
           <span className={`text-[9px] font-bold ${rc.text}`}>{riskLabels[data.riskLevel]?.[l] || data.riskLevel}</span>
         </div>
       </div>
+
+      {/* Main Meters */}
       <div className="relative grid grid-cols-2 gap-4 mb-4">
+        {/* NET Probability */}
         <div className="text-center">
-          <Ring pct={data.netProbability} size={100} sw={7} color={data.netProbability >= 60 ? '#22c55e' : data.netProbability >= 40 ? '#f59e0b' : '#ef4444'} bg="rgba(255,255,255,0.08)">
-            <div><p className="text-xl font-black">{data.netProbability}%</p><p className="text-[7px] text-indigo-300/50 uppercase">NET</p></div>
+          <Ring pct={data.netProbability} size={100} sw={7}
+            color={data.netProbability >= 60 ? '#22c55e' : data.netProbability >= 40 ? '#f59e0b' : '#ef4444'}
+            bg="rgba(255,255,255,0.08)">
+            <div>
+              <p className="text-xl font-black">{data.netProbability}%</p>
+              <p className="text-[7px] text-indigo-300/50 uppercase">NET</p>
+            </div>
           </Ring>
           <p className="text-[10px] font-semibold mt-1.5 text-indigo-200">NET {l === 'hi' ? 'संभावना' : 'Probability'}</p>
           <p className="text-[8px] text-indigo-400/50">{l === 'hi' ? 'कटऑफ' : 'Cutoff'}: {data.netCutoff}%</p>
         </div>
+
+        {/* JRF Probability */}
         <div className="text-center">
-          <Ring pct={data.jrfProbability} size={100} sw={7} color={data.jrfProbability >= 60 ? '#22c55e' : data.jrfProbability >= 35 ? '#f59e0b' : '#ef4444'} bg="rgba(255,255,255,0.08)">
-            <div><p className="text-xl font-black">{data.jrfProbability}%</p><p className="text-[7px] text-indigo-300/50 uppercase">JRF</p></div>
+          <Ring pct={data.jrfProbability} size={100} sw={7}
+            color={data.jrfProbability >= 60 ? '#22c55e' : data.jrfProbability >= 35 ? '#f59e0b' : '#ef4444'}
+            bg="rgba(255,255,255,0.08)">
+            <div>
+              <p className="text-xl font-black">{data.jrfProbability}%</p>
+              <p className="text-[7px] text-indigo-300/50 uppercase">JRF</p>
+            </div>
           </Ring>
           <p className="text-[10px] font-semibold mt-1.5 text-indigo-200">JRF {l === 'hi' ? 'संभावना' : 'Probability'}</p>
           <p className="text-[8px] text-indigo-400/50">{l === 'hi' ? 'कटऑफ' : 'Cutoff'}: {data.jrfCutoff}%</p>
         </div>
       </div>
+
+      {/* Predicted Scores Strip */}
       <div className="grid grid-cols-3 gap-2 mb-4">
         {[
           { l: 'Paper 1', v: `${data.predictedP1}%`, icon: BookOpen, t: data.p1Trend },
@@ -287,44 +319,65 @@ const JRFProbabilityMeter = ({ data, language }) => {
           </div>
         ))}
       </div>
+
+      {/* Consistency Bar */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
           <span className="text-[9px] text-indigo-300/50">{l === 'hi' ? 'स्थिरता स्कोर' : 'Consistency Score'}</span>
           <span className="text-[10px] font-bold">{data.consistencyScore}%</span>
         </div>
         <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-          <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${data.consistencyScore}%`, background: data.consistencyScore >= 60 ? 'linear-gradient(90deg, #22c55e, #10b981)' : data.consistencyScore >= 40 ? 'linear-gradient(90deg, #f59e0b, #eab308)' : 'linear-gradient(90deg, #ef4444, #f97316)' }} />
+          <div className="h-full rounded-full transition-all duration-1000"
+            style={{
+              width: `${data.consistencyScore}%`,
+              background: data.consistencyScore >= 60 ? 'linear-gradient(90deg, #22c55e, #10b981)'
+                : data.consistencyScore >= 40 ? 'linear-gradient(90deg, #f59e0b, #eab308)'
+                : 'linear-gradient(90deg, #ef4444, #f97316)'
+            }} />
         </div>
       </div>
+
+      {/* Factors */}
       {data.factors.length > 0 && (
         <div className="mb-3">
           <p className="text-[9px] text-indigo-300/40 uppercase tracking-wider mb-1.5">{l === 'hi' ? 'प्रभावी कारक' : 'Key Factors'}</p>
           <div className="space-y-1">
             {data.factors.slice(0, 4).map((f, i) => (
               <div key={i} className="flex items-center gap-1.5 text-[9px]">
-                {f.type === 'positive' ? <CheckCircle className="w-3 h-3 text-emerald-400 flex-shrink-0" /> : <XCircle className="w-3 h-3 text-red-400 flex-shrink-0" />}
+                {f.type === 'positive'
+                  ? <CheckCircle className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                  : <XCircle className="w-3 h-3 text-red-400 flex-shrink-0" />}
                 <span className={f.type === 'positive' ? 'text-emerald-300/80' : 'text-red-300/80'}>{f.text}</span>
               </div>
             ))}
           </div>
         </div>
       )}
+
+      {/* Suggestions */}
       {data.suggestions.length > 0 && (
         <div className="bg-white/5 rounded-lg p-2.5 border border-white/5">
           <p className="text-[9px] text-indigo-300/40 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-            <Lightbulb className="w-3 h-3 text-yellow-400" />{l === 'hi' ? 'सुझाव' : 'Suggestions'}
+            <Lightbulb className="w-3 h-3 text-yellow-400" />
+            {l === 'hi' ? 'सुझाव' : 'Suggestions'}
           </p>
           <div className="space-y-1">
             {data.suggestions.slice(0, 3).map((s, i) => (
               <p key={i} className="text-[9px] text-indigo-200/60 flex items-start gap-1">
-                <ArrowRight className="w-2.5 h-2.5 mt-0.5 text-indigo-400 flex-shrink-0" />{s}
+                <ArrowRight className="w-2.5 h-2.5 mt-0.5 text-indigo-400 flex-shrink-0" />
+                {s}
               </p>
             ))}
           </div>
         </div>
       )}
+
+      {/* Confidence */}
       <div className="mt-3 flex items-center justify-between">
-        <span className="text-[8px] text-indigo-400/30">{l === 'hi' ? 'विश्वसनीयता' : 'Confidence'}: {data.confidence} ({data.dataPoints} {l === 'hi' ? 'डेटा' : 'data pts'})</span>
+        <span className="text-[8px] text-indigo-400/30">
+          {l === 'hi' ? 'विश्वसनीयता' : 'Confidence'}: {data.confidence}
+          ({data.dataPoints} {l === 'hi' ? 'डेटा' : 'data pts'})
+        </span>
         <span className="text-[8px] text-indigo-400/30">{l === 'hi' ? 'अनुमानित' : 'Predicted'}</span>
       </div>
     </div>
@@ -332,14 +385,17 @@ const JRFProbabilityMeter = ({ data, language }) => {
 };
 
 // ════════════════════════════════════════════════════════════
-//   EXAM COUNTDOWN
+//   🆕 EXAM COUNTDOWN
 // ════════════════════════════════════════════════════════════
 const ExamCountdown = ({ examDate, setExamDate, daysUntilExam, notAttemptedCount, language }) => {
   const [editing, setEditing] = useState(false);
   const [tempDate, setTempDate] = useState(examDate);
   const l = language;
 
-  const handleSave = () => { setExamDate(tempDate); setEditing(false); };
+  const handleSave = () => {
+    setExamDate(tempDate);
+    setEditing(false);
+  };
 
   if (!examDate) {
     return (
@@ -362,7 +418,13 @@ const ExamCountdown = ({ examDate, setExamDate, daysUntilExam, notAttemptedCount
   }
 
   const urgency = daysUntilExam <= 7 ? 'critical' : daysUntilExam <= 30 ? 'urgent' : daysUntilExam <= 90 ? 'moderate' : 'relaxed';
-  const gradients = { critical: 'from-red-600 via-rose-600 to-red-700', urgent: 'from-orange-500 via-amber-600 to-orange-700', moderate: 'from-blue-600 via-indigo-600 to-blue-700', relaxed: 'from-emerald-600 via-green-600 to-emerald-700' };
+  const gradients = {
+    critical: 'from-red-600 via-rose-600 to-red-700',
+    urgent: 'from-orange-500 via-amber-600 to-orange-700',
+    moderate: 'from-blue-600 via-indigo-600 to-blue-700',
+    relaxed: 'from-emerald-600 via-green-600 to-emerald-700',
+  };
+
   const testsPerDay = daysUntilExam > 0 ? Math.ceil(notAttemptedCount / daysUntilExam) : notAttemptedCount;
 
   return (
@@ -370,12 +432,19 @@ const ExamCountdown = ({ examDate, setExamDate, daysUntilExam, notAttemptedCount
       <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full blur-3xl" />
       <div className="relative">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2"><CalendarDays className="w-5 h-5" /><span className="font-bold text-xs">{l === 'hi' ? 'UGC NET परीक्षा' : 'UGC NET Exam'}</span></div>
-          <button onClick={() => setEditing(!editing)} className="p-1 rounded-lg bg-white/10 hover:bg-white/20"><Settings className="w-3 h-3" /></button>
+          <div className="flex items-center gap-2">
+            <CalendarDays className="w-5 h-5" />
+            <span className="font-bold text-xs">{l === 'hi' ? 'UGC NET परीक्षा' : 'UGC NET Exam'}</span>
+          </div>
+          <button onClick={() => setEditing(!editing)} className="p-1 rounded-lg bg-white/10 hover:bg-white/20">
+            <Settings className="w-3 h-3" />
+          </button>
         </div>
+
         {editing ? (
           <div className="space-y-2">
-            <input type="date" value={tempDate || examDate} onChange={e => setTempDate(e.target.value)} className="w-full px-3 py-1.5 rounded-lg bg-white/20 border border-white/20 text-white text-xs focus:outline-none" />
+            <input type="date" value={tempDate || examDate} onChange={e => setTempDate(e.target.value)}
+              className="w-full px-3 py-1.5 rounded-lg bg-white/20 border border-white/20 text-white text-xs focus:outline-none" />
             <div className="flex gap-2">
               <button onClick={handleSave} className="flex-1 px-3 py-1.5 bg-white text-indigo-600 font-bold text-xs rounded-lg">Save</button>
               <button onClick={() => setEditing(false)} className="px-3 py-1.5 bg-white/10 text-xs rounded-lg">Cancel</button>
@@ -384,13 +453,23 @@ const ExamCountdown = ({ examDate, setExamDate, daysUntilExam, notAttemptedCount
         ) : (
           <>
             <div className="text-center mb-3">
-              <p className={`text-4xl font-black ${urgency === 'critical' ? 'animate-pulse' : ''}`}>{daysUntilExam}</p>
+              <p className={`text-4xl font-black ${urgency === 'critical' ? 'animate-pulse' : ''}`}>
+                {daysUntilExam}
+              </p>
               <p className="text-xs text-white/70">{l === 'hi' ? 'दिन शेष' : 'Days Remaining'}</p>
-              <p className="text-[9px] text-white/40 mt-0.5">{new Date(examDate).toLocaleDateString(l === 'hi' ? 'hi-IN' : 'en', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              <p className="text-[9px] text-white/40 mt-0.5">
+                {new Date(examDate).toLocaleDateString(l === 'hi' ? 'hi-IN' : 'en', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div className="bg-white/10 rounded-lg p-2 text-center"><p className="text-lg font-black">{notAttemptedCount}</p><p className="text-[8px] text-white/50">{l === 'hi' ? 'बाकी टेस्ट' : 'Pending Tests'}</p></div>
-              <div className="bg-white/10 rounded-lg p-2 text-center"><p className="text-lg font-black">{testsPerDay}</p><p className="text-[8px] text-white/50">{l === 'hi' ? 'टेस्ट/दिन' : 'Tests/Day'}</p></div>
+              <div className="bg-white/10 rounded-lg p-2 text-center">
+                <p className="text-lg font-black">{notAttemptedCount}</p>
+                <p className="text-[8px] text-white/50">{l === 'hi' ? 'बाकी टेस्ट' : 'Pending Tests'}</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-2 text-center">
+                <p className="text-lg font-black">{testsPerDay}</p>
+                <p className="text-[8px] text-white/50">{l === 'hi' ? 'टेस्ट/दिन' : 'Tests/Day'}</p>
+              </div>
             </div>
           </>
         )}
@@ -400,13 +479,20 @@ const ExamCountdown = ({ examDate, setExamDate, daysUntilExam, notAttemptedCount
 };
 
 // ════════════════════════════════════════════════════════════
-//   GOAL TRACKER
+//   🆕 ADVANCED GOAL TRACKER (Fully Working + Pressure)
+//   Replace the old GoalTracker in Dashboard.jsx
 // ════════════════════════════════════════════════════════════
-const GoalTracker = ({ goals, completionPct, todayActivity, todayDetailed, yesterdayActivity, customTargets, updateCustomTargets, dayProgress, goalStreak, goalsCompleted, totalGoals, pressureMessage, todayXP, streak, language, navigate }) => {
+const GoalTracker = ({
+  goals, completionPct, todayActivity, todayDetailed, yesterdayActivity,
+  customTargets, updateCustomTargets, dayProgress, goalStreak,
+  goalsCompleted, totalGoals, pressureMessage, todayXP, streak,
+  language, navigate
+}) => {
   const l = language;
   const [showSettings, setShowSettings] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
 
+  // Celebration effect when all goals done
   useEffect(() => {
     if (completionPct === 100 && todayDetailed?.count > 0 && !celebrating) {
       setCelebrating(true);
@@ -415,19 +501,30 @@ const GoalTracker = ({ goals, completionPct, todayActivity, todayDetailed, yeste
     }
   }, [completionPct, todayDetailed]);
 
-  const goalIconMap = { ClipboardList, Target, TrendingUp, Clock, RefreshCw, Flame, Timer, BarChart2, Hash, Zap };
-  const colorMap = {
-    blue: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400', bar: 'bg-blue-500', ring: '#3b82f6' },
-    emerald: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400', bar: 'bg-emerald-500', ring: '#22c55e' },
-    purple: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400', bar: 'bg-purple-500', ring: '#8b5cf6' },
-    amber: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-600 dark:text-amber-400', bar: 'bg-amber-500', ring: '#f59e0b' },
-    red: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400', bar: 'bg-red-500', ring: '#ef4444' },
-    orange: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-600 dark:text-orange-400', bar: 'bg-orange-500', ring: '#f97316' },
-    cyan: { bg: 'bg-cyan-100 dark:bg-cyan-900/30', text: 'text-cyan-600 dark:text-cyan-400', bar: 'bg-cyan-500', ring: '#06b6d4' },
-    indigo: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-600 dark:text-indigo-400', bar: 'bg-indigo-500', ring: '#6366f1' },
-    teal: { bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-600 dark:text-teal-400', bar: 'bg-teal-500', ring: '#14b8a6' },
+  const iconMap = {
+    ClipboardList, Target, TrendingUp, Clock, RefreshCw, Flame,
+    Timer, BarChart2, Hash, Zap,
   };
-  const urgencyColors = { critical: 'bg-red-500 animate-pulse', high: 'bg-orange-500', medium: 'bg-amber-400', normal: 'bg-gray-300 dark:bg-gray-600' };
+
+  const colorMap = {
+    blue: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600 dark:text-blue-400', bar: 'bg-blue-500', ring: '#3b82f6', glow: 'shadow-blue-500/20' },
+    emerald: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-600 dark:text-emerald-400', bar: 'bg-emerald-500', ring: '#22c55e', glow: 'shadow-emerald-500/20' },
+    purple: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-600 dark:text-purple-400', bar: 'bg-purple-500', ring: '#8b5cf6', glow: 'shadow-purple-500/20' },
+    amber: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-600 dark:text-amber-400', bar: 'bg-amber-500', ring: '#f59e0b', glow: 'shadow-amber-500/20' },
+    red: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400', bar: 'bg-red-500', ring: '#ef4444', glow: 'shadow-red-500/20' },
+    orange: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-600 dark:text-orange-400', bar: 'bg-orange-500', ring: '#f97316', glow: 'shadow-orange-500/20' },
+    cyan: { bg: 'bg-cyan-100 dark:bg-cyan-900/30', text: 'text-cyan-600 dark:text-cyan-400', bar: 'bg-cyan-500', ring: '#06b6d4', glow: 'shadow-cyan-500/20' },
+    indigo: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-600 dark:text-indigo-400', bar: 'bg-indigo-500', ring: '#6366f1', glow: 'shadow-indigo-500/20' },
+    teal: { bg: 'bg-teal-100 dark:bg-teal-900/30', text: 'text-teal-600 dark:text-teal-400', bar: 'bg-teal-500', ring: '#14b8a6', glow: 'shadow-teal-500/20' },
+  };
+
+  const urgencyColors = {
+    critical: 'bg-red-500 animate-pulse',
+    high: 'bg-orange-500',
+    medium: 'bg-amber-400',
+    normal: 'bg-gray-300 dark:bg-gray-600',
+  };
+
   const pressureColors = {
     celebration: { bg: 'bg-emerald-50 dark:bg-emerald-900/10', border: 'border-emerald-300 dark:border-emerald-800', text: 'text-emerald-700 dark:text-emerald-400', icon: Trophy },
     critical: { bg: 'bg-red-50 dark:bg-red-900/10', border: 'border-red-300 dark:border-red-800', text: 'text-red-700 dark:text-red-400', icon: AlertTriangle },
@@ -443,6 +540,8 @@ const GoalTracker = ({ goals, completionPct, todayActivity, todayDetailed, yeste
 
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden ${celebrating ? 'ring-2 ring-emerald-400 shadow-lg shadow-emerald-500/20' : ''}`}>
+
+      {/* ── HEADER ── */}
       <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/10 dark:to-purple-900/10 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
@@ -454,64 +553,103 @@ const GoalTracker = ({ goals, completionPct, todayActivity, todayDetailed, yeste
                 {l === 'hi' ? 'आज के लक्ष्य' : "Today's Goals"}
                 {celebrating && <Sparkles className="w-3.5 h-3.5 text-yellow-500 animate-spin" />}
               </h3>
-              <p className="text-[9px] text-gray-500">{goalsCompleted}/{totalGoals} {l === 'hi' ? 'पूरे' : 'done'}
-                {goalStreak > 0 && <span className="ml-1 text-amber-600 dark:text-amber-400 font-bold"> | {goalStreak}d {l === 'hi' ? 'गोल स्ट्रीक' : 'goal streak'}</span>}</p>
+              <p className="text-[9px] text-gray-500">
+                {goalsCompleted}/{totalGoals} {l === 'hi' ? 'पूरे' : 'done'}
+                {goalStreak > 0 && <span className="ml-1 text-amber-600 dark:text-amber-400 font-bold"> | {goalStreak}d {l === 'hi' ? 'गोल स्ट्रीक' : 'goal streak'}</span>}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* XP Badge */}
             <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800">
               <Zap className="w-3 h-3 text-amber-600 dark:text-amber-400" />
               <span className="text-[9px] font-black text-amber-700 dark:text-amber-400">{todayXP} XP</span>
             </div>
-            <Ring pct={completionPct} size={36} sw={3} color={completionPct === 100 ? '#22c55e' : completionPct >= 50 ? '#f59e0b' : '#ef4444'}>
+            <Ring pct={completionPct} size={36} sw={3}
+              color={completionPct === 100 ? '#22c55e' : completionPct >= 50 ? '#f59e0b' : '#ef4444'}>
               <span className="text-[7px] font-bold text-gray-600 dark:text-gray-300">{completionPct}%</span>
             </Ring>
-            <button onClick={() => setShowSettings(!showSettings)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <button onClick={() => setShowSettings(!showSettings)}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
               <Settings className="w-3.5 h-3.5 text-gray-400" />
             </button>
           </div>
         </div>
+
+        {/* ── DAY PROGRESS BAR ── */}
         <div className="mb-2">
           <div className="flex items-center justify-between mb-0.5">
-            <span className="text-[8px] text-gray-500 flex items-center gap-1"><Clock className="w-2.5 h-2.5" />{l === 'hi' ? 'दिन की प्रगति' : 'Day Progress'}</span>
+            <span className="text-[8px] text-gray-500 flex items-center gap-1">
+              <Clock className="w-2.5 h-2.5" />
+              {l === 'hi' ? 'दिन की प्रगति' : 'Day Progress'}
+            </span>
             <span className={`text-[8px] font-bold ${dp.isAlmostOver ? 'text-red-600 dark:text-red-400 animate-pulse' : dp.isPastHalf ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500'}`}>
               {dp.remainingHours}h {dp.remainingMins}m {l === 'hi' ? 'बाकी' : 'left'}
             </span>
           </div>
           <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
-            <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${dp.pct}%`, background: dp.isAlmostOver ? 'linear-gradient(90deg, #ef4444, #f97316)' : dp.isPastHalf ? 'linear-gradient(90deg, #f59e0b, #eab308)' : 'linear-gradient(90deg, #3b82f6, #6366f1)' }} />
-            <div className="absolute top-0 h-full rounded-full bg-emerald-500/30" style={{ width: `${completionPct}%` }} />
+            <div className="h-full rounded-full transition-all duration-1000"
+              style={{
+                width: `${dp.pct}%`,
+                background: dp.isAlmostOver ? 'linear-gradient(90deg, #ef4444, #f97316)' : dp.isPastHalf ? 'linear-gradient(90deg, #f59e0b, #eab308)' : 'linear-gradient(90deg, #3b82f6, #6366f1)',
+              }} />
+            {/* Goal completion overlay */}
+            <div className="absolute top-0 h-full rounded-full bg-emerald-500/30"
+              style={{ width: `${completionPct}%` }} />
           </div>
           <div className="flex items-center justify-between mt-0.5">
             <span className="text-[7px] text-gray-400">{dp.pct}% {l === 'hi' ? 'बीत चुका' : 'elapsed'}</span>
             <span className="text-[7px] text-gray-400">{completionPct}% {l === 'hi' ? 'लक्ष्य' : 'goals'}</span>
           </div>
         </div>
+
+        {/* ── TODAY'S STATS STRIP ── */}
         <div className="flex items-center gap-2 text-[8px] flex-wrap">
           <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-bold">
             <ClipboardList className="w-2.5 h-2.5" />{todayDetailed?.count || 0} {l === 'hi' ? 'टेस्ट' : 'tests'}
           </span>
           {(todayDetailed?.count || 0) > 0 && (
             <>
-              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-bold"><Target className="w-2.5 h-2.5" />{todayDetailed?.accuracy || 0}%</span>
-              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-bold"><BarChart3 className="w-2.5 h-2.5" />{todayDetailed?.avgScore || 0}% avg</span>
-              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-bold"><Timer className="w-2.5 h-2.5" />{Math.round((todayDetailed?.timeSpent || 0) / 60)}m</span>
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-bold">
+                <Target className="w-2.5 h-2.5" />{todayDetailed?.accuracy || 0}%
+              </span>
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-bold">
+                <BarChart3 className="w-2.5 h-2.5" />{todayDetailed?.avgScore || 0}% avg
+              </span>
+              <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-bold">
+                <Timer className="w-2.5 h-2.5" />{Math.round((todayDetailed?.timeSpent || 0) / 60)}m
+              </span>
             </>
           )}
+          {/* Yesterday comparison */}
           {(yesterdayActivity?.count || 0) > 0 && (
-            <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded font-bold ${(todayDetailed?.count || 0) > yesterdayActivity.count ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : (todayDetailed?.count || 0) < yesterdayActivity.count ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}`}>
-              {(todayDetailed?.count || 0) >= yesterdayActivity.count ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />}
+            <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded font-bold
+              ${(todayDetailed?.count || 0) > yesterdayActivity.count
+                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                : (todayDetailed?.count || 0) < yesterdayActivity.count
+                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+              }`}>
+              {(todayDetailed?.count || 0) >= yesterdayActivity.count
+                ? <ArrowUp className="w-2.5 h-2.5" />
+                : <ArrowDown className="w-2.5 h-2.5" />}
               vs {l === 'hi' ? 'कल' : 'yday'}: {yesterdayActivity.count}
             </span>
           )}
         </div>
       </div>
+
+      {/* ── PRESSURE MESSAGE ── */}
       <div className={`px-4 py-2 border-b border-gray-100 dark:border-gray-700 ${pmStyle.bg} border-l-4 ${pmStyle.border}`}>
         <div className="flex items-center gap-2">
           <PMIcon className={`w-3.5 h-3.5 flex-shrink-0 ${pmStyle.text} ${pm.type === 'critical' ? 'animate-pulse' : ''}`} />
-          <p className={`text-[10px] font-semibold ${pmStyle.text}`}>{l === 'hi' ? pm.hi : pm.en}</p>
+          <p className={`text-[10px] font-semibold ${pmStyle.text}`}>
+            {l === 'hi' ? pm.hi : pm.en}
+          </p>
         </div>
       </div>
+
+      {/* ── SETTINGS PANEL ── */}
       {showSettings && (
         <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700">
           <p className="text-[10px] font-bold text-gray-600 dark:text-gray-300 mb-2">{l === 'hi' ? 'लक्ष्य सेटिंग्स' : 'Goal Settings'}</p>
@@ -531,41 +669,83 @@ const GoalTracker = ({ goals, completionPct, todayActivity, todayDetailed, yeste
           </div>
         </div>
       )}
+
+      {/* ── GOALS LIST ── */}
       <div className="p-3 space-y-1.5 max-h-[400px] overflow-y-auto">
         {goals.map((goal, i) => {
-          const Icon = goalIconMap[goal.icon] || Target;
+          const Icon = iconMap[goal.icon] || Target;
           const cc = colorMap[goal.color] || colorMap.blue;
           const pct = Math.min(100, Math.round((goal.current / Math.max(goal.target, 1)) * 100));
           const done = goal.current >= goal.target;
           const isOverAchieved = goal.current > goal.target;
           const urgDot = urgencyColors[goal.urgency] || urgencyColors.normal;
+
           return (
             <div key={goal.id || i}
               className={`relative flex items-start gap-2.5 p-2.5 rounded-xl border transition-all
-                ${done ? `bg-emerald-50/50 border-emerald-200 dark:bg-emerald-900/10 dark:border-emerald-800/30 ${isOverAchieved ? 'ring-1 ring-emerald-300 dark:ring-emerald-700' : ''}` : goal.urgency === 'critical' ? 'bg-red-50/30 border-red-200 dark:bg-red-900/5 dark:border-red-900/30' : goal.urgency === 'high' ? 'bg-orange-50/30 border-orange-200 dark:bg-orange-900/5 dark:border-orange-900/30' : 'bg-gray-50/50 border-gray-100 dark:bg-gray-700/20 dark:border-gray-700/50'}`}>
-              {!done && goal.urgency !== 'normal' && <div className={`absolute top-2 right-2 w-2 h-2 rounded-full ${urgDot}`} />}
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 transition-all ${done ? 'bg-emerald-100 dark:bg-emerald-900/30 shadow-sm' : cc.bg}`}>
-                {done ? <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Icon className={`w-4 h-4 ${cc.text}`} />}
+                ${done
+                  ? `bg-emerald-50/50 border-emerald-200 dark:bg-emerald-900/10 dark:border-emerald-800/30 ${isOverAchieved ? 'ring-1 ring-emerald-300 dark:ring-emerald-700' : ''}`
+                  : goal.urgency === 'critical'
+                  ? 'bg-red-50/30 border-red-200 dark:bg-red-900/5 dark:border-red-900/30'
+                  : goal.urgency === 'high'
+                  ? 'bg-orange-50/30 border-orange-200 dark:bg-orange-900/5 dark:border-orange-900/30'
+                  : 'bg-gray-50/50 border-gray-100 dark:bg-gray-700/20 dark:border-gray-700/50'
+                }`}>
+
+              {/* Urgency dot */}
+              {!done && goal.urgency !== 'normal' && (
+                <div className={`absolute top-2 right-2 w-2 h-2 rounded-full ${urgDot}`} />
+              )}
+
+              {/* Icon */}
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 transition-all
+                ${done ? 'bg-emerald-100 dark:bg-emerald-900/30 shadow-sm' : cc.bg}`}>
+                {done
+                  ? <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  : <Icon className={`w-4 h-4 ${cc.text}`} />}
               </div>
+
+              {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
-                  <p className={`text-[11px] font-semibold truncate pr-4 ${done ? 'text-emerald-700 dark:text-emerald-400 line-through' : 'text-gray-900 dark:text-white'}`}>
+                  <p className={`text-[11px] font-semibold truncate pr-4
+                    ${done ? 'text-emerald-700 dark:text-emerald-400 line-through' : 'text-gray-900 dark:text-white'}`}>
                     {l === 'hi' ? goal.titleHi : goal.title}
                   </p>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <span className={`text-[9px] font-black ${done ? 'text-emerald-600 dark:text-emerald-400' : pct >= 50 ? cc.text : 'text-gray-500'}`}>
+                    <span className={`text-[9px] font-black
+                      ${done ? 'text-emerald-600 dark:text-emerald-400' : pct >= 50 ? cc.text : 'text-gray-500'}`}>
                       {goal.current}{goal.type === 'percentage' ? '%' : ''}/{goal.target}{goal.type === 'percentage' ? '%' : ''}
                     </span>
-                    {done && <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">+{goal.xp}XP</span>}
+                    {/* XP badge */}
+                    {done && (
+                      <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        +{goal.xp}XP
+                      </span>
+                    )}
                   </div>
                 </div>
-                <p className={`text-[8px] mb-1 ${done ? 'text-emerald-600/60 dark:text-emerald-400/60' : 'text-gray-500'}`}>{l === 'hi' ? goal.descriptionHi : goal.description}</p>
+
+                {/* Description */}
+                <p className={`text-[8px] mb-1 ${done ? 'text-emerald-600/60 dark:text-emerald-400/60' : 'text-gray-500'}`}>
+                  {l === 'hi' ? goal.descriptionHi : goal.description}
+                </p>
+
+                {/* Progress bar */}
                 <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-1000 ${done ? 'bg-emerald-500' : cc.bar}`} style={{ width: `${pct}%` }} />
+                  <div className={`h-full rounded-full transition-all duration-1000 ${done ? 'bg-emerald-500' : cc.bar}`}
+                    style={{ width: `${pct}%` }} />
                 </div>
+
+                {/* Priority badge */}
                 {!done && (
                   <div className="flex items-center justify-between mt-1">
-                    <span className={`text-[7px] font-bold uppercase tracking-wider ${goal.priority === 'critical' ? 'text-red-500' : goal.priority === 'high' ? 'text-orange-500' : goal.priority === 'medium' ? 'text-blue-500' : 'text-gray-400'}`}>{goal.priority}</span>
+                    <span className={`text-[7px] font-bold uppercase tracking-wider
+                      ${goal.priority === 'critical' ? 'text-red-500' :
+                      goal.priority === 'high' ? 'text-orange-500' :
+                      goal.priority === 'medium' ? 'text-blue-500' : 'text-gray-400'}`}>
+                      {goal.priority}
+                    </span>
                     <span className="text-[7px] text-gray-400">{pct}%</span>
                   </div>
                 )}
@@ -574,15 +754,22 @@ const GoalTracker = ({ goals, completionPct, todayActivity, todayDetailed, yeste
           );
         })}
       </div>
+
+      {/* ── FOOTER ── */}
       <div className="px-4 py-2.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-[8px] text-gray-400">{l === 'hi' ? 'गोल स्ट्रीक' : 'Goal Streak'}: <b className="text-amber-600 dark:text-amber-400">{goalStreak}d</b></span>
+            <span className="text-[8px] text-gray-400">
+              {l === 'hi' ? 'गोल स्ट्रीक' : 'Goal Streak'}: <b className="text-amber-600 dark:text-amber-400">{goalStreak}d</b>
+            </span>
             <span className="text-[8px] text-gray-400">|</span>
-            <span className="text-[8px] text-gray-400">XP: <b className="text-indigo-600 dark:text-indigo-400">{todayXP}</b></span>
+            <span className="text-[8px] text-gray-400">
+              XP: <b className="text-indigo-600 dark:text-indigo-400">{todayXP}</b>
+            </span>
           </div>
           {(todayDetailed?.count || 0) === 0 && (
-            <button onClick={() => navigate && navigate('/tests')} className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[9px] font-bold rounded-lg hover:shadow-lg transition-all">
+            <button onClick={() => navigate && navigate('/tests')}
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[9px] font-bold rounded-lg hover:shadow-lg transition-all">
               <Play className="w-3 h-3" />{l === 'hi' ? 'शुरू करो!' : 'Start Now!'}
             </button>
           )}
@@ -591,13 +778,14 @@ const GoalTracker = ({ goals, completionPct, todayActivity, todayDetailed, yeste
     </div>
   );
 };
-
 // ════════════════════════════════════════════════════════════
-//  SYLLABUS COVERAGE HEATMAP
+//  🆕 SYLLABUS COVERAGE HEATMAP (FIXED)
+//  Replace the old SyllabusCoverageMap in Dashboard.jsx
 // ════════════════════════════════════════════════════════════
 const SyllabusCoverageMap = ({ coverage, language }) => {
   const l = language;
   const [activeTab, setActiveTab] = useState('paper1');
+
   const data = activeTab === 'paper1' ? coverage.paper1 : coverage.paper2;
   const summary = activeTab === 'paper1' ? coverage.paper1Summary : coverage.paper2Summary;
 
@@ -609,114 +797,216 @@ const SyllabusCoverageMap = ({ coverage, language }) => {
     not_started: { en: 'Not Started', hi: 'शुरू नहीं', color: 'bg-gray-400 dark:bg-gray-500', textColor: 'text-gray-500 dark:text-gray-400', border: 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-700/20' },
     no_tests: { en: 'No Tests', hi: 'कोई टेस्ट नहीं', color: 'bg-gray-300 dark:bg-gray-600', textColor: 'text-gray-400 dark:text-gray-500', border: 'border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/30' },
   };
-  const summaryKeyMap = { mastered: 'mastered', learning: 'learning', in_progress: 'inProgress', weak: 'weak', not_started: 'notStarted', no_tests: 'noTests' };
-  const testTypeLabels = { dpp: 'DPP', topic_test: 'Topic', chapter_test: 'Chapter', unit_test: 'Unit', practice: 'Practice', pyq_year: 'PYQ', full_mock_p1: 'Mock P1', full_mock_p2: 'Mock P2', full_mock_combined: 'Mock' };
+
+  // Map summary keys to levelLabels keys
+  const summaryKeyMap = {
+    mastered: 'mastered',
+    learning: 'learning',
+    in_progress: 'inProgress',
+    weak: 'weak',
+    not_started: 'notStarted',
+    no_tests: 'noTests',
+  };
+
+  // Test type display labels
+  const testTypeLabels = {
+    dpp: 'DPP', topic_test: 'Topic', chapter_test: 'Chapter',
+    unit_test: 'Unit', practice: 'Practice', pyq_year: 'PYQ',
+    full_mock_p1: 'Mock P1', full_mock_p2: 'Mock P2', full_mock_combined: 'Mock',
+  };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+      {/* Header */}
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center shadow"><Grid3X3 className="w-4 h-4 text-white" /></div>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center shadow">
+              <Grid3X3 className="w-4 h-4 text-white" />
+            </div>
             <div>
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'सिलेबस कवरेज' : 'Syllabus Coverage'}</h3>
-              <p className="text-[9px] text-gray-500">{l === 'hi' ? 'टेस्ट आधारित प्रगति' : 'Test-based progress'}</p>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                {l === 'hi' ? 'सिलेबस कवरेज' : 'Syllabus Coverage'}
+              </h3>
+              <p className="text-[9px] text-gray-500">
+                {l === 'hi' ? 'टेस्ट आधारित प्रगति' : 'Test-based progress'}
+              </p>
             </div>
           </div>
-          <Ring pct={coverage.overallPct} size={40} sw={3.5} color="#14b8a6"><span className="text-[8px] font-bold text-gray-600 dark:text-gray-300">{coverage.overallPct}%</span></Ring>
+          <Ring pct={coverage.overallPct} size={40} sw={3.5} color="#14b8a6">
+            <span className="text-[8px] font-bold text-gray-600 dark:text-gray-300">{coverage.overallPct}%</span>
+          </Ring>
         </div>
+
+        {/* Paper tabs */}
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
           {['paper1', 'paper2'].map(tab => {
             const tabSummary = tab === 'paper1' ? coverage.paper1Summary : coverage.paper2Summary;
             return (
               <button key={tab} onClick={() => setActiveTab(tab)}
-                className={`flex-1 px-3 py-1.5 rounded-md text-[10px] font-bold transition-all ${activeTab === tab ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                className={`flex-1 px-3 py-1.5 rounded-md text-[10px] font-bold transition-all
+                  ${activeTab === tab ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
                 {tab === 'paper1' ? 'Paper 1' : 'Paper 2'}
-                <span className={`ml-1 text-[8px] px-1 rounded-full ${activeTab === tab ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' : 'bg-gray-200 dark:bg-gray-600'}`}>{tabSummary.overallPct}%</span>
+                <span className={`ml-1 text-[8px] px-1 rounded-full ${activeTab === tab ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400' : 'bg-gray-200 dark:bg-gray-600'}`}>
+                  {tabSummary.overallPct}%
+                </span>
               </button>
             );
           })}
         </div>
       </div>
+
+      {/* Summary strip */}
       <div className="px-4 py-2 bg-gray-50/50 dark:bg-gray-700/20 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center gap-2 flex-wrap">
           {Object.entries(levelLabels).map(([key, val]) => {
-            const count = summary[summaryKeyMap[key]] || 0;
-            return (<div key={key} className="flex items-center gap-1"><div className={`w-2 h-2 rounded-sm ${val.color}`} /><span className="text-[8px] text-gray-500">{val[l] || val.en}: {count}</span></div>);
+            const summaryField = summaryKeyMap[key];
+            const count = summaryField ? (summary[summaryField] || 0) : 0;
+            return (
+              <div key={key} className="flex items-center gap-1">
+                <div className={`w-2 h-2 rounded-sm ${val.color}`} />
+                <span className="text-[8px] text-gray-500">{val[l] || val.en}: {count}</span>
+              </div>
+            );
           })}
         </div>
+        {/* Test counts */}
         <div className="flex items-center gap-3 mt-1 text-[8px] text-gray-400">
           <span>{l === 'hi' ? 'बनाए' : 'Created'}: {summary.totalTestsCreated || 0}</span>
           <span>{l === 'hi' ? 'दिए' : 'Attempted'}: {summary.totalTestsAttempted || 0}</span>
           <span>{l === 'hi' ? 'बाकी' : 'Pending'}: {summary.totalTestsPending || 0}</span>
         </div>
       </div>
+
+      {/* Heatmap Grid */}
       <div className="p-3">
         <div className="grid grid-cols-2 gap-2">
           {data.map((unit, i) => {
             const ll = levelLabels[unit.level] || levelLabels.not_started;
+            const borderClass = ll.border || 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-700/20';
+
             return (
               <div key={i} className="relative group">
-                <div className={`p-2.5 rounded-xl border-2 transition-all hover:shadow-lg cursor-pointer ${ll.border}`}>
+                <div className={`p-2.5 rounded-xl border-2 transition-all hover:shadow-lg cursor-pointer ${borderClass}`}>
+                  {/* Unit header */}
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[8px] font-bold text-gray-500 uppercase">{unit.unit}</span>
-                    {unit.accuracy > 0 && <span className={`text-[7px] font-bold px-1 py-0.5 rounded-full ${ll.color} text-white`}>{unit.accuracy}%</span>}
+                    <div className="flex items-center gap-1">
+                      {unit.accuracy > 0 && (
+                        <span className={`text-[7px] font-bold px-1 py-0.5 rounded-full ${ll.color} text-white`}>
+                          {unit.accuracy}%
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-[10px] font-semibold text-gray-800 dark:text-gray-200 truncate mb-1.5">{unit.name}</p>
+
+                  {/* Unit name */}
+                  <p className="text-[10px] font-semibold text-gray-800 dark:text-gray-200 truncate mb-1.5">
+                    {unit.name}
+                  </p>
+
+                  {/* Test stats */}
                   <div className="flex items-center gap-1.5 text-[8px] text-gray-500 mb-1">
-                    <span className="flex items-center gap-0.5"><ClipboardList className="w-2.5 h-2.5" />{unit.attemptedCount}/{unit.totalTests}</span>
-                    {unit.questionsAttempted > 0 && <span className="flex items-center gap-0.5"><FileQuestion className="w-2.5 h-2.5" />{unit.questionsAttempted}Q</span>}
-                    {unit.bestScore > 0 && <span className="flex items-center gap-0.5"><Trophy className="w-2.5 h-2.5 text-amber-500" />{unit.bestScore}%</span>}
+                    <span className="flex items-center gap-0.5">
+                      <ClipboardList className="w-2.5 h-2.5" />
+                      {unit.attemptedCount}/{unit.totalTests}
+                    </span>
+                    {unit.questionsAttempted > 0 && (
+                      <span className="flex items-center gap-0.5">
+                        <FileQuestion className="w-2.5 h-2.5" />
+                        {unit.questionsAttempted}Q
+                      </span>
+                    )}
+                    {unit.bestScore > 0 && (
+                      <span className="flex items-center gap-0.5">
+                        <Trophy className="w-2.5 h-2.5 text-amber-500" />
+                        {unit.bestScore}%
+                      </span>
+                    )}
                   </div>
+
+                  {/* Test type badges */}
                   {unit.testTypeBreakdown && Object.keys(unit.testTypeBreakdown).length > 0 && (
                     <div className="flex flex-wrap gap-0.5 mb-1.5">
                       {Object.entries(unit.testTypeBreakdown).map(([type, td]) => (
-                        <span key={type} className={`text-[6px] font-bold px-1 py-0.5 rounded ${td.attempted >= td.total ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : td.attempted > 0 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+                        <span key={type} className={`text-[6px] font-bold px-1 py-0.5 rounded
+                          ${td.attempted >= td.total
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                            : td.attempted > 0
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                            : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                          }`}>
                           {testTypeLabels[type] || type}: {td.attempted}/{td.total}
                         </span>
                       ))}
                     </div>
                   )}
+
+                  {/* Coverage progress bar */}
                   <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${unit.totalTests > 0 ? Math.round((unit.attemptedCount / unit.totalTests) * 100) : 0}%`, backgroundColor: unit.color || '#d1d5db' }} />
+                    <div className="h-full rounded-full transition-all duration-1000"
+                      style={{
+                        width: `${unit.totalTests > 0 ? Math.round((unit.attemptedCount / unit.totalTests) * 100) : 0}%`,
+                        backgroundColor: unit.color || '#d1d5db'
+                      }} />
                   </div>
+
+                  {/* Level label */}
                   <div className="flex items-center justify-between mt-1">
-                    <span className={`text-[7px] font-bold ${ll.textColor}`}>{ll[l] || ll.en}</span>
-                    {unit.totalTests > 0 && <span className="text-[7px] text-gray-400">{Math.round((unit.attemptedCount / unit.totalTests) * 100)}%</span>}
+                    <span className={`text-[7px] font-bold ${ll.textColor}`}>
+                      {ll[l] || ll.en}
+                    </span>
+                    {unit.totalTests > 0 && (
+                      <span className="text-[7px] text-gray-400">
+                        {Math.round((unit.attemptedCount / unit.totalTests) * 100)}%
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
             );
           })}
         </div>
+
+        {/* No data message */}
         {data.length === 0 && (
-          <div className="text-center py-8"><Grid3X3 className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" /><p className="text-xs text-gray-400">{l === 'hi' ? 'कोई डेटा नहीं' : 'No data available'}</p></div>
+          <div className="text-center py-8">
+            <Grid3X3 className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
+            <p className="text-xs text-gray-400">{l === 'hi' ? 'कोई डेटा नहीं' : 'No data available'}</p>
+          </div>
         )}
       </div>
     </div>
   );
 };
 
-// ═══════════════════════════════════════════════════════════
-// PART 2/3 — Paste directly below Part 1/3 (NO gap, NO duplicate imports)
-// ═══════════════════════════════════════════════════════════
-
 // ════════════════════════════════════════════════════════════
-//   SPEED ANALYTICS CARD
+//   🆕 SPEED ANALYTICS CARD
 // ════════════════════════════════════════════════════════════
 const SpeedAnalyticsCard = ({ data, language }) => {
   const l = language;
   if (!data || data.speedTrend.length === 0) return null;
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow"><Zap className="w-4 h-4 text-white" /></div>
-          <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गति विश्लेषण' : 'Speed Analytics'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'प्रति प्रश्न समय' : 'Time per question'}</p></div>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow">
+            <Zap className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गति विश्लेषण' : 'Speed Analytics'}</h3>
+            <p className="text-[9px] text-gray-500">{l === 'hi' ? 'प्रति प्रश्न समय' : 'Time per question'}</p>
+          </div>
         </div>
-        <div className="text-right"><p className="text-lg font-black text-gray-900 dark:text-white">{data.avgTimePerQ}s</p><p className="text-[8px] text-gray-400">{l === 'hi' ? 'औसत' : 'avg'}/Q</p></div>
+        <div className="text-right">
+          <p className="text-lg font-black text-gray-900 dark:text-white">{data.avgTimePerQ}s</p>
+          <p className="text-[8px] text-gray-400">{l === 'hi' ? 'औसत' : 'avg'}/Q</p>
+        </div>
       </div>
+
       <div className="p-4">
+        {/* Speed vs Accuracy Chart */}
         <div style={{ height: 160 }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data.speedTrend} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}>
@@ -729,11 +1019,27 @@ const SpeedAnalyticsCard = ({ data, language }) => {
             </LineChart>
           </ResponsiveContainer>
         </div>
+
+        {/* Stats */}
         <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-          <div className="text-center"><Zap className="w-3 h-3 mx-auto mb-0.5 text-emerald-500" /><p className="text-xs font-bold text-gray-900 dark:text-white">{data.fastestTest?.avgTime || 0}s</p><p className="text-[7px] text-gray-400 uppercase">{l === 'hi' ? 'सबसे तेज' : 'Fastest'}</p></div>
-          <div className="text-center"><Timer className="w-3 h-3 mx-auto mb-0.5 text-blue-500" /><p className="text-xs font-bold text-gray-900 dark:text-white">{data.avgTimePerQ}s</p><p className="text-[7px] text-gray-400 uppercase">{l === 'hi' ? 'औसत' : 'Average'}</p></div>
-          <div className="text-center"><Hourglass className="w-3 h-3 mx-auto mb-0.5 text-amber-500" /><p className="text-xs font-bold text-gray-900 dark:text-white">{data.slowestTest?.avgTime || 0}s</p><p className="text-[7px] text-gray-400 uppercase">{l === 'hi' ? 'सबसे धीमा' : 'Slowest'}</p></div>
+          <div className="text-center">
+            <Zap className="w-3 h-3 mx-auto mb-0.5 text-emerald-500" />
+            <p className="text-xs font-bold text-gray-900 dark:text-white">{data.fastestTest?.avgTime || 0}s</p>
+            <p className="text-[7px] text-gray-400 uppercase">{l === 'hi' ? 'सबसे तेज' : 'Fastest'}</p>
+          </div>
+          <div className="text-center">
+            <Timer className="w-3 h-3 mx-auto mb-0.5 text-blue-500" />
+            <p className="text-xs font-bold text-gray-900 dark:text-white">{data.avgTimePerQ}s</p>
+            <p className="text-[7px] text-gray-400 uppercase">{l === 'hi' ? 'औसत' : 'Average'}</p>
+          </div>
+          <div className="text-center">
+            <Hourglass className="w-3 h-3 mx-auto mb-0.5 text-amber-500" />
+            <p className="text-xs font-bold text-gray-900 dark:text-white">{data.slowestTest?.avgTime || 0}s</p>
+            <p className="text-[7px] text-gray-400 uppercase">{l === 'hi' ? 'सबसे धीमा' : 'Slowest'}</p>
+          </div>
         </div>
+
+        {/* Time Distribution */}
         <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
           <p className="text-[9px] font-bold text-gray-500 mb-2 uppercase">{l === 'hi' ? 'समय वितरण' : 'Time Distribution'}</p>
           <div className="flex items-end gap-1" style={{ height: 40 }}>
@@ -741,7 +1047,8 @@ const SpeedAnalyticsCard = ({ data, language }) => {
               const maxVal = Math.max(...data.timeDistribution.map(d => d.value), 1);
               return (
                 <div key={i} className="flex-1 flex flex-col items-center">
-                  <div className="w-full rounded-t-sm bg-gradient-to-t from-cyan-500 to-blue-400 transition-all duration-700" style={{ height: `${Math.max((b.value / maxVal) * 100, 5)}%` }} />
+                  <div className="w-full rounded-t-sm bg-gradient-to-t from-cyan-500 to-blue-400 transition-all duration-700"
+                    style={{ height: `${Math.max((b.value / maxVal) * 100, 5)}%` }} />
                   <span className="text-[6px] text-gray-400 mt-0.5">{b.name}</span>
                 </div>
               );
@@ -754,32 +1061,68 @@ const SpeedAnalyticsCard = ({ data, language }) => {
 };
 
 // ════════════════════════════════════════════════════════════
-//   STUDY RECOMMENDATIONS
+//  🆕 STUDY RECOMMENDATIONS
 // ════════════════════════════════════════════════════════════
 const StudyRecommendations = ({ recommendations, language, navigate }) => {
   const l = language;
   if (!recommendations || recommendations.length === 0) return null;
-  const recIconMap = { AlertTriangle, BookOpen, Target, TrendingDown, Clock, Flame, BarChart2, Zap, Lightbulb };
-  const priorityColors = { critical: 'border-red-300 bg-red-50/50 dark:border-red-800/30 dark:bg-red-900/5', high: 'border-orange-300 bg-orange-50/50 dark:border-orange-800/30 dark:bg-orange-900/5', medium: 'border-blue-300 bg-blue-50/50 dark:border-blue-800/30 dark:bg-blue-900/5', low: 'border-gray-200 bg-gray-50/50 dark:border-gray-700/30 dark:bg-gray-700/10' };
-  const colorBg = { red: 'from-red-500 to-rose-600', orange: 'from-orange-500 to-amber-600', blue: 'from-blue-500 to-indigo-600', purple: 'from-purple-500 to-violet-600', amber: 'from-amber-500 to-yellow-600', cyan: 'from-cyan-500 to-teal-600' };
+
+  const iconMap = {
+    AlertTriangle, BookOpen, Target, TrendingDown, Clock, Flame, BarChart2, Zap, Lightbulb,
+  };
+
+  const priorityColors = {
+    critical: 'border-red-300 bg-red-50/50 dark:border-red-800/30 dark:bg-red-900/5',
+    high: 'border-orange-300 bg-orange-50/50 dark:border-orange-800/30 dark:bg-orange-900/5',
+    medium: 'border-blue-300 bg-blue-50/50 dark:border-blue-800/30 dark:bg-blue-900/5',
+    low: 'border-gray-200 bg-gray-50/50 dark:border-gray-700/30 dark:bg-gray-700/10',
+  };
+
+  const colorBg = {
+    red: 'from-red-500 to-rose-600', orange: 'from-orange-500 to-amber-600',
+    blue: 'from-blue-500 to-indigo-600', purple: 'from-purple-500 to-violet-600',
+    amber: 'from-amber-500 to-yellow-600', cyan: 'from-cyan-500 to-teal-600',
+  };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow"><Lightbulb className="w-4 h-4 text-white" /></div>
-        <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'स्मार्ट सुझाव' : 'Smart Recommendations'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'आपके डेटा पर आधारित' : 'Based on your data'}</p></div>
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow">
+          <Lightbulb className="w-4 h-4 text-white" />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+            {l === 'hi' ? 'स्मार्ट सुझाव' : 'Smart Recommendations'}
+          </h3>
+          <p className="text-[9px] text-gray-500">{l === 'hi' ? 'आपके डेटा पर आधारित' : 'Based on your data'}</p>
+        </div>
       </div>
+
       <div className="p-3 space-y-1.5">
         {recommendations.map((rec, i) => {
-          const Icon = recIconMap[rec.icon] || Lightbulb;
+          const Icon = iconMap[rec.icon] || Lightbulb;
           const bgGrad = colorBg[rec.color] || colorBg.blue;
           return (
-            <div key={rec.id || i} className={`flex items-start gap-2.5 p-2.5 rounded-xl border transition-all hover:shadow-md ${priorityColors[rec.priority] || priorityColors.medium}`}>
-              <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${bgGrad} flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5`}><Icon className="w-3.5 h-3.5 text-white" /></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-semibold text-gray-900 dark:text-white">{l === 'hi' ? rec.titleHi : rec.title}</p>
-                <p className="text-[9px] text-gray-500 mt-0.5">{l === 'hi' ? rec.detailHi : rec.detail}</p>
+            <div key={rec.id || i}
+              className={`flex items-start gap-2.5 p-2.5 rounded-xl border transition-all hover:shadow-md ${priorityColors[rec.priority] || priorityColors.medium}`}>
+              <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${bgGrad} flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5`}>
+                <Icon className="w-3.5 h-3.5 text-white" />
               </div>
-              <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${rec.priority === 'critical' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : rec.priority === 'high' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' : rec.priority === 'medium' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>{rec.priority}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold text-gray-900 dark:text-white">
+                  {l === 'hi' ? rec.titleHi : rec.title}
+                </p>
+                <p className="text-[9px] text-gray-500 mt-0.5">
+                  {l === 'hi' ? rec.detailHi : rec.detail}
+                </p>
+              </div>
+              <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0
+                ${rec.priority === 'critical' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
+                rec.priority === 'high' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' :
+                rec.priority === 'medium' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' :
+                'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+                {rec.priority}
+              </span>
             </div>
           );
         })}
@@ -789,24 +1132,36 @@ const StudyRecommendations = ({ recommendations, language, navigate }) => {
 };
 
 // ════════════════════════════════════════════════════════════
-//   SCORE DISTRIBUTION CHART
+//  🆕 SCORE DISTRIBUTION CHART
 // ════════════════════════════════════════════════════════════
 const ScoreDistributionCard = ({ data, language }) => {
   const l = language;
   if (!data || data.length === 0) return null;
   const maxCount = Math.max(...data.map(d => d.count), 1);
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow"><BarChart2 className="w-4 h-4 text-white" /></div>
-        <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'स्कोर वितरण' : 'Score Distribution'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'सभी टेस्ट' : 'All tests'}</p></div>
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow">
+          <BarChart2 className="w-4 h-4 text-white" />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'स्कोर वितरण' : 'Score Distribution'}</h3>
+          <p className="text-[9px] text-gray-500">{l === 'hi' ? 'सभी टेस्ट' : 'All tests'}</p>
+        </div>
       </div>
+
       <div className="flex items-end gap-2" style={{ height: 100 }}>
         {data.map((d, i) => (
           <div key={i} className="flex-1 flex flex-col items-center">
             <span className="text-[8px] font-bold text-gray-600 dark:text-gray-300 mb-1">{d.count}</span>
-            <div className="w-full rounded-t-lg transition-all duration-1000 relative group" style={{ height: `${Math.max((d.count / maxCount) * 100, 5)}%`, backgroundColor: d.color }}>
-              <div className="absolute -top-6 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-[8px] px-1.5 py-0.5 rounded whitespace-nowrap">{d.pct}%</div>
+            <div className="w-full rounded-t-lg transition-all duration-1000 relative group" style={{
+              height: `${Math.max((d.count / maxCount) * 100, 5)}%`,
+              backgroundColor: d.color,
+            }}>
+              <div className="absolute -top-6 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-[8px] px-1.5 py-0.5 rounded whitespace-nowrap">
+                {d.pct}%
+              </div>
             </div>
             <span className="text-[8px] text-gray-400 mt-1 font-medium">{d.range}%</span>
           </div>
@@ -817,11 +1172,12 @@ const ScoreDistributionCard = ({ data, language }) => {
 };
 
 // ════════════════════════════════════════════════════════════
-//   PERSONAL RECORDS
+//  🆕 PERSONAL RECORDS BOARD
 // ════════════════════════════════════════════════════════════
 const PersonalRecords = ({ records, language }) => {
   const l = language;
   if (!records || !records.highestScore) return null;
+
   const items = [
     { icon: Trophy, label: l === 'hi' ? 'सर्वश्रेष्ठ' : 'Best Score', value: `${records.highestScore?.pct || 0}%`, sub: records.highestScore?.title, color: 'from-amber-500 to-yellow-600' },
     { icon: Target, label: l === 'hi' ? 'सटीकता' : 'Best Accuracy', value: `${records.bestAccuracy?.accuracy || 0}%`, sub: records.bestAccuracy?.title, color: 'from-emerald-500 to-green-600' },
@@ -829,16 +1185,21 @@ const PersonalRecords = ({ records, language }) => {
     { icon: Calendar, label: l === 'hi' ? 'सर्वश्रेष्ठ दिन' : 'Best Day', value: records.bestDay?.count || 0, sub: records.bestDay?.date ? new Date(records.bestDay.date).toLocaleDateString(l === 'hi' ? 'hi-IN' : 'en', { day: 'numeric', month: 'short' }) : '-', color: 'from-blue-500 to-indigo-600' },
     { icon: Clock, label: l === 'hi' ? 'कुल समय' : 'Study Time', value: fmtTime(records.totalStudyTime || 0), sub: `${records.totalTestsTaken} tests`, color: 'from-purple-500 to-violet-600' },
   ];
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow"><Crown className="w-4 h-4 text-white" /></div>
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow">
+          <Crown className="w-4 h-4 text-white" />
+        </div>
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'व्यक्तिगत रिकॉर्ड' : 'Personal Records'}</h3>
       </div>
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
         {items.map((item, i) => (
           <div key={i} className="text-center p-2 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
-            <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center shadow-sm mx-auto mb-1.5`}><item.icon className="w-3.5 h-3.5 text-white" /></div>
+            <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center shadow-sm mx-auto mb-1.5`}>
+              <item.icon className="w-3.5 h-3.5 text-white" />
+            </div>
             <p className="text-sm font-black text-gray-900 dark:text-white">{item.value}</p>
             <p className="text-[8px] text-gray-400 uppercase">{item.label}</p>
             {item.sub && <p className="text-[7px] text-gray-400 truncate mt-0.5">{item.sub}</p>}
@@ -850,28 +1211,40 @@ const PersonalRecords = ({ records, language }) => {
 };
 
 // ════════════════════════════════════════════════════════════
-//   TIME OF DAY ANALYSIS
+//  🆕 TIME OF DAY ANALYSIS
 // ════════════════════════════════════════════════════════════
 const TimeOfDayCard = ({ data, language }) => {
   const l = language;
   if (!data || !data.bestPeriod) return null;
+
   const periodIcons = { Sun, Coffee, Sunset, Moon };
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow"><Clock className="w-4 h-4 text-white" /></div>
-          <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'समय विश्लेषण' : 'Best Study Time'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'सबसे अच्छा प्रदर्शन समय' : 'When you perform best'}</p></div>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow">
+            <Clock className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'समय विश्लेषण' : 'Best Study Time'}</h3>
+            <p className="text-[9px] text-gray-500">{l === 'hi' ? 'सबसे अच्छा प्रदर्शन समय' : 'When you perform best'}</p>
+          </div>
         </div>
       </div>
+
+      {/* Period cards */}
       <div className="grid grid-cols-4 gap-1.5 mb-3">
         {data.periodData.map((p, i) => {
           const PIcon = periodIcons[p.icon] || Sun;
           const isBest = p.name === data.bestPeriod?.name;
           return (
-            <div key={i} className={`text-center p-2 rounded-xl border transition-all ${isBest ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-900/20 ring-1 ring-indigo-200 dark:ring-indigo-800' : 'border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20'}`}>
+            <div key={i} className={`text-center p-2 rounded-xl border transition-all
+              ${isBest ? 'border-indigo-300 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-900/20 ring-1 ring-indigo-200 dark:ring-indigo-800' : 'border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20'}`}>
               <PIcon className={`w-4 h-4 mx-auto mb-1 ${isBest ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`} />
-              <p className={`text-xs font-bold ${isBest ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'}`}>{p.avgScore}%</p>
+              <p className={`text-xs font-bold ${isBest ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                {p.avgScore}%
+              </p>
               <p className="text-[7px] text-gray-400">{l === 'hi' ? p.nameHi : p.name}</p>
               <p className="text-[7px] text-gray-400">{p.count} tests</p>
               {isBest && <span className="text-[6px] font-bold text-indigo-600 dark:text-indigo-400">BEST</span>}
@@ -879,6 +1252,7 @@ const TimeOfDayCard = ({ data, language }) => {
           );
         })}
       </div>
+
       {data.bestHour && (
         <div className="bg-indigo-50 dark:bg-indigo-900/10 rounded-lg p-2 border border-indigo-200/50 dark:border-indigo-800/30">
           <p className="text-[9px] text-indigo-600 dark:text-indigo-400 font-semibold">
@@ -891,23 +1265,36 @@ const TimeOfDayCard = ({ data, language }) => {
 };
 
 // ════════════════════════════════════════════════════════════
-//   ACTIVITY HEATMAP CALENDAR
+//  🆕 ACTIVITY HEATMAP CALENDAR
 // ════════════════════════════════════════════════════════════
 const ActivityHeatmap = ({ activityMap, language }) => {
   const l = language;
   const [hoveredDay, setHoveredDay] = useState(null);
+
+  // Generate last 90 days
   const days = useMemo(() => {
     const result = [];
     const today = new Date();
     for (let i = 89; i >= 0; i--) {
-      const d = new Date(today); d.setDate(d.getDate() - i);
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
       const key = d.toISOString().split('T')[0];
       const data = activityMap[key];
-      result.push({ date: key, day: d.getDate(), month: d.getMonth(), dayOfWeek: d.getDay(), count: data?.count || 0, avgScore: data?.avgScore || 0, avgAccuracy: data?.avgAccuracy || 0 });
+      result.push({
+        date: key,
+        day: d.getDate(),
+        month: d.getMonth(),
+        dayOfWeek: d.getDay(),
+        count: data?.count || 0,
+        avgScore: data?.avgScore || 0,
+        avgAccuracy: data?.avgAccuracy || 0,
+      });
     }
     return result;
   }, [activityMap]);
+
   const maxCount = Math.max(...days.map(d => d.count), 1);
+
   const getColor = (count) => {
     if (count === 0) return 'bg-gray-100 dark:bg-gray-800';
     const intensity = count / maxCount;
@@ -916,27 +1303,47 @@ const ActivityHeatmap = ({ activityMap, language }) => {
     if (intensity > 0.25) return 'bg-emerald-400 dark:bg-emerald-700';
     return 'bg-emerald-200 dark:bg-emerald-800';
   };
+
+  // Group by weeks
   const weeks = [];
   let currentWeek = [];
-  days.forEach((d, i) => { currentWeek.push(d); if (d.dayOfWeek === 6 || i === days.length - 1) { weeks.push([...currentWeek]); currentWeek = []; } });
+  days.forEach((d, i) => {
+    currentWeek.push(d);
+    if (d.dayOfWeek === 6 || i === days.length - 1) {
+      weeks.push([...currentWeek]);
+      currentWeek = [];
+    }
+  });
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow"><Calendar className="w-4 h-4 text-white" /></div>
-          <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गतिविधि कैलेंडर' : 'Activity Calendar'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'पिछले 90 दिन' : 'Last 90 days'}</p></div>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow">
+            <Calendar className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गतिविधि कैलेंडर' : 'Activity Calendar'}</h3>
+            <p className="text-[9px] text-gray-500">{l === 'hi' ? 'पिछले 90 दिन' : 'Last 90 days'}</p>
+          </div>
         </div>
         <div className="flex items-center gap-0.5">
           <span className="text-[7px] text-gray-400 mr-1">{l === 'hi' ? 'कम' : 'Less'}</span>
-          {['bg-gray-100 dark:bg-gray-800', 'bg-emerald-200 dark:bg-emerald-800', 'bg-emerald-400 dark:bg-emerald-700', 'bg-emerald-500 dark:bg-emerald-600', 'bg-emerald-600 dark:bg-emerald-500'].map((c, i) => (<div key={i} className={`w-2.5 h-2.5 rounded-sm ${c}`} />))}
+          {['bg-gray-100 dark:bg-gray-800', 'bg-emerald-200 dark:bg-emerald-800', 'bg-emerald-400 dark:bg-emerald-700', 'bg-emerald-500 dark:bg-emerald-600', 'bg-emerald-600 dark:bg-emerald-500'].map((c, i) => (
+            <div key={i} className={`w-2.5 h-2.5 rounded-sm ${c}`} />
+          ))}
           <span className="text-[7px] text-gray-400 ml-1">{l === 'hi' ? 'ज्यादा' : 'More'}</span>
         </div>
       </div>
+
+      {/* Heatmap grid */}
       <div className="flex gap-0.5 overflow-x-auto pb-1">
         {weeks.map((week, wi) => (
           <div key={wi} className="flex flex-col gap-0.5">
             {week.map((day, di) => (
-              <div key={di} className="relative" onMouseEnter={() => setHoveredDay(day)} onMouseLeave={() => setHoveredDay(null)}>
+              <div key={di} className="relative"
+                onMouseEnter={() => setHoveredDay(day)}
+                onMouseLeave={() => setHoveredDay(null)}>
                 <div className={`w-3 h-3 rounded-sm ${getColor(day.count)} transition-all hover:ring-1 hover:ring-gray-400 cursor-pointer`} />
                 {hoveredDay?.date === day.date && (
                   <div className="absolute z-50 bottom-5 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-gray-700 text-white text-[8px] px-2 py-1.5 rounded-lg shadow-xl whitespace-nowrap">
@@ -955,42 +1362,55 @@ const ActivityHeatmap = ({ activityMap, language }) => {
 };
 
 // ════════════════════════════════════════════════════════════
-//   WEEKLY COMPARISON
+//  🆕 WEEKLY COMPARISON CARD
 // ════════════════════════════════════════════════════════════
 const WeeklyComparison = ({ data, language }) => {
   const l = language;
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow"><Activity className="w-4 h-4 text-white" /></div>
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow">
+          <Activity className="w-4 h-4 text-white" />
+        </div>
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'साप्ताहिक तुलना' : 'Weekly Comparison'}</h3>
       </div>
+
       <div className="grid grid-cols-2 gap-3">
+        {/* This week */}
         <div className="bg-indigo-50 dark:bg-indigo-900/10 rounded-xl p-3 border border-indigo-200/50 dark:border-indigo-800/30">
           <p className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-1">{l === 'hi' ? 'इस हफ्ते' : 'This Week'}</p>
           <p className="text-2xl font-black text-indigo-900 dark:text-indigo-200">{data.thisWeek.tests}</p>
           <p className="text-[9px] text-indigo-500">{l === 'hi' ? 'टेस्ट' : 'tests'} | {data.thisWeek.avgScore}% avg</p>
         </div>
+        {/* Last week */}
         <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-3 border border-gray-200 dark:border-gray-700">
           <p className="text-[9px] font-bold text-gray-500 uppercase mb-1">{l === 'hi' ? 'पिछला हफ्ता' : 'Last Week'}</p>
           <p className="text-2xl font-black text-gray-700 dark:text-gray-300">{data.lastWeek.tests}</p>
           <p className="text-[9px] text-gray-400">{l === 'hi' ? 'टेस्ट' : 'tests'} | {data.lastWeek.avgScore}% avg</p>
         </div>
       </div>
+
+      {/* Change indicator */}
       <div className="mt-2 flex items-center justify-center gap-2">
-        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${data.change > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : data.change < 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
-          {data.change > 0 ? <ArrowUp className="w-3 h-3" /> : data.change < 0 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}{Math.abs(data.change)} {l === 'hi' ? 'टेस्ट' : 'tests'}
+        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold
+          ${data.change > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+          data.change < 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+          'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+          {data.change > 0 ? <ArrowUp className="w-3 h-3" /> : data.change < 0 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+          {Math.abs(data.change)} {l === 'hi' ? 'टेस्ट' : 'tests'}
         </div>
-        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${data.scoreChange > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : data.scoreChange < 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
+        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold
+          ${data.scoreChange > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+          data.scoreChange < 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+          'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
           {data.scoreChange > 0 ? '+' : ''}{data.scoreChange}% score
         </div>
       </div>
     </div>
   );
 };
-
 // ════════════════════════════════════════════════════════════
-//   PAPER TREND CARD
+//  PAPER-WISE SCORE TREND (Enhanced)
 // ════════════════════════════════════════════════════════════
 const PaperTrendCard = ({ title, icon: Icon, color, data, trend, predicted, avgScore, accuracy, language }) => {
   const cMap = {
@@ -1002,15 +1422,25 @@ const PaperTrendCard = ({ title, icon: Icon, color, data, trend, predicted, avgS
   const best = data.length > 0 ? Math.max(...data.map(d => d.score)) : 0;
   const worst = data.length > 0 ? Math.min(...data.map(d => d.score)) : 0;
   const l = language;
+
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-2xl border-2 ${c.border} overflow-hidden`}>
       <div className={`${c.light} px-4 py-3 border-b ${c.border} flex items-center justify-between`}>
         <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${c.grad} flex items-center justify-center shadow`}><Icon className="w-4 h-4 text-white" /></div>
-          <div><h4 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h4><p className="text-[9px] text-gray-500">{data.length} {l === 'hi' ? 'टेस्ट दिए' : 'tests taken'}</p></div>
+          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${c.grad} flex items-center justify-center shadow`}>
+            <Icon className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h4>
+            <p className="text-[9px] text-gray-500">{data.length} {l === 'hi' ? 'टेस्ट दिए' : 'tests taken'}</p>
+          </div>
         </div>
         <div className="flex items-center gap-1.5">
-          {predicted !== null && <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${c.badge}`}>{l === 'hi' ? 'अनुमानित' : 'Pred'}: {predicted}%</span>}
+          {predicted !== null && (
+            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${c.badge}`}>
+              {l === 'hi' ? 'अनुमानित' : 'Pred'}: {predicted}%
+            </span>
+          )}
           <TrendBadge direction={trend} />
         </div>
       </div>
@@ -1020,7 +1450,12 @@ const PaperTrendCard = ({ title, icon: Icon, color, data, trend, predicted, avgS
             <div style={{ height: 150 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}>
-                  <defs><linearGradient id={`grad_${color}`} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={c.stroke} stopOpacity={0.3} /><stop offset="95%" stopColor={c.stroke} stopOpacity={0} /></linearGradient></defs>
+                  <defs>
+                    <linearGradient id={`grad_${color}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={c.stroke} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={c.stroke} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:stroke-gray-700" />
                   <XAxis dataKey="name" tick={{ fontSize: 9 }} stroke="#94a3b8" />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} stroke="#94a3b8" />
@@ -1031,13 +1466,25 @@ const PaperTrendCard = ({ title, icon: Icon, color, data, trend, predicted, avgS
               </ResponsiveContainer>
             </div>
             <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-              {[{ l: l === 'hi' ? 'औसत' : 'Avg', v: `${avg}%`, i: Gauge, cl: 'text-blue-500' }, { l: l === 'hi' ? 'सर्वश्रेष्ठ' : 'Best', v: `${best}%`, i: TrendingUp, cl: 'text-emerald-500' }, { l: l === 'hi' ? 'न्यूनतम' : 'Low', v: `${worst}%`, i: TrendingDown, cl: 'text-amber-500' }, { l: l === 'hi' ? 'सटीकता' : 'Acc', v: `${accuracy}%`, i: Target, cl: 'text-violet-500' }].map((m, i) => (
-                <div key={i} className="text-center"><m.i className={`w-3 h-3 mx-auto mb-0.5 ${m.cl}`} /><p className="text-xs font-bold text-gray-900 dark:text-white">{m.v}</p><p className="text-[7px] text-gray-400 uppercase">{m.l}</p></div>
+              {[
+                { l: l === 'hi' ? 'औसत' : 'Avg', v: `${avg}%`, i: Gauge, cl: 'text-blue-500' },
+                { l: l === 'hi' ? 'सर्वश्रेष्ठ' : 'Best', v: `${best}%`, i: TrendingUp, cl: 'text-emerald-500' },
+                { l: l === 'hi' ? 'न्यूनतम' : 'Low', v: `${worst}%`, i: TrendingDown, cl: 'text-amber-500' },
+                { l: l === 'hi' ? 'सटीकता' : 'Acc', v: `${accuracy}%`, i: Target, cl: 'text-violet-500' },
+              ].map((m, i) => (
+                <div key={i} className="text-center">
+                  <m.i className={`w-3 h-3 mx-auto mb-0.5 ${m.cl}`} />
+                  <p className="text-xs font-bold text-gray-900 dark:text-white">{m.v}</p>
+                  <p className="text-[7px] text-gray-400 uppercase">{m.l}</p>
+                </div>
               ))}
             </div>
           </>
         ) : (
-          <div className="text-center py-8"><BarChart3 className="w-8 h-8 mx-auto mb-2 text-gray-200 dark:text-gray-700" /><p className="text-[10px] text-gray-400">{l === 'hi' ? 'कोई डेटा नहीं' : 'No data yet'}</p></div>
+          <div className="text-center py-8">
+            <BarChart3 className="w-8 h-8 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
+            <p className="text-[10px] text-gray-400">{l === 'hi' ? 'कोई डेटा नहीं' : 'No data yet'}</p>
+          </div>
         )}
       </div>
     </div>
@@ -1045,50 +1492,94 @@ const PaperTrendCard = ({ title, icon: Icon, color, data, trend, predicted, avgS
 };
 
 // ════════════════════════════════════════════════════════════
-//   ERROR ANALYSIS CARD
+//  🆕 ERROR ANALYSIS CARD
 // ════════════════════════════════════════════════════════════
 const ErrorAnalysisCard = ({ data, language, navigate }) => {
   const l = language;
   if (!data || data.unitPerformance?.length === 0) return null;
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow"><AlertTriangle className="w-4 h-4 text-white" /></div>
-          <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गलती विश्लेषण' : 'Error Analysis'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'कमजोर क्षेत्र पहचानें' : 'Identify weak areas'}</p></div>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow">
+            <AlertTriangle className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गलती विश्लेषण' : 'Error Analysis'}</h3>
+            <p className="text-[9px] text-gray-500">{l === 'hi' ? 'कमजोर क्षेत्र पहचानें' : 'Identify weak areas'}</p>
+          </div>
         </div>
-        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">{l === 'hi' ? 'त्रुटि दर' : 'Error Rate'}: {data.errorRate}%</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+            {l === 'hi' ? 'त्रुटि दर' : 'Error Rate'}: {data.errorRate}%
+          </span>
+        </div>
       </div>
+
       <div className="p-4">
+        {/* Weak vs Strong summary */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-red-50 dark:bg-red-900/10 rounded-xl p-2.5 border border-red-200/50 dark:border-red-800/30">
-            <div className="flex items-center gap-1 mb-1"><TrendingDown className="w-3 h-3 text-red-500" /><span className="text-[9px] font-bold text-red-700 dark:text-red-400">{l === 'hi' ? 'कमजोर' : 'Weak'} ({data.weakUnits.length})</span></div>
-            {data.weakUnits.slice(0, 3).map((u, i) => (<p key={i} className="text-[8px] text-red-600/70 dark:text-red-400/70 truncate">{u.unit}: {u.accuracy}%</p>))}
+            <div className="flex items-center gap-1 mb-1">
+              <TrendingDown className="w-3 h-3 text-red-500" />
+              <span className="text-[9px] font-bold text-red-700 dark:text-red-400">
+                {l === 'hi' ? 'कमजोर' : 'Weak Areas'} ({data.weakUnits.length})
+              </span>
+            </div>
+            {data.weakUnits.slice(0, 3).map((u, i) => (
+              <p key={i} className="text-[8px] text-red-600/70 dark:text-red-400/70 truncate">
+                {u.unit}: {u.accuracy}%
+              </p>
+            ))}
           </div>
           <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-xl p-2.5 border border-emerald-200/50 dark:border-emerald-800/30">
-            <div className="flex items-center gap-1 mb-1"><TrendingUp className="w-3 h-3 text-emerald-500" /><span className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400">{l === 'hi' ? 'मजबूत' : 'Strong'} ({data.strongUnits.length})</span></div>
-            {data.strongUnits.slice(0, 3).map((u, i) => (<p key={i} className="text-[8px] text-emerald-600/70 dark:text-emerald-400/70 truncate">{u.unit}: {u.accuracy}%</p>))}
+            <div className="flex items-center gap-1 mb-1">
+              <TrendingUp className="w-3 h-3 text-emerald-500" />
+              <span className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400">
+                {l === 'hi' ? 'मजबूत' : 'Strong Areas'} ({data.strongUnits.length})
+              </span>
+            </div>
+            {data.strongUnits.slice(0, 3).map((u, i) => (
+              <p key={i} className="text-[8px] text-emerald-600/70 dark:text-emerald-400/70 truncate">
+                {u.unit}: {u.accuracy}%
+              </p>
+            ))}
           </div>
         </div>
+
+        {/* Unit performance bars */}
         <p className="text-[9px] font-bold text-gray-500 uppercase mb-2">{l === 'hi' ? 'इकाई प्रदर्शन' : 'Unit Performance'}</p>
         <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
           {(data.unitPerformance || []).slice(0, 10).map((u, i) => (
             <div key={i} className="flex items-center gap-2">
               <span className="text-[9px] font-medium text-gray-600 dark:text-gray-400 w-28 truncate flex-shrink-0">{u.unit}</span>
               <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${u.accuracy}%`, background: u.accuracy >= 70 ? '#22c55e' : u.accuracy >= 50 ? '#3b82f6' : u.accuracy >= 30 ? '#f59e0b' : '#ef4444' }} />
+                <div className="h-full rounded-full transition-all duration-1000"
+                  style={{
+                    width: `${u.accuracy}%`,
+                    background: u.accuracy >= 70 ? '#22c55e' : u.accuracy >= 50 ? '#3b82f6' : u.accuracy >= 30 ? '#f59e0b' : '#ef4444'
+                  }} />
               </div>
-              <span className={`text-[9px] font-bold w-8 text-right flex-shrink-0 ${u.accuracy >= 70 ? 'text-emerald-600' : u.accuracy >= 50 ? 'text-blue-600' : u.accuracy >= 30 ? 'text-amber-600' : 'text-red-600'}`}>{u.accuracy}%</span>
+              <span className={`text-[9px] font-bold w-8 text-right flex-shrink-0
+                ${u.accuracy >= 70 ? 'text-emerald-600' : u.accuracy >= 50 ? 'text-blue-600' : u.accuracy >= 30 ? 'text-amber-600' : 'text-red-600'}`}>
+                {u.accuracy}%
+              </span>
             </div>
           ))}
         </div>
+
+        {/* Improvement suggestions */}
         {data.improvementAreas.length > 0 && (
           <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
             <p className="text-[9px] font-bold text-gray-500 uppercase mb-1.5">{l === 'hi' ? 'सुधार क्षेत्र' : 'Improvement Areas'}</p>
             {data.improvementAreas.slice(0, 3).map((area, i) => (
               <div key={i} className="flex items-start gap-1.5 mb-1">
                 <AlertCircle className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" />
-                <div><p className="text-[9px] font-semibold text-gray-700 dark:text-gray-300">{area.unit} ({area.accuracy}%)</p><p className="text-[8px] text-gray-400">{area.suggestion}</p></div>
+                <div>
+                  <p className="text-[9px] font-semibold text-gray-700 dark:text-gray-300">{area.unit} ({area.accuracy}%)</p>
+                  <p className="text-[8px] text-gray-400">{area.suggestion}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -1099,18 +1590,30 @@ const ErrorAnalysisCard = ({ data, language, navigate }) => {
 };
 
 // ════════════════════════════════════════════════════════════
-//   TOPIC MASTERY RADAR
+//  🆕 TOPIC MASTERY RADAR
 // ════════════════════════════════════════════════════════════
 const TopicMasteryRadar = ({ data, language }) => {
   const l = language;
   if (!data || data.length === 0) return null;
-  const radarData = data.slice(0, 8).map(d => ({ ...d, subject: d.unit?.replace(/UNIT\s*/i, 'U').substring(0, 12) || 'Other' }));
+
+  // Shorten unit names for radar
+  const radarData = data.slice(0, 8).map(d => ({
+    ...d,
+    subject: d.unit?.replace(/UNIT\s*/i, 'U').substring(0, 12) || 'Other',
+  }));
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow"><Crosshair className="w-4 h-4 text-white" /></div>
-        <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'विषय दक्षता' : 'Topic Mastery'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'रडार चार्ट' : 'Radar chart'}</p></div>
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow">
+          <Crosshair className="w-4 h-4 text-white" />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'विषय दक्षता' : 'Topic Mastery'}</h3>
+          <p className="text-[9px] text-gray-500">{l === 'hi' ? 'रडार चार्ट' : 'Radar chart'}</p>
+        </div>
       </div>
+
       <div style={{ height: 220 }}>
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart data={radarData}>
@@ -1121,6 +1624,8 @@ const TopicMasteryRadar = ({ data, language }) => {
           </RadarChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Legend */}
       <div className="grid grid-cols-2 gap-1 mt-2">
         {radarData.map((d, i) => (
           <div key={i} className="flex items-center gap-1 text-[8px]">
@@ -1135,7 +1640,7 @@ const TopicMasteryRadar = ({ data, language }) => {
 };
 
 // ════════════════════════════════════════════════════════════
-//   NEEDS ATTENTION
+//  NEEDS ATTENTION (low scores)
 // ════════════════════════════════════════════════════════════
 const NeedsAttentionCard = ({ tests, language, navigate }) => {
   const l = language;
@@ -1144,8 +1649,13 @@ const NeedsAttentionCard = ({ tests, language, navigate }) => {
     <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-red-200/50 dark:border-red-800/30 overflow-hidden">
       <div className="bg-red-50 dark:bg-red-900/10 px-4 py-3 border-b border-red-200/50 dark:border-red-800/30 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow"><AlertTriangle className="w-4 h-4 text-white" /></div>
-          <div><h3 className="text-sm font-bold text-red-800 dark:text-red-300">{l === 'hi' ? 'ध्यान दें - कम स्कोर' : 'Needs Attention'}</h3><p className="text-[9px] text-red-600/60">{l === 'hi' ? '50% से कम स्कोर' : 'Score below 50%'}</p></div>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow">
+            <AlertTriangle className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-red-800 dark:text-red-300">{l === 'hi' ? 'ध्यान दें - कम स्कोर' : 'Needs Attention'}</h3>
+            <p className="text-[9px] text-red-600/60">{l === 'hi' ? '50% से कम स्कोर' : 'Score below 50%'}</p>
+          </div>
         </div>
         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">{tests.length}</span>
       </div>
@@ -1153,15 +1663,22 @@ const NeedsAttentionCard = ({ tests, language, navigate }) => {
         {tests.slice(0, 5).map((t, i) => {
           const { g, c } = grd(t.bestScore);
           return (
-            <div key={i} onClick={() => navigate(`/results/${t.lastAttempt?._id}`)} className="group flex items-center gap-2.5 p-2.5 rounded-xl bg-red-50/50 dark:bg-red-900/5 border border-red-100 dark:border-red-900/20 hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg cursor-pointer transition-all">
+            <div key={i} onClick={() => navigate(`/results/${t.lastAttempt?._id}`)}
+              className="group flex items-center gap-2.5 p-2.5 rounded-xl bg-red-50/50 dark:bg-red-900/5 border border-red-100 dark:border-red-900/20 hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg cursor-pointer transition-all">
               <div className="relative flex-shrink-0"><div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /></div>
               <div className={`w-9 h-9 rounded-lg border flex items-center justify-center font-black text-sm flex-shrink-0 ${GC[c]}`}>{g}</div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate group-hover:text-red-600 transition-colors">{t.test?.title || 'Test'}</h4>
-                <div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500"><span>Best: {t.bestScore}%</span><span>{t.attempts} att</span></div>
+                <div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500">
+                  <span>Best: {t.bestScore}%</span>
+                  <span>{t.attempts} att</span>
+                </div>
               </div>
               <p className="text-lg font-black text-red-600 dark:text-red-400 flex-shrink-0">{t.bestScore}%</p>
-              <button onClick={(e) => { e.stopPropagation(); navigate(`/test/${t.testId}`); }} className="p-1.5 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 transition-colors flex-shrink-0"><RefreshCw className="w-3.5 h-3.5" /></button>
+              <button onClick={(e) => { e.stopPropagation(); navigate(`/test/${t.testId}`); }}
+                className="p-1.5 rounded-lg bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 transition-colors flex-shrink-0">
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
             </div>
           );
         })}
@@ -1171,52 +1688,91 @@ const NeedsAttentionCard = ({ tests, language, navigate }) => {
 };
 
 // ════════════════════════════════════════════════════════════
-//   PENDING TESTS TIMELINE
+//  PENDING TESTS TIMELINE (Simplified but complete)
 // ════════════════════════════════════════════════════════════
 const PendingTimeline = ({ notAttemptedTests, paper1NotAttempted, paper2NotAttempted, language, navigate }) => {
   const [activeTab, setActiveTab] = useState('all');
   const l = language;
+
   const sorted = useMemo(() => {
     const base = activeTab === 'paper1' ? paper1NotAttempted : activeTab === 'paper2' ? paper2NotAttempted : notAttemptedTests;
     return [...base].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   }, [notAttemptedTests, paper1NotAttempted, paper2NotAttempted, activeTab]);
+
   if (notAttemptedTests.length === 0) return null;
+
   const getDaysOld = (date) => Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
   const criticalCount = sorted.filter(t => getDaysOld(t.createdAt) >= 14).length;
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow"><Calendar className="w-4 h-4 text-white" /></div>
-            <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'बाकी टेस्ट' : 'Pending Tests'}</h3><p className="text-[9px] text-gray-500">{sorted.length} {l === 'hi' ? 'बाकी' : 'pending'}</p></div>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow">
+              <Calendar className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'बाकी टेस्ट' : 'Pending Tests'}</h3>
+              <p className="text-[9px] text-gray-500">{sorted.length} {l === 'hi' ? 'बाकी' : 'pending'}</p>
+            </div>
           </div>
-          {criticalCount > 0 && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />{criticalCount} {l === 'hi' ? 'जरूरी' : 'urgent'}</span>}
+          {criticalCount > 0 && (
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 flex items-center gap-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+              {criticalCount} {l === 'hi' ? 'जरूरी' : 'urgent'}
+            </span>
+          )}
         </div>
+
+        {/* Tabs */}
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
-          {[{ id: 'all', label: l === 'hi' ? 'सभी' : 'All', count: notAttemptedTests.length }, { id: 'paper1', label: 'P1', count: paper1NotAttempted.length }, { id: 'paper2', label: 'P2', count: paper2NotAttempted.length }].map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-[10px] font-bold transition-all ${activeTab === tab.id ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              {tab.label}<span className={`text-[8px] px-1 rounded-full ${activeTab === tab.id ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-gray-200 text-gray-500 dark:bg-gray-600'}`}>{tab.count}</span>
+          {[
+            { id: 'all', label: l === 'hi' ? 'सभी' : 'All', count: notAttemptedTests.length },
+            { id: 'paper1', label: 'P1', count: paper1NotAttempted.length },
+            { id: 'paper2', label: 'P2', count: paper2NotAttempted.length },
+          ].map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-[10px] font-bold transition-all
+                ${activeTab === tab.id ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              {tab.label}
+              <span className={`text-[8px] px-1 rounded-full ${activeTab === tab.id ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-gray-200 text-gray-500 dark:bg-gray-600'}`}>{tab.count}</span>
             </button>
           ))}
         </div>
+
+        {/* Marathon button */}
         {sorted[0] && (
-          <button onClick={() => navigate(`/test/${sorted[0]._id}`)} className="w-full mt-2 p-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white flex items-center justify-center gap-2 hover:shadow-xl transition-all">
-            <Rocket className="w-3.5 h-3.5" /><span className="text-[10px] font-bold">{l === 'hi' ? 'मैराथन शुरू करें' : 'Start Marathon'}</span><ArrowRight className="w-3 h-3" />
+          <button onClick={() => navigate(`/test/${sorted[0]._id}`)}
+            className="w-full mt-2 p-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white flex items-center justify-center gap-2 hover:shadow-xl transition-all">
+            <Rocket className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-bold">{l === 'hi' ? 'मैराथन शुरू करें' : 'Start Marathon'}</span>
+            <ArrowRight className="w-3 h-3" />
           </button>
         )}
       </div>
+
       <div className="p-3 max-h-[400px] overflow-y-auto space-y-1.5">
         {sorted.slice(0, 15).map((test, idx) => {
           const days = getDaysOld(test.createdAt);
-          const urgClass = days >= 14 ? 'border-red-200 bg-red-50/30 dark:border-red-900/30 dark:bg-red-900/5' : days >= 7 ? 'border-orange-200 bg-orange-50/20 dark:border-orange-900/20 dark:bg-orange-900/5' : 'border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-700/20';
+          const urgClass = days >= 14 ? 'border-red-200 bg-red-50/30 dark:border-red-900/30 dark:bg-red-900/5'
+            : days >= 7 ? 'border-orange-200 bg-orange-50/20 dark:border-orange-900/20 dark:bg-orange-900/5'
+            : 'border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-700/20';
+
           return (
             <div key={test._id || idx} className={`group flex items-center gap-2.5 p-2.5 rounded-xl border hover:shadow-lg hover:bg-white dark:hover:bg-gray-700 transition-all ${urgClass}`}>
-              <div className="flex-shrink-0 text-center w-8"><p className="text-sm font-black text-gray-900 dark:text-white leading-none">{new Date(test.createdAt).getDate()}</p><p className="text-[7px] text-gray-400 uppercase">{new Date(test.createdAt).toLocaleDateString('en', { month: 'short' })}</p></div>
+              <div className="flex-shrink-0 text-center w-8">
+                <p className="text-sm font-black text-gray-900 dark:text-white leading-none">{new Date(test.createdAt).getDate()}</p>
+                <p className="text-[7px] text-gray-400 uppercase">{new Date(test.createdAt).toLocaleDateString('en', { month: 'short' })}</p>
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1">
                   <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{test.title || 'Untitled'}</h4>
-                  {test.paper && <span className={`px-1 rounded text-[7px] font-bold flex-shrink-0 ${test.paper === 'paper1' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'}`}>{test.paper === 'paper1' ? 'P1' : 'P2'}</span>}
+                  {test.paper && (
+                    <span className={`px-1 rounded text-[7px] font-bold flex-shrink-0 ${test.paper === 'paper1' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'}`}>
+                      {test.paper === 'paper1' ? 'P1' : 'P2'}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 text-[8px] text-gray-500 mt-0.5">
                   <span><Hash className="w-2.5 h-2.5 inline" />{test.totalQuestions || 0}</span>
@@ -1224,11 +1780,15 @@ const PendingTimeline = ({ notAttemptedTests, paper1NotAttempted, paper2NotAttem
                   <span className={`font-bold ${days >= 14 ? 'text-red-500' : days >= 7 ? 'text-orange-500' : 'text-gray-400'}`}>{days}d ago</span>
                 </div>
               </div>
-              <button onClick={() => navigate(`/test/${test._id}`)} className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-white flex-shrink-0 bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-lg transition-all"><Play className="w-3 h-3" />{l === 'hi' ? 'दें' : 'Take'}</button>
+              <button onClick={() => navigate(`/test/${test._id}`)}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-white flex-shrink-0 bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-lg transition-all">
+                <Play className="w-3 h-3" />{l === 'hi' ? 'दें' : 'Take'}
+              </button>
             </div>
           );
         })}
       </div>
+
       {sorted.length > 15 && (
         <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 text-center">
           <button onClick={() => navigate('/tests')} className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center justify-center gap-1 mx-auto">
@@ -1241,7 +1801,7 @@ const PendingTimeline = ({ notAttemptedTests, paper1NotAttempted, paper2NotAttem
 };
 
 // ════════════════════════════════════════════════════════════
-//   PAPER TABBED ACTIVITY
+//  PAPER TABBED ACTIVITY
 // ════════════════════════════════════════════════════════════
 const PaperTabbedActivity = ({ allAttempts, paper1Attempts, paper2Attempts, allTests, paper1Tests, paper2Tests, notAttemptedTests, paper1NotAttempted, paper2NotAttempted, language, loading: la }) => {
   const [mainTab, setMainTab] = useState('attempted');
@@ -1251,95 +1811,160 @@ const PaperTabbedActivity = ({ allAttempts, paper1Attempts, paper2Attempts, allT
   const fA = paperFilter === 'paper1' ? paper1Attempts : paperFilter === 'paper2' ? paper2Attempts : allAttempts;
   const fT = paperFilter === 'paper1' ? paper1Tests : paperFilter === 'paper2' ? paper2Tests : allTests;
   const fN = paperFilter === 'paper1' ? paper1NotAttempted : paperFilter === 'paper2' ? paper2NotAttempted : notAttemptedTests;
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="flex items-center justify-between px-4 pt-3 pb-1">
-        <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5"><History className="w-4 h-4 text-indigo-500" />{l === 'hi' ? 'गतिविधि' : 'Activity'}</h3>
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+          <History className="w-4 h-4 text-indigo-500" />{l === 'hi' ? 'गतिविधि' : 'Activity'}
+        </h3>
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
           {[{ id: 'all', l: l === 'hi' ? 'सभी' : 'All' }, { id: 'paper1', l: 'P1' }, { id: 'paper2', l: 'P2' }].map(pt => (
-            <button key={pt.id} onClick={() => setPaperFilter(pt.id)} className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${paperFilter === pt.id ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500'}`}>{pt.l}</button>
+            <button key={pt.id} onClick={() => setPaperFilter(pt.id)}
+              className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${paperFilter === pt.id ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500'}`}>
+              {pt.l}
+            </button>
           ))}
         </div>
       </div>
       <div className="flex border-b border-gray-100 dark:border-gray-700 px-1">
-        {[{ id: 'attempted', label: l === 'hi' ? 'दिए गए' : 'Attempted', Icon: CheckCircle, count: fA.length }, { id: 'created', label: l === 'hi' ? 'बनाए' : 'Created', Icon: PlusCircle, count: fT.length }, { id: 'pending', label: l === 'hi' ? 'बाकी' : 'Pending', Icon: Clock, count: fN.length }].map(t => (
-          <button key={t.id} onClick={() => setMainTab(t.id)} className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 text-[11px] font-semibold transition-all ${mainTab === t.id ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10' : 'text-gray-500 hover:text-gray-700'}`}>
-            <t.Icon className="w-3 h-3" />{t.label}<span className={`text-[8px] font-bold px-1 rounded-full ${mainTab === t.id ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700'}`}>{t.count}</span>
+        {[
+          { id: 'attempted', label: l === 'hi' ? 'दिए गए' : 'Attempted', Icon: CheckCircle, count: fA.length },
+          { id: 'created', label: l === 'hi' ? 'बनाए' : 'Created', Icon: PlusCircle, count: fT.length },
+          { id: 'pending', label: l === 'hi' ? 'बाकी' : 'Pending', Icon: Clock, count: fN.length },
+        ].map(t => (
+          <button key={t.id} onClick={() => setMainTab(t.id)}
+            className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 text-[11px] font-semibold transition-all
+              ${mainTab === t.id ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10' : 'text-gray-500 hover:text-gray-700'}`}>
+            <t.Icon className="w-3 h-3" />{t.label}
+            <span className={`text-[8px] font-bold px-1 rounded-full ${mainTab === t.id ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700'}`}>{t.count}</span>
           </button>
         ))}
       </div>
       <div className="p-3 max-h-[400px] overflow-y-auto">
-        {mainTab === 'attempted' && (la ? <div className="space-y-2">{[1,2,3].map(i => <Sk key={i} className="h-14 w-full" />)}</div> : fA.length > 0 ? (
-          <div className="space-y-1.5">
-            {fA.slice(0, 10).map((a, i) => {
-              const pct = a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0;
-              const { g, c } = grd(pct);
-              const isLow = pct < 50;
-              return (
-                <div key={a._id || i} onClick={() => navigate(`/results/${a._id}`)} className={`group flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all hover:shadow-lg ${isLow ? 'border-red-200 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/5' : 'border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-700/30'} hover:bg-white dark:hover:bg-gray-700`}>
-                  <span className="text-[8px] font-bold text-gray-400 w-3 text-center">#{i+1}</span>
-                  <div className={`w-9 h-9 rounded-lg border flex items-center justify-center font-black text-sm flex-shrink-0 ${GC[c]}`}>{g}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{a.testId?.title || 'Test'}</h4>{isLow && <AlertTriangle className="w-3 h-3 text-red-500 flex-shrink-0" />}{a.testId?.paper && <span className={`px-1 rounded text-[7px] font-bold flex-shrink-0 ${a.testId.paper === 'paper1' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{a.testId.paper === 'paper1' ? 'P1' : 'P2'}</span>}</div>
-                    <div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500"><span><CheckCircle className="w-2.5 h-2.5 text-emerald-500 inline" />{a.correctCount || 0}</span><span><XCircle className="w-2.5 h-2.5 text-red-400 inline" />{a.wrongCount || 0}</span><span><Clock className="w-2.5 h-2.5 inline" />{tAgo(a.completedAt, l)}</span></div>
+        {mainTab === 'attempted' && (la
+          ? <div className="space-y-2">{[1, 2, 3].map(i => <Sk key={i} className="h-14 w-full" />)}</div>
+          : fA.length > 0 ? (
+            <div className="space-y-1.5">
+              {fA.slice(0, 10).map((a, i) => {
+                const pct = a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0;
+                const { g, c } = grd(pct);
+                const isLow = pct < 50;
+                return (
+                  <div key={a._id || i} onClick={() => navigate(`/results/${a._id}`)}
+                    className={`group flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all hover:shadow-lg
+                      ${isLow ? 'border-red-200 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/5' : 'border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-700/30'} hover:bg-white dark:hover:bg-gray-700`}>
+                    <span className="text-[8px] font-bold text-gray-400 w-3 text-center">#{i + 1}</span>
+                    <div className={`w-9 h-9 rounded-lg border flex items-center justify-center font-black text-sm flex-shrink-0 ${GC[c]}`}>{g}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
+                        <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{a.testId?.title || 'Test'}</h4>
+                        {isLow && <AlertTriangle className="w-3 h-3 text-red-500 flex-shrink-0" />}
+                        {a.testId?.paper && <span className={`px-1 rounded text-[7px] font-bold flex-shrink-0 ${a.testId.paper === 'paper1' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{a.testId.paper === 'paper1' ? 'P1' : 'P2'}</span>}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500">
+                        <span><CheckCircle className="w-2.5 h-2.5 text-emerald-500 inline" />{a.correctCount || 0}</span>
+                        <span><XCircle className="w-2.5 h-2.5 text-red-400 inline" />{a.wrongCount || 0}</span>
+                        <span><Clock className="w-2.5 h-2.5 inline" />{tAgo(a.completedAt, l)}</span>
+                      </div>
+                    </div>
+                    <p className={`text-base font-black flex-shrink-0 ${isLow ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>{pct}<span className="text-[9px] text-gray-400">%</span></p>
+                    <Ring pct={pct} size={26} sw={2.5} color={pct >= 70 ? '#22c55e' : pct >= 50 ? '#3b82f6' : '#ef4444'}>
+                      <span className="text-[6px] font-bold text-gray-500">{pct}</span>
+                    </Ring>
+                    <ChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
                   </div>
-                  <p className={`text-base font-black flex-shrink-0 ${isLow ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>{pct}<span className="text-[9px] text-gray-400">%</span></p>
-                  <Ring pct={pct} size={26} sw={2.5} color={pct >= 70 ? '#22c55e' : pct >= 50 ? '#3b82f6' : '#ef4444'}><span className="text-[6px] font-bold text-gray-500">{pct}</span></Ring>
-                  <ChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
-                </div>
-              );
-            })}
-            <Link to="/results" className="flex items-center justify-center gap-1 p-2 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 text-[10px] font-semibold text-gray-500 hover:text-indigo-600 transition-colors"><History className="w-3 h-3" />{l === 'hi' ? 'सभी देखें' : 'View All'}<ArrowRight className="w-3 h-3" /></Link>
-          </div>
-        ) : (
-          <div className="text-center py-8"><ClipboardList className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" /><p className="text-xs text-gray-400 mb-3">{l === 'hi' ? 'कोई टेस्ट नहीं' : 'No tests taken'}</p><button onClick={() => navigate('/tests')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-semibold rounded-lg"><Play className="w-3 h-3" />Take Test</button></div>
-        ))}
+                );
+              })}
+              <Link to="/results" className="flex items-center justify-center gap-1 p-2 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 text-[10px] font-semibold text-gray-500 hover:text-indigo-600 transition-colors">
+                <History className="w-3 h-3" />{l === 'hi' ? 'सभी देखें' : 'View All'}<ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <ClipboardList className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
+              <p className="text-xs text-gray-400 mb-3">{l === 'hi' ? 'कोई टेस्ट नहीं' : 'No tests taken'}</p>
+              <button onClick={() => navigate('/tests')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-semibold rounded-lg">
+                <Play className="w-3 h-3" />Take Test
+              </button>
+            </div>
+          )
+        )}
+
         {mainTab === 'created' && (fT.length > 0 ? (
           <div className="space-y-1.5">
             {fT.slice(0, 10).map((t, i) => (
               <div key={t._id || i} className="group flex items-center gap-2.5 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-700/30 hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg transition-all">
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow flex-shrink-0"><FileText className="w-4 h-4 text-white" /></div>
-                <div className="flex-1 min-w-0"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title || 'Untitled'}</h4><div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500"><span><Hash className="w-2.5 h-2.5 inline" />{t.totalQuestions || 0}</span><span><Clock className="w-2.5 h-2.5 inline" />{t.duration || 0}m</span><span>{tAgo(t.createdAt, l)}</span></div></div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title || 'Untitled'}</h4>
+                  <div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500">
+                    <span><Hash className="w-2.5 h-2.5 inline" />{t.totalQuestions || 0}</span>
+                    <span><Clock className="w-2.5 h-2.5 inline" />{t.duration || 0}m</span>
+                    <span>{tAgo(t.createdAt, l)}</span>
+                  </div>
+                </div>
                 <button onClick={() => navigate(`/test/${t._id}`)} className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-100 transition-colors flex-shrink-0"><Play className="w-3 h-3" /></button>
               </div>
             ))}
           </div>
-        ) : (<div className="text-center py-8"><PlusCircle className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" /><p className="text-xs text-gray-400 mb-3">No tests created</p><button onClick={() => navigate('/tests/create')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-semibold rounded-lg"><PlusCircle className="w-3 h-3" />Create</button></div>))}
+        ) : (
+          <div className="text-center py-8">
+            <PlusCircle className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
+            <p className="text-xs text-gray-400 mb-3">No tests created</p>
+            <button onClick={() => navigate('/tests/create')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-semibold rounded-lg"><PlusCircle className="w-3 h-3" />Create</button>
+          </div>
+        ))}
+
         {mainTab === 'pending' && (fN.length > 0 ? (
           <div className="space-y-1.5">
             {fN.slice(0, 10).map((t, i) => (
               <div key={t._id || i} className="group flex items-center gap-2.5 p-2.5 rounded-xl bg-amber-50/30 dark:bg-amber-900/5 border border-amber-100 dark:border-amber-900/20 hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg transition-all">
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 flex items-center justify-center border border-amber-200 dark:border-amber-800 flex-shrink-0"><Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" /></div>
-                <div className="flex-1 min-w-0"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title}</h4><div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500"><span><Hash className="w-2.5 h-2.5 inline" />{t.totalQuestions || 0}</span><span><Clock className="w-2.5 h-2.5 inline" />{t.duration || 0}m</span></div></div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title}</h4>
+                  <div className="flex items-center gap-2 mt-0.5 text-[9px] text-gray-500">
+                    <span><Hash className="w-2.5 h-2.5 inline" />{t.totalQuestions || 0}</span>
+                    <span><Clock className="w-2.5 h-2.5 inline" />{t.duration || 0}m</span>
+                  </div>
+                </div>
                 <button onClick={() => navigate(`/test/${t._id}`)} className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold rounded-lg hover:shadow-lg transition-all flex-shrink-0"><Play className="w-3 h-3" />{l === 'hi' ? 'दें' : 'Take'}</button>
               </div>
             ))}
           </div>
-        ) : (<div className="text-center py-8"><CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-200 dark:text-emerald-900" /><p className="text-xs text-gray-400">All attempted!</p></div>))}
+        ) : (
+          <div className="text-center py-8"><CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-200 dark:text-emerald-900" /><p className="text-xs text-gray-400">All attempted!</p></div>
+        ))}
       </div>
     </div>
   );
 };
 
 // ════════════════════════════════════════════════════════════
-//   PAPER SECTION
+//  PAPER SECTION (Unit breakdown)
 // ════════════════════════════════════════════════════════════
 const PaperSection = ({ paper, title, subtitle, Icon, color, units, total, language, navigate }) => {
   const [open, setOpen] = useState(true);
   const sorted = [...units].sort((a, b) => b.count - a.count);
   const l = language;
   const c = color === 'blue'
-    ? { grad: 'from-blue-600 to-cyan-600', gradL: 'from-blue-50 to-cyan-50 dark:from-blue-900/10 dark:to-cyan-900/10', bdr: 'border-blue-200/50 dark:border-blue-800/30', txt: 'text-blue-600 dark:text-blue-400', bar: 'from-blue-500 to-cyan-400', iconBg: 'from-blue-500 to-cyan-500', hover: 'hover:bg-blue-50/50 dark:hover:bg-blue-900/10' }
-    : { grad: 'from-purple-600 to-violet-600', gradL: 'from-purple-50 to-violet-50 dark:from-purple-900/10 dark:to-violet-900/10', bdr: 'border-purple-200/50 dark:border-purple-800/30', txt: 'text-purple-600 dark:text-purple-400', bar: 'from-purple-500 to-violet-400', iconBg: 'from-purple-500 to-violet-500', hover: 'hover:bg-purple-50/50 dark:hover:bg-purple-900/10' };
+    ? { grad: 'from-blue-600 to-cyan-600', gradL: 'from-blue-50 to-cyan-50 dark:from-blue-900/10 dark:to-cyan-900/10', bdr: 'border-blue-200/50 dark:border-blue-800/30', txt: 'text-blue-600 dark:text-blue-400', bar: 'from-blue-500 to-cyan-400', iconBg: 'from-blue-500 to-cyan-500', ring: '#3b82f6', hover: 'hover:bg-blue-50/50 dark:hover:bg-blue-900/10' }
+    : { grad: 'from-purple-600 to-violet-600', gradL: 'from-purple-50 to-violet-50 dark:from-purple-900/10 dark:to-violet-900/10', bdr: 'border-purple-200/50 dark:border-purple-800/30', txt: 'text-purple-600 dark:text-purple-400', bar: 'from-purple-500 to-violet-400', iconBg: 'from-purple-500 to-violet-500', ring: '#8b5cf6', hover: 'hover:bg-purple-50/50 dark:hover:bg-purple-900/10' };
+
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-2xl border-2 ${c.bdr} overflow-hidden`}>
       <div className={`bg-gradient-to-r ${c.gradL} p-4 border-b ${c.bdr}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${c.iconBg} flex items-center justify-center shadow-lg`}><Icon className="w-5 h-5 text-white" /></div>
-            <div><h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">{title}<span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/80 dark:bg-gray-700/80 ${c.txt}`}>{total} Qs</span></h3><p className="text-[10px] text-gray-500">{subtitle}</p></div>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">{title}<span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/80 dark:bg-gray-700/80 ${c.txt}`}>{total} Qs</span></h3>
+              <p className="text-[10px] text-gray-500">{subtitle}</p>
+            </div>
           </div>
-          <button onClick={() => setOpen(!open)} className="p-1 rounded-lg hover:bg-white/60 dark:hover:bg-gray-700">{open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}</button>
+          <button onClick={() => setOpen(!open)} className="p-1 rounded-lg hover:bg-white/60 dark:hover:bg-gray-700">
+            {open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+          </button>
         </div>
       </div>
       {open && (
@@ -1349,21 +1974,37 @@ const PaperSection = ({ paper, title, subtitle, Icon, color, units, total, langu
               {sorted.map((u, idx) => {
                 const pct = total > 0 ? Math.round((u.count / total) * 100) : 0;
                 return (
-                  <div key={idx} onClick={() => navigate(`/questions?paper=${paper}&unit=${encodeURIComponent(u._id?.unit || '')}`)} className={`group flex items-center gap-2 p-2 rounded-lg ${c.hover} border border-transparent hover:border-gray-200 dark:hover:border-gray-700 cursor-pointer transition-all`}>
-                    <div className={`w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center ${idx === 0 ? `bg-gradient-to-br ${c.grad} text-white shadow` : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>{idx+1}</div>
+                  <div key={idx} onClick={() => navigate(`/questions?paper=${paper}&unit=${encodeURIComponent(u._id?.unit || '')}`)}
+                    className={`group flex items-center gap-2 p-2 rounded-lg ${c.hover} border border-transparent hover:border-gray-200 dark:hover:border-gray-700 cursor-pointer transition-all`}>
+                    <div className={`w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center ${idx === 0 ? `bg-gradient-to-br ${c.grad} text-white shadow` : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>{idx + 1}</div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1 mb-0.5"><p className="text-[11px] font-semibold text-gray-800 dark:text-gray-200 truncate">{u._id?.unit || 'Unknown'}</p>{idx === 0 && <Crown className={`w-2.5 h-2.5 ${c.txt} flex-shrink-0`} />}</div>
-                      <div className="h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"><div className={`h-full bg-gradient-to-r ${c.bar} rounded-full transition-all duration-1000`} style={{ width: `${pct}%` }} /></div>
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <p className="text-[11px] font-semibold text-gray-800 dark:text-gray-200 truncate">{u._id?.unit || 'Unknown'}</p>
+                        {idx === 0 && <Crown className={`w-2.5 h-2.5 ${c.txt} flex-shrink-0`} />}
+                      </div>
+                      <div className="h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div className={`h-full bg-gradient-to-r ${c.bar} rounded-full transition-all duration-1000`} style={{ width: `${pct}%` }} />
+                      </div>
                     </div>
-                    <div className="text-right flex-shrink-0"><p className="text-[11px] font-bold text-gray-900 dark:text-white">{u.count}</p><p className="text-[8px] text-gray-400">{pct}%</p></div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-[11px] font-bold text-gray-900 dark:text-white">{u.count}</p>
+                      <p className="text-[8px] text-gray-400">{pct}%</p>
+                    </div>
                     <ChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
                   </div>
                 );
               })}
-              <button onClick={() => navigate(`/questions?paper=${paper}`)} className={`w-full mt-2 p-2 rounded-lg border border-dashed ${c.bdr} ${c.txt} text-[10px] font-semibold flex items-center justify-center gap-1 hover:bg-gray-50 dark:hover:bg-gray-700/50`}><Eye className="w-3 h-3" />{l === 'hi' ? 'सभी देखें' : 'View All'}<ArrowRight className="w-3 h-3" /></button>
+              <button onClick={() => navigate(`/questions?paper=${paper}`)}
+                className={`w-full mt-2 p-2 rounded-lg border border-dashed ${c.bdr} ${c.txt} text-[10px] font-semibold flex items-center justify-center gap-1 hover:bg-gray-50 dark:hover:bg-gray-700/50`}>
+                <Eye className="w-3 h-3" />{l === 'hi' ? 'सभी देखें' : 'View All'}<ArrowRight className="w-3 h-3" />
+              </button>
             </div>
           ) : (
-            <div className="text-center py-6"><FileQuestion className="w-8 h-8 mx-auto mb-2 text-gray-200 dark:text-gray-700" /><p className="text-[10px] text-gray-400 mb-2">No questions</p><button onClick={() => navigate('/import')} className={`inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r ${c.grad} text-white text-[10px] font-semibold rounded-lg`}><Upload className="w-3 h-3" />Import</button></div>
+            <div className="text-center py-6">
+              <FileQuestion className="w-8 h-8 mx-auto mb-2 text-gray-200 dark:text-gray-700" />
+              <p className="text-[10px] text-gray-400 mb-2">No questions</p>
+              <button onClick={() => navigate('/import')} className={`inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r ${c.grad} text-white text-[10px] font-semibold rounded-lg`}><Upload className="w-3 h-3" />Import</button>
+            </div>
           )}
         </div>
       )}
@@ -1372,9 +2013,9 @@ const PaperSection = ({ paper, title, subtitle, Icon, color, units, total, langu
 };
 
 // ════════════════════════════════════════════════════════════
-//   ACHIEVEMENTS + STREAK + QUOTE + QUICK ACTIONS
+//  ACHIEVEMENTS + STREAK + QUOTE + QUICK ACTIONS
 // ════════════════════════════════════════════════════════════
-const achIconMap = { Layers, Crown, Play, Flame, Medal, Star, Target, PlusCircle };
+const iconMap = { Layers, Crown, Play, Flame, Medal, Star, Target, PlusCircle };
 
 const AchievementCard = ({ achievements, language: l }) => {
   const un = achievements.filter(a => a.unlocked).length;
@@ -1389,17 +2030,26 @@ const AchievementCard = ({ achievements, language: l }) => {
   };
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
-      <div className="flex items-center justify-between mb-3"><h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm"><Award className="w-5 h-5 text-amber-500" />{l === 'hi' ? 'उपलब्धियाँ' : 'Achievements'}</h3><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">{un}/{achievements.length}</span></div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm"><Award className="w-5 h-5 text-amber-500" />{l === 'hi' ? 'उपलब्धियाँ' : 'Achievements'}</h3>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">{un}/{achievements.length}</span>
+      </div>
       <div className="grid grid-cols-4 gap-2">
         {achievements.map((a, i) => {
           const c = cM[a.color] || cM.gray;
-          const Ic = achIconMap[a.icon] || Star;
+          const Ic = iconMap[a.icon] || Star;
           return (
             <div key={i} className={`relative flex flex-col items-center gap-1 p-2 rounded-xl border transition-all ${a.unlocked ? `${c.bg} ${c.b}` : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 opacity-50'}`} title={a.desc}>
-              {a.unlocked ? <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full flex items-center justify-center"><CheckCircle className="w-2.5 h-2.5 text-white" /></div> : <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-gray-400 dark:bg-gray-600 rounded-full flex items-center justify-center"><Lock className="w-2 h-2 text-white" /></div>}
+              {a.unlocked
+                ? <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full flex items-center justify-center"><CheckCircle className="w-2.5 h-2.5 text-white" /></div>
+                : <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-gray-400 dark:bg-gray-600 rounded-full flex items-center justify-center"><Lock className="w-2 h-2 text-white" /></div>}
               <Ic className={`w-4 h-4 ${a.unlocked ? c.t : 'text-gray-400'}`} />
               <span className={`text-[8px] font-bold text-center leading-tight ${a.unlocked ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'}`}>{a.label}</span>
-              {!a.unlocked && a.progress !== undefined && <div className="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"><div className="h-full bg-indigo-400 rounded-full transition-all duration-1000" style={{ width: `${Math.min(a.progress * 100, 100)}%` }} /></div>}
+              {!a.unlocked && a.progress !== undefined && (
+                <div className="w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="h-full bg-indigo-400 rounded-full transition-all duration-1000" style={{ width: `${Math.min(a.progress * 100, 100)}%` }} />
+                </div>
+              )}
             </div>
           );
         })}
@@ -1409,16 +2059,22 @@ const AchievementCard = ({ achievements, language: l }) => {
 };
 
 const StreakCard = ({ streak, longestStreak, language: l }) => {
-  const days = ['S','M','T','W','T','F','S'];
+  const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   const today = new Date().getDay();
   return (
     <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-4 text-white">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5"><Flame className="w-4 h-4 text-yellow-300" /><span className="font-bold text-xs">{l === 'hi' ? 'स्ट्रीक' : 'Streak'}</span></div>
-        <div className="text-right"><span className="text-xl font-black">{streak}<span className="text-[9px] font-normal text-white/60 ml-0.5">d</span></span>{longestStreak > 0 && <p className="text-[8px] text-white/40">{l === 'hi' ? 'सर्वश्रेष्ठ' : 'Best'}: {longestStreak}d</p>}</div>
+        <div className="text-right">
+          <span className="text-xl font-black">{streak}<span className="text-[9px] font-normal text-white/60 ml-0.5">d</span></span>
+          {longestStreak > 0 && <p className="text-[8px] text-white/40">{l === 'hi' ? 'सर्वश्रेष्ठ' : 'Best'}: {longestStreak}d</p>}
+        </div>
       </div>
       <div className="flex justify-between gap-1">
-        {days.map((d, i) => (<div key={i} className={`w-6 h-6 rounded-md flex items-center justify-center text-[9px] font-bold ${i <= today && streak > 0 ? 'bg-white text-orange-600 shadow-sm' : 'bg-white/15 text-white/50'}`}>{d}</div>))}
+        {days.map((d, i) => (
+          <div key={i} className={`w-6 h-6 rounded-md flex items-center justify-center text-[9px] font-bold
+            ${i <= today && streak > 0 ? 'bg-white text-orange-600 shadow-sm' : 'bg-white/15 text-white/50'}`}>{d}</div>
+        ))}
       </div>
     </div>
   );
@@ -1463,391 +2119,10 @@ const QAction = ({ icon: Icon, title, desc, to, gradient, badge, delay = 0 }) =>
     </Link>
   );
 };
-
 // ════════════════════════════════════════════════════════════
-// 🆕🆕🆕  9 NEW COMPONENTS START HERE  🆕🆕🆕
+//               MAIN DASHBOARD COMPONENT
+//          (Section 3/3 - Paste below Section 2/3)
 // ════════════════════════════════════════════════════════════
-
-// ════════════════════════════════════════════════════════════
-//  🆕 1. DAILY CHALLENGE CARD
-// ════════════════════════════════════════════════════════════
-const DailyChallengeCard = ({ challenge, language }) => {
-  const l = language;
-  if (!challenge) return null;
-  const chalIconMap = { Star, Zap, Target, Flame, Shield, RefreshCw, BarChart2, Timer };
-  const Icon = chalIconMap[challenge.icon] || Star;
-  const colorMap = {
-    amber: 'from-amber-500 to-yellow-600', cyan: 'from-cyan-500 to-teal-600', emerald: 'from-emerald-500 to-green-600',
-    orange: 'from-orange-500 to-red-600', blue: 'from-blue-500 to-indigo-600', red: 'from-red-500 to-rose-600',
-    indigo: 'from-indigo-500 to-purple-600', purple: 'from-purple-500 to-violet-600',
-  };
-  const grad = colorMap[challenge.color] || colorMap.amber;
-  return (
-    <div className={`bg-gradient-to-br ${grad} rounded-2xl p-4 text-white relative overflow-hidden`}>
-      <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-3xl" />
-      <div className="relative">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center"><Icon className="w-4 h-4" /></div>
-            <div>
-              <p className="text-[8px] uppercase tracking-wider text-white/60">{l === 'hi' ? 'आज की चुनौती' : "Today's Challenge"}</p>
-              <h3 className="text-xs font-bold">{l === 'hi' ? challenge.titleHi : challenge.title}</h3>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/20">
-            <Zap className="w-3 h-3 text-yellow-300" />
-            <span className="text-[9px] font-black">{challenge.xp} XP</span>
-          </div>
-        </div>
-        <div className="h-2 bg-white/20 rounded-full overflow-hidden mb-2">
-          <div className={`h-full rounded-full transition-all duration-1000 ${challenge.completed ? 'bg-white' : 'bg-white/60'}`} style={{ width: `${challenge.pct}%` }} />
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-[9px] text-white/70">{challenge.current}/{challenge.target}</span>
-          {challenge.completed ? (
-            <span className="flex items-center gap-1 text-[9px] font-bold bg-white/20 px-2 py-0.5 rounded-full"><CheckCircle className="w-3 h-3" />{l === 'hi' ? 'पूरा!' : 'Done!'}</span>
-          ) : (
-            <span className="text-[9px] text-white/60">{challenge.pct}%</span>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ════════════════════════════════════════════════════════════
-//  🆕 2. PLAYER LEVEL CARD
-// ════════════════════════════════════════════════════════════
-const PlayerLevelCard = ({ playerLevel, language }) => {
-  const l = language;
-  if (!playerLevel) return null;
-  const colorMap = { gray: 'from-gray-500 to-slate-600', blue: 'from-blue-500 to-cyan-600', green: 'from-emerald-500 to-green-600', purple: 'from-purple-500 to-violet-600', indigo: 'from-indigo-500 to-blue-600', amber: 'from-amber-500 to-yellow-600', orange: 'from-orange-500 to-red-600', red: 'from-red-500 to-rose-600' };
-  const grad = colorMap[playerLevel.current.color] || colorMap.blue;
-  return (
-    <div className={`bg-gradient-to-br ${grad} rounded-2xl p-4 text-white relative overflow-hidden`}>
-      <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full blur-3xl" />
-      <div className="relative">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shadow-lg">
-              <span className="text-lg font-black">{playerLevel.current.level}</span>
-            </div>
-            <div>
-              <h3 className="text-sm font-bold">{l === 'hi' ? playerLevel.current.nameHi : playerLevel.current.name}</h3>
-              <p className="text-[8px] text-white/50">{l === 'hi' ? 'स्तर' : 'Level'} {playerLevel.current.level}</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-lg font-black">{playerLevel.totalXP}</p>
-            <p className="text-[8px] text-white/50">XP</p>
-          </div>
-        </div>
-        {playerLevel.next && (
-          <>
-            <div className="h-2 bg-white/20 rounded-full overflow-hidden mb-1">
-              <div className="h-full bg-white rounded-full transition-all duration-1000" style={{ width: `${playerLevel.pct}%` }} />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[8px] text-white/60">{playerLevel.inLevel}/{playerLevel.forNext} XP</span>
-              <span className="text-[8px] text-white/60">{l === 'hi' ? 'अगला' : 'Next'}: {l === 'hi' ? playerLevel.next.nameHi : playerLevel.next.name}</span>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// ════════════════════════════════════════════════════════════
-//  🆕 3. REVISION QUEUE CARD
-// ════════════════════════════════════════════════════════════
-const RevisionQueueCard = ({ queue, language, navigate }) => {
-  const l = language;
-  if (!queue || queue.length === 0) return null;
-  const needsRev = queue.filter(q => q.needsRevision);
-  const urgencyColors = { critical: 'bg-red-500', high: 'bg-orange-500', medium: 'bg-amber-400', low: 'bg-emerald-400' };
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow"><RefreshCw className="w-4 h-4 text-white" /></div>
-          <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'रिवीजन क्यू' : 'Revision Queue'}</h3><p className="text-[9px] text-gray-500">{needsRev.length} {l === 'hi' ? 'रिवीजन चाहिए' : 'need revision'}</p></div>
-        </div>
-      </div>
-      <div className="p-3 space-y-1.5 max-h-[300px] overflow-y-auto">
-        {queue.slice(0, 8).map((item, i) => (
-          <div key={i} className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all hover:shadow-md cursor-pointer ${item.urgency === 'critical' ? 'border-red-200 bg-red-50/30 dark:border-red-900/30 dark:bg-red-900/5' : item.urgency === 'high' ? 'border-orange-200 bg-orange-50/20 dark:border-orange-900/20' : 'border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-700/20'}`}
-            onClick={() => item.test?._id && navigate(`/test/${item.test._id}`)}>
-            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${urgencyColors[item.urgency]}`} />
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{item.test?.title || 'Test'}</p>
-              <div className="flex items-center gap-2 text-[8px] text-gray-500">
-                <span>{l === 'hi' ? 'सर्वश्रेष्ठ' : 'Best'}: {item.bestScore}%</span>
-                <span>{item.daysSince}d {l === 'hi' ? 'पहले' : 'ago'}</span>
-                <span>{l === 'hi' ? 'याद' : 'Ret'}: {item.retention}%</span>
-              </div>
-            </div>
-            <RefreshCw className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-// ════════════════════════════════════════════════════════════
-//  🆕 4. WEAK CHAPTERS LIST
-// ════════════════════════════════════════════════════════════
-
-  const WeakChaptersCard = ({ chapters, language }) => {
-  const l = language;
-  if (!chapters || chapters.length === 0) return null;
-  const weak = chapters.filter(c => c.status !== 'strong').slice(0, 8);
-  if (weak.length === 0) return null;
-  const statusColors = { critical: 'bg-red-500 text-white', weak: 'bg-orange-500 text-white', average: 'bg-amber-400 text-white', strong: 'bg-emerald-500 text-white' };
-  const statusLabels = { critical: { en: 'Critical', hi: 'गंभीर' }, weak: { en: 'Weak', hi: 'कमजोर' }, average: { en: 'Average', hi: 'औसत' }, strong: { en: 'Strong', hi: 'मजबूत' } };
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow"><BookOpen className="w-4 h-4 text-white" /></div>
-        <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'कमजोर अध्याय' : 'Weak Chapters'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'सबसे कम स्कोर' : 'Lowest scoring'}</p></div>
-      </div>
-      <div className="p-3 space-y-1.5 max-h-[300px] overflow-y-auto">
-        {weak.map((ch, i) => (
-          <div key={i} className="flex items-center gap-2.5 p-2 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <p className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{ch.unit}</p>
-                <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full ${statusColors[ch.status]}`}>{statusLabels[ch.status]?.[l] || ch.status}</span>
-                <span className="text-[7px] px-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-500">{ch.paper === 'paper1' ? 'P1' : 'P2'}</span>
-              </div>
-              <div className="flex items-center gap-2 text-[8px] text-gray-500">
-                <span>{l === 'hi' ? 'औसत' : 'Avg'}: {ch.avgScore}%</span>
-                <span>{l === 'hi' ? 'सटीक' : 'Acc'}: {ch.accuracy}%</span>
-                <span>{ch.attempts} {l === 'hi' ? 'प्रयास' : 'att'}</span>
-              </div>
-              <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-1">
-                <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${ch.avgScore}%`, background: ch.avgScore < 30 ? '#ef4444' : ch.avgScore < 50 ? '#f97316' : ch.avgScore < 70 ? '#f59e0b' : '#22c55e' }} />
-              </div>
-            </div>
-            <span className="text-lg font-black text-gray-900 dark:text-white flex-shrink-0">{ch.avgScore}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-// ════════════════════════════════════════════════════════════
-//  🆕 5. FORGETTING CURVE / SPACED REPETITION
-// ════════════════════════════════════════════════════════════
-const ForgettingCurveCard = ({ data, language }) => {
-  const l = language;
-  if (!data || data.totalTopics === 0) return null;
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow"><Brain className="w-4 h-4 text-white" /></div>
-            <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'भूलने की अवस्था' : 'Forgetting Curve'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'स्पेस्ड रिपिटीशन' : 'Spaced Repetition'}</p></div>
-          </div>
-          <Ring pct={data.avgRetention} size={36} sw={3} color={data.avgRetention >= 60 ? '#22c55e' : data.avgRetention >= 40 ? '#f59e0b' : '#ef4444'}>
-            <span className="text-[7px] font-bold text-gray-600 dark:text-gray-300">{data.avgRetention}%</span>
-          </Ring>
-        </div>
-      </div>
-      <div className="p-3">
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          <div className="text-center p-2 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-200/50 dark:border-red-800/30">
-            <p className="text-lg font-black text-red-600 dark:text-red-400">{data.overdueCount}</p>
-            <p className="text-[8px] text-red-500">{l === 'hi' ? 'ओवरड्यू' : 'Overdue'}</p>
-          </div>
-          <div className="text-center p-2 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30">
-            <p className="text-lg font-black text-amber-600 dark:text-amber-400">{data.upcoming.length}</p>
-            <p className="text-[8px] text-amber-500">{l === 'hi' ? 'आगामी' : 'Upcoming'}</p>
-          </div>
-          <div className="text-center p-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200/50 dark:border-emerald-800/30">
-            <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">{data.safe.length}</p>
-            <p className="text-[8px] text-emerald-500">{l === 'hi' ? 'सुरक्षित' : 'Safe'}</p>
-          </div>
-        </div>
-        {data.dueForRevision.length > 0 && (
-          <div>
-            <p className="text-[9px] font-bold text-red-600 dark:text-red-400 mb-1.5">{l === 'hi' ? 'तुरंत रिवीजन करें' : 'Revise Now'}</p>
-            <div className="space-y-1 max-h-[150px] overflow-y-auto">
-              {data.dueForRevision.slice(0, 5).map((item, i) => (
-                <div key={i} className="flex items-center gap-2 p-1.5 rounded-lg bg-red-50/50 dark:bg-red-900/5 border border-red-100 dark:border-red-900/20">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
-                  <span className="text-[9px] text-gray-700 dark:text-gray-300 truncate flex-1">{item.unit}</span>
-                  <span className="text-[8px] text-red-500 font-bold flex-shrink-0">{item.daysSince}d</span>
-                  <span className="text-[8px] text-gray-400 flex-shrink-0">{item.retention}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// ════════════════════════════════════════════════════════════
-//  🆕 6. FATIGUE ANALYSIS
-// ════════════════════════════════════════════════════════════
-const FatigueAnalysisCard = ({ data, language }) => {
-  const l = language;
-  if (!data || data.chart.length === 0) return null;
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow"><Gauge className="w-4 h-4 text-white" /></div>
-          <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'थकान विश्लेषण' : 'Fatigue Analysis'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'सत्र प्रदर्शन' : 'Session performance'}</p></div>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-black text-gray-900 dark:text-white">{data.optimalTests}</p>
-          <p className="text-[7px] text-gray-400">{l === 'hi' ? 'आदर्श टेस्ट' : 'optimal'}</p>
-        </div>
-      </div>
-      <div className="p-4">
-        <div style={{ height: 130 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data.chart} margin={{ top: 5, right: 5, bottom: 5, left: -25 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" className="dark:stroke-gray-700" />
-              <XAxis dataKey="name" tick={{ fontSize: 8 }} stroke="#94a3b8" />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 8 }} stroke="#94a3b8" />
-              <Tooltip content={<CTooltip />} />
-              <Bar dataKey="avgScore" fill="#f97316" radius={[4,4,0,0]} name={l === 'hi' ? 'स्कोर' : 'Score'} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-          <div className="text-center"><p className="text-xs font-bold text-gray-900 dark:text-white">{data.sessions}</p><p className="text-[7px] text-gray-400">{l === 'hi' ? 'सत्र' : 'Sessions'}</p></div>
-          <div className="text-center"><p className="text-xs font-bold text-gray-900 dark:text-white">{data.dropPct}%</p><p className="text-[7px] text-gray-400">{l === 'hi' ? 'गिरावट' : 'Drop'}</p></div>
-          <div className="text-center"><p className="text-xs font-bold text-gray-900 dark:text-white">{data.avgSessionLen}</p><p className="text-[7px] text-gray-400">{l === 'hi' ? 'औसत' : 'Avg Len'}</p></div>
-        </div>
-        <div className="mt-2 p-2 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200/50 dark:border-orange-800/30">
-          <p className="text-[9px] text-orange-700 dark:text-orange-400 font-semibold">{l === 'hi' ? data.recHi : data.rec}</p>
-        </div>
-      </div>
-    </div>
-  );
-};
-// ════════════════════════════════════════════════════════════
-//  🆕 7. NEGATIVE MARKING IMPACT
-const NegativeMarkingCard = ({ data, language }) => {
-  const l = language;
-  if (!data) return null;
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow"><AlertCircle className="w-4 h-4 text-white" /></div>
-        <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'ऋणात्मक अंकन' : 'Negative Marking'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'गलत उत्तर का प्रभाव' : 'Wrong answer impact'}</p></div>
-      </div>
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        <div className="text-center p-2 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-200/50 dark:border-red-800/30">
-          <p className="text-lg font-black text-red-600 dark:text-red-400">-{data.totalNeg}</p>
-          <p className="text-[7px] text-red-500">{l === 'hi' ? 'कुल हानि' : 'Total Lost'}</p>
-        </div>
-        <div className="text-center p-2 rounded-xl bg-orange-50 dark:bg-orange-900/10 border border-orange-200/50 dark:border-orange-800/30">
-          <p className="text-lg font-black text-orange-600 dark:text-orange-400">-{data.avgPer}</p>
-          <p className="text-[7px] text-orange-500">{l === 'hi' ? 'प्रति टेस्ट' : 'Per Test'}</p>
-        </div>
-        <div className="text-center p-2 rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-700">
-          <p className="text-lg font-black text-gray-700 dark:text-gray-300">{data.totalWrong}</p>
-          <p className="text-[7px] text-gray-500">{l === 'hi' ? 'कुल गलत' : 'Wrong'}</p>
-        </div>
-      </div>
-      <div className="p-2 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-200/50 dark:border-amber-800/30">
-        <p className="text-[9px] text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-1">
-          <Lightbulb className="w-3 h-3" />{l === 'hi' ? data.recHi : data.rec}
-        </p>
-      </div>
-    </div>
-  );
-};
-// ════════════════════════════════════════════════════════════
-//  🆕 8. WEEKLY REPORT
-// ════════════════════════════════════════════════════════════
-const WeeklyReportCard = ({ data, language }) => {
-  const l = language;
-  if (!data || data.totalTests === 0) return null;
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow"><CalendarDays className="w-4 h-4 text-white" /></div>
-          <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'साप्ताहिक रिपोर्ट' : 'Weekly Report'}</h3><p className="text-[9px] text-gray-500">{data.activeDays}/7 {l === 'hi' ? 'सक्रिय दिन' : 'active days'}</p></div>
-        </div>
-      </div>
-      <div className="p-4">
-        <div className="flex items-end gap-1 mb-3" style={{ height: 60 }}>
-          {data.daily.map((d, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center">
-              <div className={`w-full rounded-t-sm transition-all duration-700 ${d.isToday ? 'bg-indigo-500' : d.tests > 0 ? 'bg-blue-400' : 'bg-gray-200 dark:bg-gray-700'}`}
-                style={{ height: `${d.tests > 0 ? Math.max((d.avgScore / 100) * 100, 15) : 5}%` }} />
-              <span className={`text-[7px] mt-0.5 font-bold ${d.isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`}>{d.day}</span>
-              <span className="text-[6px] text-gray-400">{d.tests}</span>
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-4 gap-2">
-          <div className="text-center"><p className="text-sm font-black text-gray-900 dark:text-white">{data.totalTests}</p><p className="text-[7px] text-gray-400">{l === 'hi' ? 'टेस्ट' : 'Tests'}</p></div>
-          <div className="text-center"><p className="text-sm font-black text-gray-900 dark:text-white">{data.avgScore}%</p><p className="text-[7px] text-gray-400">{l === 'hi' ? 'औसत' : 'Avg'}</p></div>
-          <div className="text-center"><p className="text-sm font-black text-gray-900 dark:text-white">{data.accuracy}%</p><p className="text-[7px] text-gray-400">{l === 'hi' ? 'सटीकता' : 'Acc'}</p></div>
-          <div className="text-center"><p className="text-sm font-black text-gray-900 dark:text-white">{fmtTime(data.totalTime)}</p><p className="text-[7px] text-gray-400">{l === 'hi' ? 'समय' : 'Time'}</p></div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ════════════════════════════════════════════════════════════
-//  🆕 9. ADVANCED EXAM COUNTDOWN
-// ════════════════════════════════════════════════════════════
-const AdvancedCountdownCard = ({ data, language }) => {
-  const l = language;
-  if (!data) return null;
-  const phaseColors = { emerald: 'from-emerald-500 to-green-600', blue: 'from-blue-500 to-indigo-600', amber: 'from-amber-500 to-yellow-600', orange: 'from-orange-500 to-red-600', red: 'from-red-500 to-rose-600' };
-  const grad = phaseColors[data.phaseColor] || phaseColors.blue;
-  return (
-    <div className={`bg-gradient-to-br ${grad} rounded-2xl p-4 text-white relative overflow-hidden`}>
-      <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full blur-3xl" />
-      <div className="relative">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Milestone className="w-5 h-5" />
-            <div>
-              <h3 className="text-xs font-bold">{l === 'hi' ? data.phaseHi : data.phase} {l === 'hi' ? 'चरण' : 'Phase'}</h3>
-              <p className="text-[8px] text-white/50">{data.weeks}w {data.remDays}d {l === 'hi' ? 'शेष' : 'remaining'}</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-2xl font-black">{data.totalDays}</p>
-            <p className="text-[7px] text-white/50">{l === 'hi' ? 'दिन' : 'days'}</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          <div className="bg-white/10 rounded-lg p-2 text-center"><p className="text-sm font-black">{data.testsPerDay}</p><p className="text-[7px] text-white/50">{l === 'hi' ? 'टेस्ट/दिन' : 'tests/day'}</p></div>
-          <div className="bg-white/10 rounded-lg p-2 text-center"><p className="text-sm font-black">{data.pending}</p><p className="text-[7px] text-white/50">{l === 'hi' ? 'बाकी' : 'pending'}</p></div>
-          <div className="bg-white/10 rounded-lg p-2 text-center"><p className="text-sm font-black">{data.readiness}%</p><p className="text-[7px] text-white/50">{l === 'hi' ? 'तैयारी' : 'ready'}</p></div>
-        </div>
-        {data.dailyPlan.length > 0 && (
-          <div className="bg-white/10 rounded-lg p-2">
-            <p className="text-[8px] text-white/60 uppercase mb-1">{l === 'hi' ? 'दैनिक योजना' : 'Daily Plan'}</p>
-            {data.dailyPlan.map((p, i) => (
-              <p key={i} className="text-[9px] text-white/80 flex items-center gap-1"><ArrowRight className="w-2.5 h-2.5 flex-shrink-0" />{l === 'hi' ? p.hi : p.en}</p>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════
-// PART 3/3 — Paste directly below Part 2/3 (NO gap, NO duplicate imports)
-// MAIN DASHBOARD COMPONENT + EXPORT
-// ═══════════════════════════════════════════════════════════
 
 const Dashboard = ({ language: propLanguage, setLanguage }) => {
   const navigate = useNavigate();
@@ -1863,7 +2138,7 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
           <div className="space-y-5 pb-8">
 
             {/* ═══════════════════════════════════════════════
-                 HERO SECTION
+                 HERO SECTION (Enhanced)
             ═══════════════════════════════════════════════ */}
             <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-5 md:p-6 text-white">
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl" />
@@ -1879,7 +2154,9 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
                     {d.daysUntilExam !== null && d.daysUntilExam > 0 && (
                       <div className="flex items-center gap-1.5 bg-white/10 rounded-lg px-2.5 py-1.5 border border-white/10">
                         <CalendarDays className="w-3 h-3 text-rose-400" />
-                        <span className="text-xs font-mono font-bold text-white tabular-nums">{d.daysUntilExam}d</span>
+                        <span className="text-xs font-mono font-bold text-white tabular-nums">
+                          {d.daysUntilExam}d
+                        </span>
                       </div>
                     )}
                   </div>
@@ -1913,9 +2190,9 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
                       {l === 'hi' ? 'नियमित अभ्यास सफलता की कुंजी है। आज का लक्ष्य पूरा करें!' : 'Consistent practice is the key. Complete today\'s goals!'}
                     </p>
 
-                    {/* JRF + Player Level badges in hero */}
-                    <div className="flex items-center gap-2 mb-4 flex-wrap">
-                      {d.jrfProbability.dataPoints >= 3 && (
+                    {/* JRF quick badge in hero */}
+                    {d.jrfProbability.dataPoints >= 3 && (
+                      <div className="flex items-center gap-2 mb-4">
                         <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border ${
                           d.jrfProbability.riskLevel === 'safe' ? 'bg-emerald-500/10 border-emerald-500/20' :
                           d.jrfProbability.riskLevel === 'moderate' ? 'bg-blue-500/10 border-blue-500/20' :
@@ -1923,29 +2200,24 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
                           'bg-red-500/10 border-red-500/20'
                         }`}>
                           <Brain className="w-3.5 h-3.5 text-indigo-300" />
-                          <span className="text-[10px] font-bold">JRF: {d.jrfProbability.jrfProbability}%</span>
-                          <span className="text-[8px] text-indigo-300/50">|</span>
-                          <span className="text-[10px] font-bold">NET: {d.jrfProbability.netProbability}%</span>
-                        </div>
-                      )}
-                      {d.playerLevel && (
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10">
-                          <Star className="w-3.5 h-3.5 text-amber-400" />
                           <span className="text-[10px] font-bold">
-                            Lv.{d.playerLevel.current.level} {l === 'hi' ? d.playerLevel.current.nameHi : d.playerLevel.current.name}
+                            JRF: {d.jrfProbability.jrfProbability}%
                           </span>
-                          <span className="text-[8px] text-indigo-300/50">{d.playerLevel.totalXP} XP</span>
-                        </div>
-                      )}
-                      {d.todayActivity.count > 0 && (
-                        <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                          <CheckCircle className="w-3 h-3 text-emerald-400" />
-                          <span className="text-[9px] font-bold text-emerald-300">
-                            {l === 'hi' ? `आज ${d.todayActivity.count} टेस्ट` : `${d.todayActivity.count} tests today`}
+                          <span className="text-[8px] text-indigo-300/50">|</span>
+                          <span className="text-[10px] font-bold">
+                            NET: {d.jrfProbability.netProbability}%
                           </span>
                         </div>
-                      )}
-                    </div>
+                        {d.todayActivity.count > 0 && (
+                          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                            <CheckCircle className="w-3 h-3 text-emerald-400" />
+                            <span className="text-[9px] font-bold text-emerald-300">
+                              {l === 'hi' ? `आज ${d.todayActivity.count} टेस्ट` : `${d.todayActivity.count} tests today`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="flex flex-wrap gap-2">
                       <button onClick={() => navigate('/tests/create')}
@@ -1968,11 +2240,17 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
                         { l: l === 'hi' ? 'टेस्ट' : 'Tests', v: d.testStats?.totalTests || 0, i: ClipboardList, c: 'from-amber-500 to-orange-500' },
                       ].map((p, i) => (
                         <div key={i} className="flex items-center gap-2 bg-white/5 rounded-lg px-2.5 py-1.5 border border-white/10">
-                          <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${p.c} flex items-center justify-center`}><p.i className="w-3 h-3 text-white" /></div>
-                          <div><p className="text-[8px] text-indigo-300/40">{p.l}{p.acc !== undefined ? ` (${p.acc}%)` : ''}</p><p className="text-sm font-bold">{p.v}</p></div>
+                          <div className={`w-6 h-6 rounded-md bg-gradient-to-br ${p.c} flex items-center justify-center`}>
+                            <p.i className="w-3 h-3 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-[8px] text-indigo-300/40">{p.l}{p.acc !== undefined ? ` (${p.acc}%)` : ''}</p>
+                            <p className="text-sm font-bold">{p.v}</p>
+                          </div>
                         </div>
                       ))}
                     </div>
+
                     <Ring pct={d.overallAccuracy} size={120} sw={8} color="#22c55e" bg="rgba(255,255,255,0.08)">
                       <div className="text-center">
                         <p className="text-2xl font-black">{d.overallAccuracy}%</p>
@@ -1988,60 +2266,68 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
                  STAT CARDS ROW
             ═══════════════════════════════════════════════ */}
             {d.loading ? (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{[1,2,3,4].map(i => <Sk key={i} className="h-28 rounded-2xl" />)}</div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {[1, 2, 3, 4].map(i => <Sk key={i} className="h-28 rounded-2xl" />)}
+              </div>
             ) : (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <StatCard icon={FileQuestion} label={l === 'hi' ? 'कुल प्रश्न' : 'Questions'} value={d.totalQuestions} sub={l === 'hi' ? 'बैंक में' : 'in bank'} gradient="from-blue-500 to-cyan-500" iconBg="from-blue-500 to-cyan-600" onClick={() => navigate('/questions')} delay={0} spark={[3,7,5,12,8,15,10]} />
-                <StatCard icon={BookOpen} label="Paper 1" value={d.paper1Count} sub={`${d.paper1Accuracy}% acc`} gradient="from-emerald-500 to-green-500" iconBg="from-emerald-500 to-green-600" onClick={() => navigate('/questions?paper=paper1')} delay={80} spark={[2,5,3,8,6,10,7]} trend={d.paper1TrendDir} />
-                <StatCard icon={Target} label="Paper 2" value={d.paper2Count} sub={`${d.paper2Accuracy}% acc`} gradient="from-purple-500 to-violet-500" iconBg="from-purple-500 to-violet-600" onClick={() => navigate('/questions?paper=paper2')} delay={160} spark={[4,6,9,5,11,8,13]} trend={d.paper2TrendDir} />
-                <StatCard icon={ClipboardList} label={l === 'hi' ? 'टेस्ट' : 'Tests'} value={d.testStats?.totalTests || 0} sub={`${d.allCompletedAttempts.length} ${l === 'hi' ? 'दिए' : 'taken'}`} gradient="from-amber-500 to-orange-500" iconBg="from-amber-500 to-orange-600" onClick={() => navigate('/tests')} delay={240} spark={[1,3,2,5,4,7,6]} />
+                <StatCard icon={FileQuestion} label={l === 'hi' ? 'कुल प्रश्न' : 'Questions'} value={d.totalQuestions}
+                  sub={l === 'hi' ? 'बैंक में' : 'in bank'} gradient="from-blue-500 to-cyan-500" iconBg="from-blue-500 to-cyan-600"
+                  onClick={() => navigate('/questions')} delay={0} spark={[3, 7, 5, 12, 8, 15, 10]} />
+                <StatCard icon={BookOpen} label="Paper 1" value={d.paper1Count}
+                  sub={`${d.paper1Accuracy}% acc`} gradient="from-emerald-500 to-green-500" iconBg="from-emerald-500 to-green-600"
+                  onClick={() => navigate('/questions?paper=paper1')} delay={80} spark={[2, 5, 3, 8, 6, 10, 7]}
+                  trend={d.paper1TrendDir} />
+                <StatCard icon={Target} label="Paper 2" value={d.paper2Count}
+                  sub={`${d.paper2Accuracy}% acc`} gradient="from-purple-500 to-violet-500" iconBg="from-purple-500 to-violet-600"
+                  onClick={() => navigate('/questions?paper=paper2')} delay={160} spark={[4, 6, 9, 5, 11, 8, 13]}
+                  trend={d.paper2TrendDir} />
+                <StatCard icon={ClipboardList} label={l === 'hi' ? 'टेस्ट' : 'Tests'} value={d.testStats?.totalTests || 0}
+                  sub={`${d.allCompletedAttempts.length} ${l === 'hi' ? 'दिए' : 'taken'}`} gradient="from-amber-500 to-orange-500" iconBg="from-amber-500 to-orange-600"
+                  onClick={() => navigate('/tests')} delay={240} spark={[1, 3, 2, 5, 4, 7, 6]} />
               </div>
             )}
 
             {/* ═══════════════════════════════════════════════
-                 🆕 PLAYER LEVEL + DAILY CHALLENGE + STREAK ROW
-            ═══════════════════════════════════════════════ */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <PlayerLevelCard playerLevel={d.playerLevel} language={l} />
-              <DailyChallengeCard challenge={d.dailyChallenge} language={l} />
-              <StreakCard streak={d.streak} longestStreak={d.longestStreak} language={l} />
-            </div>
-
-            {/* ═══════════════════════════════════════════════
-                 JRF PROBABILITY + GOALS + EXAM COUNTDOWN
+                 🆕 JRF PROBABILITY + GOALS + EXAM COUNTDOWN
             ═══════════════════════════════════════════════ */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <JRFProbabilityMeter data={d.jrfProbability} language={l} />
-              <GoalTracker
-                goals={d.autoGeneratedGoals} completionPct={d.goalCompletionPct}
-                todayActivity={d.todayActivity} todayDetailed={d.todayDetailed}
-                yesterdayActivity={d.yesterdayActivity} customTargets={d.customTargets}
-                updateCustomTargets={d.updateCustomTargets} dayProgress={d.dayProgress}
-                goalStreak={d.goalStreak} goalsCompleted={d.goalsCompleted}
-                totalGoals={d.totalGoals} pressureMessage={d.pressureMessage}
-                todayXP={d.todayXP} streak={d.streak} language={l} navigate={navigate}
+                            <GoalTracker
+                goals={d.autoGeneratedGoals}
+                completionPct={d.goalCompletionPct}
+                todayActivity={d.todayActivity}
+                todayDetailed={d.todayDetailed}
+                yesterdayActivity={d.yesterdayActivity}
+                customTargets={d.customTargets}
+                updateCustomTargets={d.updateCustomTargets}
+                dayProgress={d.dayProgress}
+                goalStreak={d.goalStreak}
+                goalsCompleted={d.goalsCompleted}
+                totalGoals={d.totalGoals}
+                pressureMessage={d.pressureMessage}
+                todayXP={d.todayXP}
+                streak={d.streak}
+                language={l}
+                navigate={navigate}
               />
               <div className="space-y-4">
-                <ExamCountdown examDate={d.examDate} setExamDate={d.setExamDate} daysUntilExam={d.daysUntilExam} notAttemptedCount={d.notAttemptedTests.length} language={l} />
-                {d.advancedCountdown && <AdvancedCountdownCard data={d.advancedCountdown} language={l} />}
+                <ExamCountdown
+                  examDate={d.examDate}
+                  setExamDate={d.setExamDate}
+                  daysUntilExam={d.daysUntilExam}
+                  notAttemptedCount={d.notAttemptedTests.length}
+                  language={l}
+                />
+                <StreakCard streak={d.streak} longestStreak={d.longestStreak} language={l} />
               </div>
             </div>
 
             {/* ═══════════════════════════════════════════════
-                 PERSONAL RECORDS
+                 🆕 PERSONAL RECORDS
             ═══════════════════════════════════════════════ */}
             {d.allCompletedAttempts.length > 0 && (
               <PersonalRecords records={d.personalRecords} language={l} />
-            )}
-
-            {/* ═══════════════════════════════════════════════
-                 🆕 WEEKLY REPORT + NEGATIVE MARKING
-            ═══════════════════════════════════════════════ */}
-            {(d.weeklyReportData?.totalTests > 0 || d.negativeMarkingImpact) && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <WeeklyReportCard data={d.weeklyReportData} language={l} />
-                <NegativeMarkingCard data={d.negativeMarkingImpact} language={l} />
-              </div>
             )}
 
             {/* ═══════════════════════════════════════════════
@@ -2050,17 +2336,23 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <BarChart3 className="w-5 h-5 text-indigo-500" />
-                <h2 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'पेपर-वार स्कोर ट्रेंड' : 'Paper-wise Score Trends'}</h2>
+                <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+                  {l === 'hi' ? 'पेपर-वार स्कोर ट्रेंड' : 'Paper-wise Score Trends'}
+                </h2>
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-2" />
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <PaperTrendCard title={l === 'hi' ? 'पेपर 1 ट्रेंड' : 'Paper 1 Trend'} icon={BookOpen} color="blue" data={d.paper1Trend} trend={d.paper1TrendDir} predicted={d.paper1Predicted} avgScore={d.paper1AvgScore} accuracy={d.paper1Accuracy} language={l} />
-                <PaperTrendCard title={l === 'hi' ? 'पेपर 2 ट्रेंड' : 'Paper 2 Trend'} icon={Target} color="purple" data={d.paper2Trend} trend={d.paper2TrendDir} predicted={d.paper2Predicted} avgScore={d.paper2AvgScore} accuracy={d.paper2Accuracy} language={l} />
+                <PaperTrendCard title={l === 'hi' ? 'पेपर 1 ट्रेंड' : 'Paper 1 Trend'} icon={BookOpen} color="blue"
+                  data={d.paper1Trend} trend={d.paper1TrendDir} predicted={d.paper1Predicted}
+                  avgScore={d.paper1AvgScore} accuracy={d.paper1Accuracy} language={l} />
+                <PaperTrendCard title={l === 'hi' ? 'पेपर 2 ट्रेंड' : 'Paper 2 Trend'} icon={Target} color="purple"
+                  data={d.paper2Trend} trend={d.paper2TrendDir} predicted={d.paper2Predicted}
+                  avgScore={d.paper2AvgScore} accuracy={d.paper2Accuracy} language={l} />
               </div>
             </div>
 
             {/* ═══════════════════════════════════════════════
-                 SYLLABUS COVERAGE + RECOMMENDATIONS
+                 🆕 SYLLABUS COVERAGE + SPEED + RECOMMENDATIONS
             ═══════════════════════════════════════════════ */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2">
@@ -2072,25 +2364,7 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
             </div>
 
             {/* ═══════════════════════════════════════════════
-                 🆕 FORGETTING CURVE + REVISION QUEUE + WEAK CHAPTERS
-            ═══════════════════════════════════════════════ */}
-            {d.allCompletedAttempts.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Brain className="w-5 h-5 text-violet-500" />
-                  <h2 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'स्मार्ट रिवीजन' : 'Smart Revision'}</h2>
-                  <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-2" />
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <ForgettingCurveCard data={d.forgettingCurveData} language={l} />
-                  <RevisionQueueCard queue={d.revisionQueue} language={l} navigate={navigate} />
-                  <WeakChaptersCard chapters={d.weakChaptersList} language={l} />
-                </div>
-              </div>
-            )}
-
-            {/* ═══════════════════════════════════════════════
-                 ERROR ANALYSIS + TOPIC MASTERY + SPEED
+                 🆕 ERROR ANALYSIS + TOPIC MASTERY + SPEED
             ═══════════════════════════════════════════════ */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <ErrorAnalysisCard data={d.errorPatterns} language={l} navigate={navigate} />
@@ -2099,27 +2373,20 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
             </div>
 
             {/* ═══════════════════════════════════════════════
-                 🆕 FATIGUE ANALYSIS + ACTIVITY HEATMAP
+                 🆕 ACTIVITY HEATMAP + WEEKLY + SCORE DIST
             ═══════════════════════════════════════════════ */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2">
                 <ActivityHeatmap activityMap={d.activityMap} language={l} />
               </div>
               <div className="space-y-4">
-                <FatigueAnalysisCard data={d.fatigueAnalysis} language={l} />
+                <WeeklyComparison data={d.weeklyComparison} language={l} />
+                <ScoreDistributionCard data={d.scoreDistribution} language={l} />
               </div>
             </div>
 
             {/* ═══════════════════════════════════════════════
-                 WEEKLY COMPARISON + SCORE DISTRIBUTION
-            ═══════════════════════════════════════════════ */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <WeeklyComparison data={d.weeklyComparison} language={l} />
-              <ScoreDistributionCard data={d.scoreDistribution} language={l} />
-            </div>
-
-            {/* ═══════════════════════════════════════════════
-                 TIME OF DAY ANALYSIS
+                 🆕 TIME OF DAY ANALYSIS
             ═══════════════════════════════════════════════ */}
             {d.timeOfDayAnalysis.bestPeriod && (
               <TimeOfDayCard data={d.timeOfDayAnalysis} language={l} />
@@ -2131,12 +2398,18 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <GraduationCap className="w-5 h-5 text-indigo-500" />
-                <h2 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'पेपर विश्लेषण' : 'Paper Analysis'}</h2>
+                <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+                  {l === 'hi' ? 'पेपर विश्लेषण' : 'Paper Analysis'}
+                </h2>
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-2" />
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <PaperSection paper="paper1" title={l === 'hi' ? 'पेपर 1' : 'Paper 1'} subtitle={l === 'hi' ? 'शिक्षण अभिवृत्ति' : 'Teaching Aptitude'} Icon={BookOpen} color="blue" units={d.paper1Units} total={d.paper1Count} language={l} navigate={navigate} />
-                <PaperSection paper="paper2" title={l === 'hi' ? 'पेपर 2' : 'Paper 2'} subtitle={l === 'hi' ? 'इतिहास' : 'History'} Icon={Target} color="purple" units={d.paper2Units} total={d.paper2Count} language={l} navigate={navigate} />
+                <PaperSection paper="paper1" title={l === 'hi' ? 'पेपर 1' : 'Paper 1'}
+                  subtitle={l === 'hi' ? 'शिक्षण अभिवृत्ति' : 'Teaching Aptitude'} Icon={BookOpen} color="blue"
+                  units={d.paper1Units} total={d.paper1Count} language={l} navigate={navigate} />
+                <PaperSection paper="paper2" title={l === 'hi' ? 'पेपर 2' : 'Paper 2'}
+                  subtitle={l === 'hi' ? 'इतिहास' : 'History'} Icon={Target} color="purple"
+                  units={d.paper2Units} total={d.paper2Count} language={l} navigate={navigate} />
               </div>
             </div>
 
@@ -2147,10 +2420,17 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <Calendar className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-                  <h2 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'बाकी टेस्ट' : 'Pending Tests Timeline'}</h2>
+                  <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+                    {l === 'hi' ? 'बाकी टेस्ट' : 'Pending Tests Timeline'}
+                  </h2>
                   <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-2" />
                 </div>
-                <PendingTimeline notAttemptedTests={d.notAttemptedTests} paper1NotAttempted={d.paper1NotAttempted} paper2NotAttempted={d.paper2NotAttempted} language={l} navigate={navigate} />
+                <PendingTimeline
+                  notAttemptedTests={d.notAttemptedTests}
+                  paper1NotAttempted={d.paper1NotAttempted}
+                  paper2NotAttempted={d.paper2NotAttempted}
+                  language={l} navigate={navigate}
+                />
               </div>
             )}
 
@@ -2161,7 +2441,9 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <AlertTriangle className="w-5 h-5 text-red-500" />
-                  <h2 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'ध्यान दें' : 'Needs Attention'}</h2>
+                  <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+                    {l === 'hi' ? 'ध्यान दें' : 'Needs Attention'}
+                  </h2>
                   <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700 ml-2" />
                 </div>
                 <NeedsAttentionCard tests={d.needsAttentionTests} language={l} navigate={navigate} />
@@ -2174,9 +2456,15 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2">
                 <PaperTabbedActivity
-                  allAttempts={d.allCompletedAttempts} paper1Attempts={d.paper1Attempts} paper2Attempts={d.paper2Attempts}
-                  allTests={d.createdTests} paper1Tests={d.paper1Tests} paper2Tests={d.paper2Tests}
-                  notAttemptedTests={d.notAttemptedTests} paper1NotAttempted={d.paper1NotAttempted} paper2NotAttempted={d.paper2NotAttempted}
+                  allAttempts={d.allCompletedAttempts}
+                  paper1Attempts={d.paper1Attempts}
+                  paper2Attempts={d.paper2Attempts}
+                  allTests={d.createdTests}
+                  paper1Tests={d.paper1Tests}
+                  paper2Tests={d.paper2Tests}
+                  notAttemptedTests={d.notAttemptedTests}
+                  paper1NotAttempted={d.paper1NotAttempted}
+                  paper2NotAttempted={d.paper2NotAttempted}
                   language={l} loading={d.loading}
                 />
               </div>
@@ -2192,13 +2480,23 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <Zap className="w-4 h-4 text-amber-500" />
-                <h2 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'त्वरित क्रियाएं' : 'Quick Actions'}</h2>
+                <h2 className="text-sm font-bold text-gray-900 dark:text-white">
+                  {l === 'hi' ? 'त्वरित क्रियाएं' : 'Quick Actions'}
+                </h2>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <QAction icon={PlusCircle} title={l === 'hi' ? 'नया टेस्ट' : 'New Test'} desc={l === 'hi' ? 'मॉक बनाएं' : 'Create mock'} to="/tests/create" gradient="from-blue-600 to-indigo-600" delay={0} />
-                <QAction icon={Upload} title={l === 'hi' ? 'आयात' : 'Import'} desc="JSON" to="/import" gradient="from-emerald-600 to-green-600" badge="JSON" delay={80} />
-                <QAction icon={FileQuestion} title={l === 'hi' ? 'प्रश्न' : 'Questions'} desc={l === 'hi' ? 'बैंक' : 'Bank'} to="/questions" gradient="from-purple-600 to-violet-600" delay={160} />
-                <QAction icon={BarChart3} title={l === 'hi' ? 'परिणाम' : 'Results'} desc={l === 'hi' ? 'प्रगति' : 'Progress'} to="/results" gradient="from-orange-600 to-red-600" delay={240} />
+                <QAction icon={PlusCircle} title={l === 'hi' ? 'नया टेस्ट' : 'New Test'}
+                  desc={l === 'hi' ? 'मॉक बनाएं' : 'Create mock'} to="/tests/create"
+                  gradient="from-blue-600 to-indigo-600" delay={0} />
+                <QAction icon={Upload} title={l === 'hi' ? 'आयात' : 'Import'}
+                  desc="JSON" to="/import" gradient="from-emerald-600 to-green-600"
+                  badge="JSON" delay={80} />
+                <QAction icon={FileQuestion} title={l === 'hi' ? 'प्रश्न' : 'Questions'}
+                  desc={l === 'hi' ? 'बैंक' : 'Bank'} to="/questions"
+                  gradient="from-purple-600 to-violet-600" delay={160} />
+                <QAction icon={BarChart3} title={l === 'hi' ? 'परिणाम' : 'Results'}
+                  desc={l === 'hi' ? 'प्रगति' : 'Progress'} to="/results"
+                  gradient="from-orange-600 to-red-600" delay={240} />
               </div>
             </div>
 
@@ -2221,7 +2519,6 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
                           : `JRF: ${d.jrfProbability.jrfProbability}% | NET: ${d.jrfProbability.netProbability}%`)
                         : (l === 'hi' ? 'अभी शुरू करें!' : 'Start now!')
                       }
-                      {d.playerLevel && ` | ${l === 'hi' ? d.playerLevel.current.nameHi : d.playerLevel.current.name} (${d.playerLevel.totalXP} XP)`}
                     </p>
                   </div>
                 </div>

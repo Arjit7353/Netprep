@@ -563,6 +563,7 @@ const useDashboard = () => {
   const todayDetailed = useMemo(() => {
     const todayStr = todayKey;
 
+    // All attempts completed today
     const todayAttempts = allCompletedAttempts.filter(a => {
       const d = new Date(a.completedAt || a.createdAt).toISOString().split('T')[0];
       return d === todayStr;
@@ -572,6 +573,7 @@ const useDashboard = () => {
       a.testId?._id?.toString() || a.testId?.toString()
     ));
 
+    // Count pending tests cleared today (first-time attempts)
     let pendingCleared = 0;
     let weakRetried = 0;
 
@@ -579,6 +581,7 @@ const useDashboard = () => {
       const tid = a.testId?._id?.toString() || a.testId?.toString();
       if (!tid) return;
 
+      // Previous attempts before today
       const previousAttempts = allCompletedAttempts.filter(prev => {
         const prevTid = prev.testId?._id?.toString() || prev.testId?.toString();
         const prevDate = new Date(prev.completedAt || prev.createdAt).toISOString().split('T')[0];
@@ -597,6 +600,7 @@ const useDashboard = () => {
       }
     });
 
+    // Scores today
     const todayScores = todayAttempts.map(a =>
       a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0
     );
@@ -604,21 +608,27 @@ const useDashboard = () => {
     const avgToday = todayScores.length > 0
       ? Math.round(todayScores.reduce((a, b) => a + b, 0) / todayScores.length) : 0;
 
+    // Accuracy today
     const todayCorrect = todayAttempts.reduce((s, a) => s + (a.correctCount || 0), 0);
     const todayWrong = todayAttempts.reduce((s, a) => s + (a.wrongCount || 0), 0);
     const todaySkipped = todayAttempts.reduce((s, a) => s + (a.skippedCount || 0), 0);
     const todayAccuracy = (todayCorrect + todayWrong) > 0
       ? Math.round((todayCorrect / (todayCorrect + todayWrong)) * 100) : 0;
 
+    // Time spent today (seconds)
     const todayTime = todayAttempts.reduce((s, a) => s + (a.totalTimeTaken || 0), 0);
 
+    // Paper wise
     const p1Today = todayAttempts.filter(a => a.testId?.paper === 'paper1').length;
     const p2Today = todayAttempts.filter(a => a.testId?.paper === 'paper2').length;
 
+    // Questions solved today
     const totalQuestionsSolved = todayCorrect + todayWrong + todaySkipped;
 
+    // Scores above target
     const scoresAboveTarget = todayScores.filter(s => s >= (customTargets.targetScore || 75)).length;
 
+    // Perfect scores (90%+)
     const perfectScores = todayScores.filter(s => s >= 90).length;
 
     return {
@@ -643,9 +653,10 @@ const useDashboard = () => {
     };
   }, [allCompletedAttempts, todayKey, customTargets]);
 
+  // Use todayDetailed as todayActivity for backward compat
   const todayActivity = todayDetailed;
 
-  // ── YESTERDAY'S ACTIVITY ──
+  // ── YESTERDAY'S ACTIVITY (for comparison) ──
   const yesterdayActivity = useMemo(() => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
@@ -654,7 +665,7 @@ const useDashboard = () => {
     return data || { count: 0, avgScore: 0, avgAccuracy: 0 };
   }, [activityMap]);
 
-  // ── GOAL STREAK ──
+  // ── GOAL STREAK (consecutive days all goals completed) ──
   const [goalHistory, setGoalHistoryState] = useState(() => {
     try {
       const saved = localStorage.getItem('netprep_goal_history');
@@ -673,7 +684,7 @@ const useDashboard = () => {
   const goalStreak = useMemo(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     let count = 0;
-    for (let i = 1; i < 365; i++) {
+    for (let i = 1; i < 365; i++) { // start from yesterday
       const d = new Date(today); d.setDate(d.getDate() - i);
       const k = d.toISOString().split('T')[0];
       if (goalHistory[k] === true) count++;
@@ -682,14 +693,15 @@ const useDashboard = () => {
     return count;
   }, [goalHistory]);
 
-  // ── DAY PROGRESS ──
+  // ── DAY PROGRESS (what % of the day has passed) ──
   const dayProgress = useMemo(() => {
     const now = new Date();
     const hours = now.getHours();
     const minutes = now.getMinutes();
     const totalMinutes = hours * 60 + minutes;
-    const studyStart = 6 * 60;
-    const studyEnd = 23 * 60;
+    // Study day: 6 AM to 11 PM = 17 hours = 1020 minutes
+    const studyStart = 6 * 60; // 6 AM
+    const studyEnd = 23 * 60; // 11 PM
     const studyDuration = studyEnd - studyStart;
     const elapsed = Math.max(0, Math.min(totalMinutes - studyStart, studyDuration));
     const pct = Math.round((elapsed / studyDuration) * 100);
@@ -697,6 +709,7 @@ const useDashboard = () => {
     const remainingHours = Math.floor(remaining / 60);
     const remainingMins = remaining % 60;
 
+    // Time period
     let period = 'morning';
     if (hours >= 17) period = 'evening';
     else if (hours >= 12) period = 'afternoon';
@@ -713,29 +726,36 @@ const useDashboard = () => {
       isAlmostOver: pct > 80,
       currentHour: hours,
     };
-  }, []);
+  }, []); // Updates on re-render which happens every minute anyway
 
   // ── XP SYSTEM ──
   const todayXP = useMemo(() => {
     let xp = 0;
     const td = todayDetailed;
+    // Base XP for tests
     xp += td.count * 10;
+    // Bonus for accuracy
     if (td.accuracy >= 80) xp += td.count * 5;
     else if (td.accuracy >= 70) xp += td.count * 3;
+    // Bonus for perfect scores
     xp += td.perfectScores * 15;
+    // Bonus for clearing pending
     xp += td.pendingCleared * 8;
+    // Bonus for retrying weak
     xp += td.weakRetried * 12;
+    // Streak bonus
     xp += Math.min(streak, 7) * 2;
     return xp;
   }, [todayDetailed, streak]);
 
-  // ── AUTO-GENERATED GOALS ──
+  // ── AUTO-GENERATED GOALS (Fully Working) ──
   const autoGeneratedGoals = useMemo(() => {
     const goals = [];
     const { dailyTests, dailyAccuracy, targetScore } = customTargets;
     const td = todayDetailed;
     const dp = dayProgress;
 
+    // ── Goal 1: Daily test count ──
     goals.push({
       id: 'daily_tests',
       title: `Complete ${dailyTests} tests today`,
@@ -756,6 +776,7 @@ const useDashboard = () => {
       urgency: td.count < dailyTests && dp.isPastHalf ? 'high' : 'normal',
     });
 
+    // ── Goal 2: Accuracy target ──
     goals.push({
       id: 'daily_accuracy',
       title: `Score ${dailyAccuracy}%+ accuracy`,
@@ -780,6 +801,7 @@ const useDashboard = () => {
       urgency: td.count > 0 && td.accuracy < dailyAccuracy ? 'medium' : 'normal',
     });
 
+    // ── Goal 3: Score improvement target ──
     const last5Avg = scoreTrend.slice(-5).reduce((s, d) => s + d.score, 0) / (Math.min(scoreTrend.length, 5) || 1);
     const improvTarget = Math.min(100, Math.round(last5Avg + 5));
     const bestTodayScore = td.bestScore;
@@ -807,6 +829,7 @@ const useDashboard = () => {
       urgency: td.count > 2 && bestTodayScore < improvTarget ? 'high' : 'normal',
     });
 
+    // ── Goal 4: Clear pending tests ──
     const pendingTarget = Math.min(2, notAttemptedTests.length);
     if (notAttemptedTests.length > 0) {
       goals.push({
@@ -830,6 +853,7 @@ const useDashboard = () => {
       });
     }
 
+    // ── Goal 5: Retry weak tests ──
     if (needsAttentionTests.length > 0) {
       goals.push({
         id: 'retry_weak',
@@ -852,6 +876,7 @@ const useDashboard = () => {
       });
     }
 
+    // ── Goal 6: Maintain streak ──
     goals.push({
       id: 'maintain_streak',
       title: streak > 0 ? `Extend ${streak}-day streak to ${streak + 1}` : 'Start a study streak',
@@ -876,7 +901,8 @@ const useDashboard = () => {
       urgency: td.count === 0 && dp.isAlmostOver ? 'critical' : td.count === 0 && dp.isPastHalf ? 'high' : 'normal',
     });
 
-    const timeTarget = 30;
+    // ── Goal 7: Study time target ──
+    const timeTarget = 30; // 30 minutes minimum
     const todayMins = Math.round(td.timeSpent / 60);
     goals.push({
       id: 'study_time',
@@ -898,6 +924,7 @@ const useDashboard = () => {
       urgency: 'normal',
     });
 
+    // ── Goal 8: Paper balance ──
     const p1Target = Math.max(1, Math.floor(dailyTests / 2));
     const p2Target = Math.max(1, dailyTests - p1Target);
     if (dailyTests >= 2) {
@@ -906,7 +933,7 @@ const useDashboard = () => {
         title: `P1: ${p1Target}+ & P2: ${p2Target}+ tests`,
         titleHi: `P1: ${p1Target}+ और P2: ${p2Target}+ टेस्ट`,
         icon: 'BarChart2',
-        target: 2,
+        target: 2, // Both papers
         current: (td.p1Count >= p1Target ? 1 : 0) + (td.p2Count >= p2Target ? 1 : 0),
         type: 'count',
         color: 'indigo',
@@ -918,7 +945,8 @@ const useDashboard = () => {
       });
     }
 
-    const qTarget = dailyTests * 15;
+    // ── Goal 9: Questions solved ──
+    const qTarget = dailyTests * 15; // ~15 questions per test average
     goals.push({
       id: 'questions_solved',
       title: `Solve ${qTarget}+ questions`,
@@ -939,11 +967,12 @@ const useDashboard = () => {
       urgency: 'normal',
     });
 
+    // Sort: critical > high > medium > low, incomplete first
     const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
     goals.sort((a, b) => {
       const aDone = a.current >= a.target ? 1 : 0;
       const bDone = b.current >= b.target ? 1 : 0;
-      if (aDone !== bDone) return aDone - bDone;
+      if (aDone !== bDone) return aDone - bDone; // incomplete first
       return (priorityOrder[a.priority] || 3) - (priorityOrder[b.priority] || 3);
     });
 
@@ -957,6 +986,7 @@ const useDashboard = () => {
     const done = autoGeneratedGoals.filter(g => g.current >= g.target).length;
     const pct = Math.round((done / autoGeneratedGoals.length) * 100);
 
+    // Auto-save goal history if all complete
     if (pct === 100 && todayDetailed.count > 0) {
       try {
         const existing = JSON.parse(localStorage.getItem('netprep_goal_history') || '{}');
@@ -992,380 +1022,6 @@ const useDashboard = () => {
     if (td.accuracy < customTargets.dailyAccuracy) return { type: 'warning', en: `Accuracy ${td.accuracy}% < target ${customTargets.dailyAccuracy}%. Focus!`, hi: `सटीकता ${td.accuracy}% < लक्ष्य ${customTargets.dailyAccuracy}%। ध्यान दो!` };
     return { type: 'info', en: `${tg - gc} goals remaining. You can do it!`, hi: `${tg - gc} लक्ष्य बाकी। आप कर सकते हो!` };
   }, [todayDetailed, dayProgress, goalsCompleted, totalGoals, customTargets]);
-
-  // ════════════════════════════════════════════════════════════
-  //  🆕 REVISION QUEUE (Lowest % tests for revision)
-  // ════════════════════════════════════════════════════════════
-  const revisionQueue = useMemo(() => {
-    const testBestScores = {};
-    allCompletedAttempts.forEach(a => {
-      const tid = a.testId?._id?.toString() || a.testId?.toString();
-      if (!tid) return;
-      const pct = a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0;
-      const lastDate = a.completedAt || a.createdAt;
-      if (!testBestScores[tid] || pct > testBestScores[tid].bestScore) {
-        testBestScores[tid] = {
-          testId: tid, test: a.testId, bestScore: pct,
-          lastAttemptDate: lastDate, attempts: (testBestScores[tid]?.attempts || 0) + 1,
-          lastAttempt: a,
-        };
-      } else {
-        testBestScores[tid].attempts += 1;
-        if (new Date(lastDate) > new Date(testBestScores[tid].lastAttemptDate)) {
-          testBestScores[tid].lastAttemptDate = lastDate;
-        }
-      }
-    });
-
-    return Object.values(testBestScores)
-      .sort((a, b) => a.bestScore - b.bestScore)
-      .map(t => {
-        const daysSince = Math.floor((Date.now() - new Date(t.lastAttemptDate).getTime()) / 86400000);
-        const needsRevision = t.bestScore < 70 || daysSince > 7;
-        const urgency = t.bestScore < 30 ? 'critical' : t.bestScore < 50 ? 'high' : t.bestScore < 70 ? 'medium' : 'low';
-        const retention = Math.max(5, Math.round(100 * Math.exp(-0.08 * daysSince)));
-        return { ...t, daysSince, needsRevision, urgency, retention };
-      });
-  }, [allCompletedAttempts]);
-
-  // ════════════════════════════════════════════════════════════
-  //  🆕 WEAK CHAPTERS LIST (Sorted by worst %)
-  // ════════════════════════════════════════════════════════════
-  const weakChaptersList = useMemo(() => {
-    const chapterMap = {};
-    allCompletedAttempts.forEach(a => {
-      const unit = a.testId?.unit || 'Unknown';
-      const paper = a.testId?.paper || 'unknown';
-      const key = `${paper}__${unit}`;
-      const pct = a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0;
-
-      if (!chapterMap[key]) {
-        chapterMap[key] = {
-          unit, paper, scores: [], attempts: 0,
-          totalCorrect: 0, totalWrong: 0, totalSkipped: 0, lastAttempted: null,
-        };
-      }
-      chapterMap[key].scores.push(pct);
-      chapterMap[key].attempts += 1;
-      chapterMap[key].totalCorrect += (a.correctCount || 0);
-      chapterMap[key].totalWrong += (a.wrongCount || 0);
-      chapterMap[key].totalSkipped += (a.skippedCount || 0);
-      const date = a.completedAt || a.createdAt;
-      if (!chapterMap[key].lastAttempted || new Date(date) > new Date(chapterMap[key].lastAttempted)) {
-        chapterMap[key].lastAttempted = date;
-      }
-    });
-
-    return Object.values(chapterMap).map(ch => {
-      const avgScore = ch.scores.length > 0 ? Math.round(ch.scores.reduce((a, b) => a + b, 0) / ch.scores.length) : 0;
-      const bestScore = ch.scores.length > 0 ? Math.max(...ch.scores) : 0;
-      const worstScore = ch.scores.length > 0 ? Math.min(...ch.scores) : 0;
-      const totalQ = ch.totalCorrect + ch.totalWrong + ch.totalSkipped;
-      const accuracy = (ch.totalCorrect + ch.totalWrong) > 0
-        ? Math.round((ch.totalCorrect / (ch.totalCorrect + ch.totalWrong)) * 100) : 0;
-      const daysSince = ch.lastAttempted
-        ? Math.floor((Date.now() - new Date(ch.lastAttempted).getTime()) / 86400000) : 999;
-      let status = 'strong';
-      if (avgScore < 30) status = 'critical';
-      else if (avgScore < 50) status = 'weak';
-      else if (avgScore < 70) status = 'average';
-
-      return { ...ch, avgScore, bestScore, worstScore, accuracy, totalQ, daysSince, status };
-    }).sort((a, b) => a.avgScore - b.avgScore);
-  }, [allCompletedAttempts]);
-
-  // ════════════════════════════════════════════════════════════
-  //  🆕 FORGETTING CURVE DATA (Spaced Repetition)
-  // ════════════════════════════════════════════════════════════
-  const forgettingCurveData = useMemo(() => {
-    const intervals = [1, 3, 7, 14, 30];
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-
-    const topicLast = {};
-    allCompletedAttempts.forEach(a => {
-      const unit = a.testId?.unit;
-      const paper = a.testId?.paper;
-      if (!unit) return;
-      const key = `${paper}__${unit}`;
-      const date = new Date(a.completedAt || a.createdAt);
-      const pct = a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0;
-      if (!topicLast[key] || date > topicLast[key].date) {
-        topicLast[key] = { date, unit, paper, lastScore: pct, testTitle: a.testId?.title };
-      }
-    });
-
-    const dueForRevision = [];
-    const upcoming = [];
-    const safe = [];
-
-    Object.entries(topicLast).forEach(([key, data]) => {
-      const daysSince = Math.floor((today - data.date) / 86400000);
-      let nextInterval = intervals[intervals.length - 1];
-      for (const iv of intervals) { if (daysSince < iv) { nextInterval = iv; break; } }
-      const daysUntilDue = nextInterval - daysSince;
-      const isOverdue = daysUntilDue <= 0;
-      const retention = Math.max(5, Math.round(100 * Math.exp(-0.08 * daysSince)));
-      const urgency = isOverdue ? (daysSince > 14 ? 'critical' : 'high') : (daysUntilDue <= 2 ? 'medium' : 'low');
-
-      const item = { ...data, key, daysSince, daysUntilDue, isOverdue, retention, urgency, nextInterval };
-
-      if (isOverdue) dueForRevision.push(item);
-      else if (daysUntilDue <= 3) upcoming.push(item);
-      else safe.push(item);
-    });
-
-    dueForRevision.sort((a, b) => b.daysSince - a.daysSince);
-    upcoming.sort((a, b) => a.daysUntilDue - b.daysUntilDue);
-
-    return {
-      dueForRevision, upcoming, safe,
-      totalTopics: Object.keys(topicLast).length,
-      overdueCount: dueForRevision.length,
-      avgRetention: Object.values(topicLast).length > 0
-        ? Math.round(Object.values(topicLast).reduce((s, t) => {
-            const ds = Math.floor((today - t.date) / 86400000);
-            return s + Math.max(5, Math.round(100 * Math.exp(-0.08 * ds)));
-          }, 0) / Object.values(topicLast).length)
-        : 0,
-    };
-  }, [allCompletedAttempts]);
-
-  // ════════════════════════════════════════════════════════════
-  //  🆕 FATIGUE ANALYSIS (Session performance drop)
-  // ════════════════════════════════════════════════════════════
-  const fatigueAnalysis = useMemo(() => {
-    const sorted = [...allCompletedAttempts]
-      .filter(a => a.completedAt)
-      .sort((a, b) => new Date(a.completedAt) - new Date(b.completedAt));
-    const sessions = [];
-    let cur = [];
-
-    sorted.forEach((a, i) => {
-      if (i === 0) { cur.push(a); return; }
-      const gap = (new Date(a.completedAt) - new Date(sorted[i - 1].completedAt)) / 60000;
-      if (gap <= 60) cur.push(a);
-      else { if (cur.length >= 2) sessions.push([...cur]); cur = [a]; }
-    });
-    if (cur.length >= 2) sessions.push(cur);
-
-    const posData = {};
-    sessions.forEach(sess => {
-      sess.forEach((a, pos) => {
-        if (!posData[pos]) posData[pos] = { scores: [], accs: [] };
-        posData[pos].scores.push(a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0);
-        const att = (a.correctCount || 0) + (a.wrongCount || 0);
-        posData[pos].accs.push(att > 0 ? Math.round((a.correctCount / att) * 100) : 0);
-      });
-    });
-
-    const chart = Object.entries(posData).map(([pos, d]) => ({
-      position: parseInt(pos) + 1,
-      name: `Test ${parseInt(pos) + 1}`,
-      avgScore: d.scores.length > 0 ? Math.round(d.scores.reduce((a, b) => a + b, 0) / d.scores.length) : 0,
-      avgAccuracy: d.accs.length > 0 ? Math.round(d.accs.reduce((a, b) => a + b, 0) / d.accs.length) : 0,
-      count: d.scores.length,
-    })).sort((a, b) => a.position - b.position).slice(0, 10);
-
-    let optimal = chart.length;
-    for (let i = 1; i < chart.length; i++) {
-      if (chart[i].avgScore < chart[0].avgScore * 0.8) { optimal = i; break; }
-    }
-
-    const first = chart.length > 0 ? chart[0].avgScore : 0;
-    const last = chart.length > 1 ? chart[chart.length - 1].avgScore : first;
-    const drop = first > 0 ? Math.round(((first - last) / first) * 100) : 0;
-
-    return {
-      sessions: sessions.length,
-      avgSessionLen: sessions.length > 0 ? Math.round(sessions.reduce((s, ss) => s + ss.length, 0) / sessions.length) : 0,
-      chart, optimalTests: optimal, dropPct: drop,
-      rec: optimal <= 2 ? 'Take breaks after every 2 tests' : optimal <= 4 ? 'Take a break after 3-4 tests' : 'Good stamina! Keep going',
-      recHi: optimal <= 2 ? 'हर 2 टेस्ट बाद ब्रेक लें' : optimal <= 4 ? '3-4 टेस्ट बाद ब्रेक लें' : 'अच्छी स्टैमिना! जारी रखें',
-    };
-  }, [allCompletedAttempts]);
-
-  // ════════════════════════════════════════════════════════════
-  //  🆕 DAILY CHALLENGE (Changes every day)
-  // ════════════════════════════════════════════════════════════
-  const dailyChallenge = useMemo(() => {
-    const today = new Date();
-    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
-    const idx = ((seed * 9301 + 49297) % 233280) % 8;
-    const td = todayDetailed;
-
-    const challenges = [
-      { id: 'perfect', title: 'Score 90%+ in any test', titleHi: 'किसी टेस्ट में 90%+ लाओ', xp: 50, icon: 'Star', color: 'amber', target: 1, current: td.perfectScores, type: 'count' },
-      { id: 'speed', title: 'Avg under 30s per question', titleHi: '30s/प्रश्न से कम में पूरा करो', xp: 40, icon: 'Zap', color: 'cyan', target: 1, current: td.attempts?.filter(a => { const q = (a.correctCount || 0) + (a.wrongCount || 0) + (a.skippedCount || 0); return q > 0 && (a.totalTimeTaken || 0) / q < 30; }).length || 0, type: 'count' },
-      { id: 'acc', title: 'Get 85%+ accuracy today', titleHi: 'आज 85%+ सटीकता लाओ', xp: 45, icon: 'Target', color: 'emerald', target: 85, current: td.accuracy, type: 'pct' },
-      { id: 'marathon', title: 'Complete 5 tests today', titleHi: 'आज 5 टेस्ट पूरे करो', xp: 35, icon: 'Flame', color: 'orange', target: 5, current: td.count, type: 'count' },
-      { id: 'noskip', title: '0 skips in a test', titleHi: 'बिना skip के टेस्ट करो', xp: 30, icon: 'Shield', color: 'blue', target: 1, current: td.attempts?.filter(a => (a.skippedCount || 0) === 0).length || 0, type: 'count' },
-      { id: 'weak', title: 'Improve a weak test (<50%)', titleHi: 'कमजोर टेस्ट सुधारो', xp: 55, icon: 'RefreshCw', color: 'red', target: 1, current: td.weakRetried, type: 'count' },
-      { id: 'both', title: 'Attempt Paper 1 & Paper 2', titleHi: 'दोनों पेपर से टेस्ट दो', xp: 25, icon: 'BarChart2', color: 'indigo', target: 2, current: (td.p1Count > 0 ? 1 : 0) + (td.p2Count > 0 ? 1 : 0), type: 'count' },
-      { id: 'hour', title: 'Study 60+ minutes', titleHi: '60+ मिनट पढ़ाई करो', xp: 40, icon: 'Timer', color: 'purple', target: 60, current: Math.round(td.timeSpent / 60), type: 'count' },
-    ];
-
-    const ch = challenges[idx];
-    const done = ch.type === 'pct' ? ch.current >= ch.target : ch.current >= ch.target;
-    return { ...ch, completed: done, pct: Math.min(100, Math.round((ch.current / Math.max(ch.target, 1)) * 100)) };
-  }, [todayDetailed]);
-
-  // ════════════════════════════════════════════════════════════
-  //  🆕 PLAYER LEVEL SYSTEM (XP-based)
-  // ════════════════════════════════════════════════════════════
-  const playerLevel = useMemo(() => {
-    let xp = 0;
-    xp += allCompletedAttempts.length * 10;
-    allCompletedAttempts.forEach(a => {
-      const p = a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0;
-      if (p >= 90) xp += 20; else if (p >= 80) xp += 15; else if (p >= 70) xp += 10; else if (p >= 60) xp += 5;
-    });
-    xp += streak * 5;
-    xp += longestStreak * 10;
-    xp += (syllabusCoverage.overallPct || 0) * 2;
-    xp += achievements.filter(a => a.unlocked).length * 25;
-
-    const levels = [
-      { level: 1, name: 'Beginner', nameHi: 'शुरुआती', xp: 0, color: 'gray' },
-      { level: 2, name: 'Learner', nameHi: 'सीखने वाला', xp: 100, color: 'blue' },
-      { level: 3, name: 'Practitioner', nameHi: 'अभ्यासी', xp: 300, color: 'green' },
-      { level: 4, name: 'Scholar', nameHi: 'विद्वान', xp: 600, color: 'purple' },
-      { level: 5, name: 'Expert', nameHi: 'विशेषज्ञ', xp: 1000, color: 'indigo' },
-      { level: 6, name: 'Master', nameHi: 'मास्टर', xp: 1500, color: 'amber' },
-      { level: 7, name: 'Grandmaster', nameHi: 'ग्रैंडमास्टर', xp: 2500, color: 'orange' },
-      { level: 8, name: 'Legend', nameHi: 'लीजेंड', xp: 4000, color: 'red' },
-    ];
-
-    let cur = levels[0], nxt = levels[1];
-    for (let i = levels.length - 1; i >= 0; i--) {
-      if (xp >= levels[i].xp) { cur = levels[i]; nxt = levels[i + 1] || null; break; }
-    }
-    const inLevel = xp - cur.xp;
-    const forNext = nxt ? nxt.xp - cur.xp : 0;
-    const pct = forNext > 0 ? Math.round((inLevel / forNext) * 100) : 100;
-
-    return { totalXP: xp, current: cur, next: nxt, inLevel, forNext, pct };
-  }, [allCompletedAttempts, streak, longestStreak, syllabusCoverage, achievements]);
-
-  // ════════════════════════════════════════════════════════════
-  //  🆕 NEGATIVE MARKING IMPACT
-  // ════════════════════════════════════════════════════════════
-  const negativeMarkingImpact = useMemo(() => {
-    if (allCompletedAttempts.length === 0) return null;
-    let totalNeg = 0, totalWrong = 0, testsWithNeg = 0;
-
-    allCompletedAttempts.forEach(a => {
-      const w = a.wrongCount || 0;
-      if (w > 0) {
-        totalNeg += w * (1 / 3);
-        totalWrong += w;
-        testsWithNeg++;
-      }
-    });
-
-    const avgPer = testsWithNeg > 0 ? Math.round((totalNeg / testsWithNeg) * 10) / 10 : 0;
-    const potential = Math.round(totalNeg);
-
-    return {
-      totalNeg: Math.round(totalNeg * 10) / 10, totalWrong, avgPer, testsWithNeg,
-      potential, totalTests: allCompletedAttempts.length,
-      rec: avgPer > 3 ? 'Skip uncertain questions' : avgPer > 1 ? 'Guess less, skip more' : 'Good balance!',
-      recHi: avgPer > 3 ? 'अनिश्चित प्रश्न छोड़ें' : avgPer > 1 ? 'कम अंदाजे लगाएं' : 'अच्छा संतुलन!',
-    };
-  }, [allCompletedAttempts]);
-
-  // ════════════════════════════════════════════════════════════
-  //  🆕 WEEKLY REPORT DATA
-  // ════════════════════════════════════════════════════════════
-  const weeklyReportData = useMemo(() => {
-    const now = new Date();
-    const ws = new Date(now); ws.setDate(now.getDate() - now.getDay()); ws.setHours(0, 0, 0, 0);
-    const wa = allCompletedAttempts.filter(a => new Date(a.completedAt) >= ws);
-
-    const daily = [];
-    for (let i = 0; i < 7; i++) {
-      const day = new Date(ws); day.setDate(day.getDate() + i);
-      const ds = day.toISOString().split('T')[0];
-      const da = wa.filter(a => new Date(a.completedAt).toISOString().split('T')[0] === ds);
-      const sc = da.map(a => a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0);
-      daily.push({
-        day: day.toLocaleDateString('en', { weekday: 'short' }),
-        date: ds, tests: da.length,
-        avgScore: sc.length > 0 ? Math.round(sc.reduce((a, b) => a + b, 0) / sc.length) : 0,
-        isToday: ds === todayKey,
-      });
-    }
-
-    const sc = wa.map(a => a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0);
-    const tc = wa.reduce((s, a) => s + (a.correctCount || 0), 0);
-    const tw = wa.reduce((s, a) => s + (a.wrongCount || 0), 0);
-
-    return {
-      daily, totalTests: wa.length,
-      avgScore: sc.length > 0 ? Math.round(sc.reduce((a, b) => a + b, 0) / sc.length) : 0,
-      bestScore: sc.length > 0 ? Math.max(...sc) : 0,
-      accuracy: (tc + tw) > 0 ? Math.round((tc / (tc + tw)) * 100) : 0,
-      totalTime: wa.reduce((s, a) => s + (a.totalTimeTaken || 0), 0),
-      activeDays: daily.filter(d => d.tests > 0).length,
-      totalCorrect: tc, totalWrong: tw,
-    };
-  }, [allCompletedAttempts, todayKey]);
-
-  // ════════════════════════════════════════════════════════════
-  //  🆕 ADVANCED EXAM COUNTDOWN
-  // ════════════════════════════════════════════════════════════
-  const advancedCountdown = useMemo(() => {
-    if (!examDate) return null;
-    const exam = new Date(examDate);
-    const now = new Date();
-    const totalDays = Math.max(0, Math.ceil((exam - now) / 86400000));
-    const weeks = Math.floor(totalDays / 7);
-    const remDays = totalDays % 7;
-    const months = Math.floor(totalDays / 30);
-    const hours = Math.max(0, Math.ceil((exam - now) / 3600000));
-
-    let phase, phaseHi, phaseColor;
-    if (totalDays > 90) { phase = 'Foundation'; phaseHi = 'नींव'; phaseColor = 'emerald'; }
-    else if (totalDays > 60) { phase = 'Building'; phaseHi = 'निर्माण'; phaseColor = 'blue'; }
-    else if (totalDays > 30) { phase = 'Practice'; phaseHi = 'अभ्यास'; phaseColor = 'amber'; }
-    else if (totalDays > 7) { phase = 'Revision'; phaseHi = 'रिवीजन'; phaseColor = 'orange'; }
-    else { phase = 'Final Sprint'; phaseHi = 'अंतिम दौड़'; phaseColor = 'red'; }
-
-    const pending = notAttemptedTests.length;
-    const testsPerDay = totalDays > 0 ? Math.ceil(pending / totalDays) : pending;
-    const testsPerWeek = weeks > 0 ? Math.ceil(pending / weeks) : pending;
-
-    const uncovered = syllabusCoverage.paper1.filter(u => u.level === 'not_started' || u.level === 'no_tests').length +
-      syllabusCoverage.paper2.filter(u => u.level === 'not_started' || u.level === 'no_tests').length;
-
-    const milestones = [];
-    [90, 60, 30, 14, 7, 3, 1].forEach(d => {
-      if (totalDays >= d) milestones.push({ days: d, done: false });
-      else milestones.push({ days: d, done: true });
-    });
-
-    const readiness = Math.round(
-      ((syllabusCoverage.overallPct || 0) * 0.3 + (overallAccuracy || 0) * 0.3 +
-       Math.min(100, streak * 10) * 0.2 + Math.max(0, 100 - needsAttentionTests.length * 10) * 0.2)
-    );
-
-    const dailyPlan = [];
-    if (totalDays <= 7) dailyPlan.push({ en: 'Full mock tests only', hi: 'सिर्फ पूर्ण मॉक टेस्ट' });
-    else if (totalDays <= 30) {
-      dailyPlan.push({ en: `${testsPerDay} tests/day minimum`, hi: `रोज कम से कम ${testsPerDay} टेस्ट` });
-      dailyPlan.push({ en: 'Focus on weak chapters', hi: 'कमजोर अध्याय पर ध्यान दो' });
-    } else {
-      dailyPlan.push({ en: `Cover ${Math.ceil(uncovered / Math.max(weeks, 1))} new units/week`, hi: `हर हफ्ते ${Math.ceil(uncovered / Math.max(weeks, 1))} नई इकाई` });
-      dailyPlan.push({ en: `${testsPerDay} tests daily`, hi: `रोज ${testsPerDay} टेस्ट` });
-    }
-    if (needsAttentionTests.length > 0) dailyPlan.push({ en: `Fix ${needsAttentionTests.length} weak tests`, hi: `${needsAttentionTests.length} कमजोर टेस्ट सुधारो` });
-
-    return {
-      totalDays, weeks, remDays, months, hours,
-      phase, phaseHi, phaseColor,
-      testsPerDay, testsPerWeek, pending,
-      uncovered, milestones, readiness, dailyPlan,
-    };
-  }, [examDate, notAttemptedTests, syllabusCoverage, overallAccuracy, streak, needsAttentionTests]);
 
   // ════════════════════════════════════════════
   //  SPEED ANALYTICS
@@ -1566,43 +1222,26 @@ const useDashboard = () => {
   //  RETURN
   // ════════════════════════════════════════════
   return {
-    // Core data
     questionStats, testStats, attemptStats, recentAttempts, allAttempts, allCompletedAttempts, createdTests,
     loading, refreshing, lastRefresh, refresh,
-
-    // Basic stats
     paper1Units, paper2Units, paper1Count, paper2Count, totalQuestions, overallAccuracy, overallAvgScore,
     paper1Attempts, paper2Attempts, paper1Tests, paper2Tests, combinedTests,
     paper1Accuracy, paper2Accuracy, paper1AvgScore, paper2AvgScore,
-
-    // Trends & predictions
     scoreTrend, paper1Trend, paper2Trend, trendDirection, paper1TrendDir, paper2TrendDir,
     predictedScore, paper1Predicted, paper2Predicted,
-
-    // Tests status
     notAttemptedTests, paper1NotAttempted, paper2NotAttempted, needsAttentionTests,
-
-    // Charts data
     difficultyData, questionTypeData, topicPerformance,
-
-    // Activity & streaks
     activityMap, streak, longestStreak, weeklyComparison, achievements,
-
-    // JRF/NET
     jrfProbability,
-
-    // Syllabus
     syllabusCoverage,
-
-    // Analytics
     speedAnalytics, errorPatterns, studyRecommendations,
     scoreDistribution, personalRecords, timeOfDayAnalysis,
 
-    // Goal tracker
+    // 🆕 Updated Goal Tracker returns
     examDate, setExamDate, daysUntilExam,
     customTargets, updateCustomTargets,
     autoGeneratedGoals, goalCompletionPct,
-    todayActivity: todayDetailed,
+    todayActivity: todayDetailed,  // backward compat
     todayDetailed,
     yesterdayActivity,
     dayProgress,
@@ -1611,17 +1250,6 @@ const useDashboard = () => {
     totalGoals,
     pressureMessage,
     todayXP,
-
-    // 🆕 NEW ADVANCED FEATURES
-    revisionQueue,
-    weakChaptersList,
-    forgettingCurveData,
-    fatigueAnalysis,
-    dailyChallenge,
-    playerLevel,
-    negativeMarkingImpact,
-    weeklyReportData,
-    advancedCountdown,
   };
 };
 

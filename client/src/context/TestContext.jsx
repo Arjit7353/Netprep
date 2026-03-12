@@ -1,5 +1,17 @@
 import React, { createContext, useContext, useReducer, useCallback } from 'react';
-import attemptService from '../services/attemptService';
+
+// Lazy loader to avoid initialization order issues in bundled code
+let cachedAttemptService = null;
+const getAttemptService = async () => {
+  if (!cachedAttemptService) {
+    const module = await import('../services/attemptService');
+    cachedAttemptService = module.default;
+  }
+  return cachedAttemptService;
+};
+
+// Import attemptService lazily within component to avoid circular dependency issues
+// during bundle initialization that cause "Cannot access before initialization" errors
 
 // Initial State
 const initialState = {
@@ -204,8 +216,10 @@ export const TestProvider = ({ children }) => {
       
       // Mark as visited on server (fire and forget)
       if (state.attempt && state.questions[index]) {
-        attemptService.markVisited(state.attempt._id, state.questions[index]._id)
-          .catch(err => console.error('Failed to mark visited:', err));
+        getAttemptService().then(service =>
+          service.markVisited(state.attempt._id, state.questions[index]._id)
+            .catch(err => console.error('Failed to mark visited:', err))
+        );
       }
     }
   }, [state.questions, state.attempt]);
@@ -236,7 +250,8 @@ export const TestProvider = ({ children }) => {
 
     // Save to server with actual elapsed time
     try {
-      await attemptService.saveAnswer(
+      const service = await getAttemptService();
+      await service.saveAnswer(
         state.attempt._id,
         currentQuestion._id,
         answer,
@@ -257,7 +272,8 @@ export const TestProvider = ({ children }) => {
 
     // Save to server
     try {
-      await attemptService.toggleMarkForReview(
+      const service = await getAttemptService();
+      await service.toggleMarkForReview(
         state.attempt._id,
         currentQuestion._id
       );
@@ -276,7 +292,8 @@ export const TestProvider = ({ children }) => {
 
     // Save to server
     try {
-      await attemptService.saveAnswer(
+      const service = await getAttemptService();
+      await service.saveAnswer(
         state.attempt._id,
         currentQuestion._id,
         -1,
@@ -324,7 +341,8 @@ export const TestProvider = ({ children }) => {
     dispatch({ type: ACTIONS.SET_SUBMITTING, payload: true });
 
     try {
-      const response = await attemptService.submitAttempt(
+      const service = await getAttemptService();
+      const response = await service.submitAttempt(
         attemptId,
         state.remainingTime
       );
