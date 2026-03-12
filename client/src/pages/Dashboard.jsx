@@ -6,12 +6,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid,
-  LineChart, Line, Legend,
-} from 'recharts';
-import {
   FileQuestion, ClipboardList, BarChart3, TrendingUp, Upload,
   PlusCircle, Clock, Target, BookOpen, Award, ArrowRight,
   Calendar, Zap, Trophy, Flame, Star, ChevronRight, Play,
@@ -27,7 +21,6 @@ import {
   Milestone, CalendarDays, CalendarClock, Workflow,
   TreePine, Grid3X3, Cpu, Dumbbell, HeartPulse,
   ArrowUp, ArrowDown, Minus, Settings, X,
-  RotateCcw, BookMarked, Battery, Repeat2, Siren,
 } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import useDashboard from '../hooks/useDashboard';
@@ -1577,7 +1570,7 @@ const RevisionQueueCard = ({ queue, language, navigate }) => {
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow"><RotateCcw className="w-4 h-4 text-white" /></div>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow"><RefreshCw className="w-4 h-4 text-white" /></div>
           <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'रिवीजन क्यू' : 'Revision Queue'}</h3><p className="text-[9px] text-gray-500">{needsRev.length} {l === 'hi' ? 'रिवीजन चाहिए' : 'need revision'}</p></div>
         </div>
       </div>
@@ -1601,11 +1594,11 @@ const RevisionQueueCard = ({ queue, language, navigate }) => {
     </div>
   );
 };
-
 // ════════════════════════════════════════════════════════════
 //  🆕 4. WEAK CHAPTERS LIST
 // ════════════════════════════════════════════════════════════
-const WeakChaptersCard = ({ chapters, language }) => {
+
+  const WeakChaptersCard = ({ chapters, language }) => {
   const l = language;
   if (!chapters || chapters.length === 0) return null;
   const weak = chapters.filter(c => c.status !== 'strong').slice(0, 8);
@@ -1615,7 +1608,7 @@ const WeakChaptersCard = ({ chapters, language }) => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow"><BookMarked className="w-4 h-4 text-white" /></div>
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow"><BookOpen className="w-4 h-4 text-white" /></div>
         <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'कमजोर अध्याय' : 'Weak Chapters'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'सबसे कम स्कोर' : 'Lowest scoring'}</p></div>
       </div>
       <div className="p-3 space-y-1.5 max-h-[300px] overflow-y-auto">
@@ -1643,7 +1636,6 @@ const WeakChaptersCard = ({ chapters, language }) => {
     </div>
   );
 };
-
 // ════════════════════════════════════════════════════════════
 //  🆕 5. FORGETTING CURVE / SPACED REPETITION
 // ════════════════════════════════════════════════════════════
@@ -1708,7 +1700,7 @@ const FatigueAnalysisCard = ({ data, language }) => {
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow"><Battery className="w-4 h-4 text-white" /></div>
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow"><Gauge className="w-4 h-4 text-white" /></div>
           <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'थकान विश्लेषण' : 'Fatigue Analysis'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'सत्र प्रदर्शन' : 'Session performance'}</p></div>
         </div>
         <div className="text-right">
@@ -1740,17 +1732,15 @@ const FatigueAnalysisCard = ({ data, language }) => {
     </div>
   );
 };
-
 // ════════════════════════════════════════════════════════════
 //  🆕 7. NEGATIVE MARKING IMPACT
-// ════════════════════════════════════════════════════════════
 const NegativeMarkingCard = ({ data, language }) => {
   const l = language;
   if (!data) return null;
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow"><Siren className="w-4 h-4 text-white" /></div>
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow"><AlertCircle className="w-4 h-4 text-white" /></div>
         <div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'ऋणात्मक अंकन' : 'Negative Marking'}</h3><p className="text-[9px] text-gray-500">{l === 'hi' ? 'गलत उत्तर का प्रभाव' : 'Wrong answer impact'}</p></div>
       </div>
       <div className="grid grid-cols-3 gap-2 mb-3">
@@ -1775,7 +1765,6 @@ const NegativeMarkingCard = ({ data, language }) => {
     </div>
   );
 };
-
 // ════════════════════════════════════════════════════════════
 //  🆕 8. WEEKLY REPORT
 // ════════════════════════════════════════════════════════════
