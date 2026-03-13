@@ -69,15 +69,18 @@ const getFilterOptions = async (req, res, next) => {
   try {
     const { paper, testType, unit, status = 'active' } = req.query;
 
-    // Build base match for cascading
-    const baseMatch = { status: status || 'active' };
-    if (paper) baseMatch.paper = paper;
-    if (testType) baseMatch.testType = testType;
+    const activeMatch = { status: status || 'active' };
+    
+    // Cascading base matches
+    const paperMatch = { ...activeMatch };
+    if (paper) paperMatch.paper = paper;
 
-    const unitMatch = { ...baseMatch };
+    const unitMatch = { ...paperMatch };
     if (unit) unitMatch.unit = unit;
 
-    // Get distinct values in parallel
+    // FIX: Use $nin instead of duplicate $ne keys
+    const unitExistsMatch = { ...activeMatch, unit: { $nin: [null, '', undefined] } };
+
     const [
       papers,
       testTypes,
@@ -88,32 +91,38 @@ const getFilterOptions = async (req, res, next) => {
       countsByPaper,
       countsByUnit
     ] = await Promise.all([
-      Test.distinct('paper', { status: status || 'active' }),
-      Test.distinct('testType', { status: status || 'active' }),
-      Test.distinct('unit', baseMatch),
+      Test.distinct('paper', activeMatch),
+      Test.distinct('testType', activeMatch),
+      Test.distinct('unit', paperMatch),
       Test.distinct('chapter', unitMatch),
       Test.distinct('topic', unitMatch),
       // Counts by test type
       Test.aggregate([
-        { $match: { status: status || 'active' } },
+        { $match: activeMatch },
         { $group: { _id: '$testType', count: { $sum: 1 } } },
         { $sort: { count: -1 } }
       ]),
       // Counts by paper
       Test.aggregate([
-        { $match: { status: status || 'active' } },
+        { $match: activeMatch },
         { $group: { _id: '$paper', count: { $sum: 1 } } }
       ]),
-      // Counts by unit
+      // FIX: Counts by unit with proper null/empty filtering
       Test.aggregate([
-        { $match: { status: status || 'active', unit: { $ne: null, $ne: '' } } },
-        { $group: { _id: { paper: '$paper', unit: '$unit' }, count: { $sum: 1 } } },
+        { $match: unitExistsMatch },
+        {
+          $group: {
+            _id: { paper: '$paper', unit: '$unit' },
+            count: { $sum: 1 },
+            testTypes: { $addToSet: '$testType' },
+            latestTest: { $max: '$createdAt' }
+          }
+        },
         { $sort: { '_id.paper': 1, '_id.unit': 1 } }
       ])
     ]);
 
-    // Clean nulls and empty strings
-    const clean = (arr) => arr.filter(v => v && v.trim && v.trim() !== '');
+    const clean = (arr) => arr.filter(v => v != null && (typeof v !== 'string' || v.trim() !== ''));
 
     res.json({
       success: true,
@@ -131,11 +140,15 @@ const getFilterOptions = async (req, res, next) => {
           if (i._id) acc[i._id] = i.count;
           return acc;
         }, {}),
-        countsByUnit: countsByUnit.map(i => ({
-          paper: i._id.paper,
-          unit: i._id.unit,
-          count: i.count
-        }))
+        countsByUnit: countsByUnit
+          .filter(i => i._id.paper && i._id.unit)
+          .map(i => ({
+            paper: i._id.paper,
+            unit: i._id.unit,
+            count: i.count,
+            testTypes: i.testTypes || [],
+            latestTest: i.latestTest
+          }))
       }
     });
   } catch (error) {

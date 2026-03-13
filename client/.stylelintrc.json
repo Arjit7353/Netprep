@@ -1,0 +1,28 @@
+{
+  "extends": "stylelint-config-tailwindcss",
+  "rules": {
+    "at-rule-no-unknown": [
+      true,
+      {
+        "ignoreAtRules": [
+          "tailwind",
+          "apply",
+          "layer",
+          "variants",
+          "responsive",
+          "screen"
+        ]
+      }
+    ],
+    "property-no-vendor-prefix": [
+      true,
+      {
+        "ignoreProperties": [
+          "line-clamp",
+          "mask"
+        ]
+      }
+    ],
+    "rule-empty-line-before": null
+  }
+}

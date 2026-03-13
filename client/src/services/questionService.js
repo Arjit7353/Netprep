@@ -58,16 +58,15 @@ const questionService = {
 
   // Bulk delete questions
   bulkDeleteQuestions: async (ids) => {
-    // ✅ FIX: Use POST with _method override or proper bulk endpoint
     return apiHelper.post('/questions/bulk-delete', { ids });
   },
 
   // ============================================================
-  // IMPORT APIs - ✅ FIXED
+  // IMPORT APIs
   // ============================================================
 
   // Import questions from JSON (Smart Parser)
-  // ✅ Properly handles skipDuplicates flag
+  // ✅ UPDATED: Handles skipDuplicates and longer timeout for large batches
   importQuestions: async (jsonData, options = {}) => {
     const { skipDuplicates = true } = options;
     
@@ -83,7 +82,14 @@ const questionService = {
       ? '/questions/import?skipDuplicates=true'
       : '/questions/import';
     
-    return apiHelper.post(url, cleanData);
+    // Use dynamic import for api instance to allow custom timeout
+    // This avoids circular dependency issues
+    const apiModule = await import('./api');
+    const api = apiModule.default;
+
+    // Use 3-minute timeout for imports (handles 50+ questions + translation)
+    const response = await api.post(url, cleanData, { timeout: 180000 });
+    return response.data;
   },
 
   // Validate JSON before import
