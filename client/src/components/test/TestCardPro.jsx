@@ -1,3 +1,6 @@
+// client/src/components/test/TestCardPro.jsx
+// ⭐ FIX: Multi-unit display, NO emojis, only Lucide icons
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -90,6 +93,24 @@ const formatRelative = (d) => {
   return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
 };
 
+// ⭐ FIX: Parse unit string - handles "UNIT I, UNIT V, UNIT VII"
+const parseUnits = (unitStr) => {
+  if (!unitStr) return [];
+  return unitStr
+    .split(',')
+    .map(u => u.trim())
+    .filter(u => u.length > 0);
+};
+
+// ⭐ Format unit label - "UNIT I" → "U-I", "UNIT VII" → "U-VII"  
+const shortUnit = (unit) => {
+  if (!unit) return '';
+  return unit
+    .replace(/^UNIT\s*/i, 'U-')
+    .replace(/^इकाई\s*/i, 'U-')
+    .trim();
+};
+
 const TestCardPro = ({
   test, language = 'en', variant = 'grid',
   selectionMode = false, isSelected = false, onSelect,
@@ -103,13 +124,16 @@ const TestCardPro = ({
   const TypeIcon = t.icon;
   const best = test.totalMarks > 0 && test.highestScore > 0 ? Math.round((test.highestScore / test.totalMarks) * 100) : null;
 
+  // ⭐ FIX: Parse multi-unit
+  const unitList = parseUnits(test.unit);
+  const hasMultipleUnits = unitList.length > 1;
+
   const onCardClick = (e) => {
     if (selectionMode && onSelect) { e.preventDefault(); e.stopPropagation(); onSelect(test._id); }
   };
-
   const closeMenu = () => setShowMenu(false);
 
-  // ── GRID ──
+  // ── GRID VARIANT ──
   if (variant === 'grid') {
     return (
       <div
@@ -136,10 +160,37 @@ const TestCardPro = ({
               <TypeIcon className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
+              {/* Badges */}
               <div className="flex flex-wrap items-center gap-1 mb-1.5">
                 <span className={`px-2 py-0.5 text-[10px] font-black rounded-md ${t.badge} shadow-sm`}>{cfg.shortCode}</span>
                 {test.paper && <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-md ${t.badgeLight}`}>{test.paper === 'paper1' ? 'P1' : 'P2'}</span>}
-                {test.unit && <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-md ${t.badgeLight} truncate max-w-[80px]`}>{test.unit.replace(/^UNIT\s*/i, 'U')}</span>}
+
+                {/* ⭐ FIX: Show all units as separate badges */}
+                {unitList.length === 1 && (
+                  <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-md ${t.badgeLight} truncate max-w-[80px]`}>
+                    {shortUnit(unitList[0])}
+                  </span>
+                )}
+                {unitList.length > 1 && unitList.length <= 3 && (
+                  unitList.map((u, i) => (
+                    <span key={i} className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-md ${t.badgeLight}`}>
+                      {shortUnit(u)}
+                    </span>
+                  ))
+                )}
+                {unitList.length > 3 && (
+                  <>
+                    {unitList.slice(0, 2).map((u, i) => (
+                      <span key={i} className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-md ${t.badgeLight}`}>
+                        {shortUnit(u)}
+                      </span>
+                    ))}
+                    <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-md ${t.badgeLight}`}>
+                      +{unitList.length - 2}
+                    </span>
+                  </>
+                )}
+
                 {best !== null && (
                   <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md flex items-center gap-0.5
                     ${best >= 80 ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' : best >= 60 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300' : best >= 40 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300' : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'}`}>
@@ -147,12 +198,21 @@ const TestCardPro = ({
                   </span>
                 )}
               </div>
+
+              {/* Title */}
               <h4 className="font-bold text-gray-900 dark:text-white text-sm leading-snug mb-2 line-clamp-2">{test.title}</h4>
+
+              {/* Stats */}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
                 <span className="flex items-center gap-1"><FileQuestion className="w-3 h-3" /> {test.totalQuestions}Q</span>
                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {test.duration}m</span>
                 {test.totalAttempts > 0 && <span className="flex items-center gap-1"><Activity className="w-3 h-3" /> {test.totalAttempts}x</span>}
+                {hasMultipleUnits && (
+                  <span className="flex items-center gap-1"><Layers className="w-3 h-3" /> {unitList.length} units</span>
+                )}
               </div>
+
+              {/* Chapter/Topic */}
               {(test.chapter || test.topic) && (
                 <div className="mt-1.5 text-[10px] text-gray-400 truncate flex items-center gap-1">
                   <BookOpen className="w-3 h-3 flex-shrink-0" />{[test.chapter, test.topic].filter(Boolean).join(' > ')}
@@ -161,6 +221,7 @@ const TestCardPro = ({
             </div>
           </div>
 
+          {/* Footer */}
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200/40 dark:border-gray-700/40">
             <span className="text-[10px] text-gray-400 flex items-center gap-1"><Clock className="w-3 h-3" />{formatRelative(test.createdAt)}</span>
             <div className="flex items-center gap-1.5">
@@ -204,7 +265,7 @@ const TestCardPro = ({
     );
   }
 
-  // ── LIST ──
+  // ── LIST VARIANT ──
   return (
     <div
       onClick={onCardClick}
@@ -223,13 +284,24 @@ const TestCardPro = ({
           <TypeIcon className="w-4 h-4 text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
+          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
             <span className={`px-1.5 py-0.5 text-[10px] font-black rounded ${t.badge}`}>{cfg.shortCode}</span>
             {test.paper && <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded ${t.badgeLight}`}>{test.paper === 'paper1' ? 'P1' : 'P2'}</span>}
-            {test.unit && <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded ${t.badgeLight} hidden sm:inline truncate max-w-[100px]`}>{test.unit.replace(/^UNIT\s*/i, 'U')}</span>}
+            {/* ⭐ FIX: Show units in list view too */}
+            {unitList.slice(0, 3).map((u, i) => (
+              <span key={i} className={`px-1.5 py-0.5 text-[10px] font-semibold rounded ${t.badgeLight} hidden sm:inline`}>
+                {shortUnit(u)}
+              </span>
+            ))}
+            {unitList.length > 3 && (
+              <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded ${t.badgeLight} hidden sm:inline`}>+{unitList.length - 3}</span>
+            )}
           </div>
           <h4 className="font-bold text-gray-900 dark:text-white text-sm leading-snug truncate">{test.title}</h4>
-          <div className="flex items-center gap-3 mt-0.5 text-[10px] text-gray-500">{test.totalQuestions}Q - {test.duration}m - {formatRelative(test.createdAt)}</div>
+          <div className="flex items-center gap-3 mt-0.5 text-[10px] text-gray-500">
+            {test.totalQuestions}Q - {test.duration}m - {formatRelative(test.createdAt)}
+            {hasMultipleUnits && <span className="hidden sm:inline">- {unitList.length} units</span>}
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {best !== null && <span className={`text-sm font-black hidden sm:block ${best >= 60 ? 'text-green-600' : best >= 40 ? 'text-yellow-600' : 'text-red-600'}`}>{best}%</span>}
@@ -251,10 +323,8 @@ const TestCardPro = ({
 };
 
 const MenuBtn = ({ icon: Icon, label, onClick, danger = false }) => (
-  <button
-    onClick={onClick}
-    className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${danger ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20' : 'text-gray-700 dark:text-gray-300'}`}
-  >
+  <button onClick={onClick}
+    className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${danger ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20' : 'text-gray-700 dark:text-gray-300'}`}>
     <Icon className="w-3.5 h-3.5" /> {label}
   </button>
 );

@@ -5,36 +5,94 @@ const config = require('../config/config');
 const randomSelector = require('../utils/randomSelector');
 const autoGenerator = require('../utils/autoGenerator');
 
+// ═══════════════════════════════════════════════════════
+//   UNIT HELPERS - Simple & Robust
+// ═══════════════════════════════════════════════════════
+
+const romanToInt = (str) => {
+  if (!str) return 0;
+  const map = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+  let result = 0;
+  const s = str.toUpperCase();
+  for (let i = 0; i < s.length; i++) {
+    const cur = map[s[i]] || 0;
+    const nxt = map[s[i + 1]] || 0;
+    result += cur < nxt ? -cur : cur;
+  }
+  return result;
+};
+
+const getUnitSortNum = (unitStr) => {
+  if (!unitStr) return 999;
+  const d = unitStr.match(/(?:UNIT|इकाई)\s*(\d+)/i);
+  if (d) return parseInt(d[1]);
+  const r = unitStr.match(/(?:UNIT|���काई)\s*([IVXLCDM]+)/i);
+  if (r) return romanToInt(r[1]);
+  return 999;
+};
+
+// Extract "UNIT V" from "UNIT V: Administration & Economy"
+const extractUnitId = (str) => {
+  if (!str) return null;
+  const m = str.trim().match(/(?:UNIT|इकाई)\s*([IVXLCDM]+|\d+)/i);
+  if (m) return 'UNIT ' + m[1].toUpperCase();
+  return str.trim();
+};
+
+// Build MongoDB regex for unit matching
+// "UNIT V: blah" → extracts "V" → regex matches UNIT V but NOT UNIT VI/VII
+const buildUnitFilter = (unitInput) => {
+  if (!unitInput) return null;
+
+  const m = unitInput.match(/(?:UNIT|इकाई)\s*([IVXLCDM]+|\d+)/i);
+  if (m) {
+    const num = m[1].toUpperCase();
+    const escaped = num.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // \b = word boundary: prevents UNIT V from matching UNIT VI
+    return { $regex: '(?:UNIT|इकाई)\\s*' + escaped + '\\b', $options: 'i' };
+  }
+
+  // Fallback: exact contains match
+  const escaped = unitInput.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return { $regex: escaped, $options: 'i' };
+};
+
+
 // @desc    Get all tests with advanced filters
 // @route   GET /api/tests
 const getTests = async (req, res, next) => {
   try {
     const {
-      page = 1,
-      limit = 20,
-      testType,
-      paper,
-      status = 'active',
-      search,
-      unit,
-      chapter,
-      topic,
-      subject,
-      year,
-      sortBy = 'createdAt',
-      sortOrder = 'desc'
+      page = 1, limit = 20, testType, paper,
+      status = 'active', search, unit, chapter,
+      topic, subject, year,
+      sortBy = 'createdAt', sortOrder = 'desc'
     } = req.query;
 
     const filter = {};
-
     if (testType) filter.testType = testType;
     if (paper) filter.paper = paper;
     if (status) filter.status = status;
-    if (unit) filter.unit = unit;
-    if (chapter) filter.chapter = chapter;
-    if (topic) filter.topic = topic;
     if (subject) filter.subject = subject;
     if (year) filter.year = year;
+
+    // ⭐ FIX: Smart unit filter using word boundary
+    if (unit) {
+      const unitFilter = buildUnitFilter(unit);
+      if (unitFilter) {
+        filter.unit = unitFilter;
+      }
+    }
+
+    if (chapter) {
+      const escaped = chapter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.chapter = { $regex: escaped, $options: 'i' };
+    }
+
+    if (topic) {
+      const escaped = topic.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.topic = { $regex: escaped, $options: 'i' };
+    }
 
     if (search) {
       filter.$or = [
@@ -46,7 +104,6 @@ const getTests = async (req, res, next) => {
     }
 
     const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
-
     const result = await Test.getByFilter(filter, {
       page: parseInt(page),
       limit: parseInt(limit),
@@ -63,64 +120,133 @@ const getTests = async (req, res, next) => {
   }
 };
 
+
 // @desc    Get filter options (distinct values for dropdowns)
 // @route   GET /api/tests/filter-options
 const getFilterOptions = async (req, res, next) => {
   try {
     const { paper, testType, unit, status = 'active' } = req.query;
 
-    const activeMatch = { status: status || 'active' };
-    
-    // Cascading base matches
+    const activeMatch = {};
+    if (status) activeMatch.status = status;
+
     const paperMatch = { ...activeMatch };
     if (paper) paperMatch.paper = paper;
 
+    // Unit match for cascading (chapters/topics)
     const unitMatch = { ...paperMatch };
-    if (unit) unitMatch.unit = unit;
-
-    // FIX: Use $nin instead of duplicate $ne keys
-    const unitExistsMatch = { ...activeMatch, unit: { $nin: [null, '', undefined] } };
+    if (unit) {
+      const uf = buildUnitFilter(unit);
+      if (uf) unitMatch.unit = uf;
+    }
 
     const [
-      papers,
-      testTypes,
-      units,
-      chapters,
-      topics,
-      countsByType,
-      countsByPaper,
-      countsByUnit
+      papers, testTypes, chapters, topics,
+      countsByType, countsByPaper, rawUnitAgg
     ] = await Promise.all([
       Test.distinct('paper', activeMatch),
       Test.distinct('testType', activeMatch),
-      Test.distinct('unit', paperMatch),
       Test.distinct('chapter', unitMatch),
       Test.distinct('topic', unitMatch),
-      // Counts by test type
+
       Test.aggregate([
         { $match: activeMatch },
         { $group: { _id: '$testType', count: { $sum: 1 } } },
         { $sort: { count: -1 } }
       ]),
-      // Counts by paper
+
       Test.aggregate([
         { $match: activeMatch },
         { $group: { _id: '$paper', count: { $sum: 1 } } }
       ]),
-      // FIX: Counts by unit with proper null/empty filtering
+
+      // ⭐ Split comma-separated units → unwind → group
       Test.aggregate([
-        { $match: unitExistsMatch },
+        {
+          $match: {
+            ...activeMatch,
+            unit: { $exists: true, $ne: null, $ne: '' }
+          }
+        },
+        {
+          $addFields: {
+            unitArray: {
+              $cond: {
+                if: { $regexMatch: { input: { $ifNull: ['$unit', ''] }, regex: /,/ } },
+                then: { $split: ['$unit', ','] },
+                else: [{ $ifNull: ['$unit', ''] }]
+              }
+            }
+          }
+        },
+        { $unwind: '$unitArray' },
+        { $addFields: { unitClean: { $trim: { input: '$unitArray' } } } },
+        { $match: { unitClean: { $ne: '' } } },
         {
           $group: {
-            _id: { paper: '$paper', unit: '$unit' },
+            _id: { paper: '$paper', unit: '$unitClean' },
             count: { $sum: 1 },
             testTypes: { $addToSet: '$testType' },
+            chapters: { $addToSet: '$chapter' },
             latestTest: { $max: '$createdAt' }
           }
         },
         { $sort: { '_id.paper': 1, '_id.unit': 1 } }
       ])
     ]);
+
+    // ⭐ Merge entries with same unit ID
+    // "UNIT V" (from split) + "UNIT V: Administration" (single) → merged
+    const mergeMap = {};
+
+    rawUnitAgg.forEach(item => {
+      if (!item._id?.paper || !item._id?.unit) return;
+
+      const uid = extractUnitId(item._id.unit);
+      const key = `${item._id.paper}||${uid}`;
+
+      if (!mergeMap[key]) {
+        mergeMap[key] = {
+          paper: item._id.paper,
+          unit: item._id.unit,
+          unitId: uid,
+          count: 0,
+          typesSet: new Set(),
+          chaptersSet: new Set(),
+          latestTest: null,
+        };
+      }
+
+      const e = mergeMap[key];
+      e.count += item.count;
+
+      // Keep longest name for display
+      if (item._id.unit.length > e.unit.length) {
+        e.unit = item._id.unit;
+      }
+
+      if (item.latestTest && (!e.latestTest || item.latestTest > e.latestTest)) {
+        e.latestTest = item.latestTest;
+      }
+
+      (item.testTypes || []).forEach(t => { if (t) e.typesSet.add(t); });
+      (item.chapters || []).forEach(c => { if (c) e.chaptersSet.add(c); });
+    });
+
+    const countsByUnit = Object.values(mergeMap)
+      .map(e => ({
+        paper: e.paper,
+        unit: e.unit,
+        unitId: e.unitId,
+        count: e.count,
+        testTypes: [...e.typesSet],
+        chapters: [...e.chaptersSet],
+        latestTest: e.latestTest,
+      }))
+      .sort((a, b) => {
+        if (a.paper !== b.paper) return a.paper.localeCompare(b.paper);
+        return getUnitSortNum(a.unitId) - getUnitSortNum(b.unitId);
+      });
 
     const clean = (arr) => arr.filter(v => v != null && (typeof v !== 'string' || v.trim() !== ''));
 
@@ -129,32 +255,20 @@ const getFilterOptions = async (req, res, next) => {
       data: {
         papers: clean(papers),
         testTypes: clean(testTypes),
-        units: clean(units).sort(),
+        units: countsByUnit.map(u => u.unit).filter(Boolean),
         chapters: clean(chapters).sort(),
         topics: clean(topics).sort(),
-        countsByType: countsByType.reduce((acc, i) => {
-          if (i._id) acc[i._id] = i.count;
-          return acc;
-        }, {}),
-        countsByPaper: countsByPaper.reduce((acc, i) => {
-          if (i._id) acc[i._id] = i.count;
-          return acc;
-        }, {}),
-        countsByUnit: countsByUnit
-          .filter(i => i._id.paper && i._id.unit)
-          .map(i => ({
-            paper: i._id.paper,
-            unit: i._id.unit,
-            count: i.count,
-            testTypes: i.testTypes || [],
-            latestTest: i.latestTest
-          }))
+        countsByType: countsByType.reduce((a, i) => { if (i._id) a[i._id] = i.count; return a; }, {}),
+        countsByPaper: countsByPaper.reduce((a, i) => { if (i._id) a[i._id] = i.count; return a; }, {}),
+        countsByUnit
       }
     });
   } catch (error) {
+    console.error('[getFilterOptions] Error:', error);
     next(error);
   }
 };
+
 
 // @desc    Get test statistics
 // @route   GET /api/tests/stats
@@ -193,6 +307,7 @@ const getTestStats = async (req, res, next) => {
   }
 };
 
+
 // @desc    Get test type configurations
 // @route   GET /api/tests/types
 const getTestTypes = async (req, res, next) => {
@@ -202,6 +317,7 @@ const getTestTypes = async (req, res, next) => {
     next(error);
   }
 };
+
 
 // @desc    Get single test by ID
 // @route   GET /api/tests/:id
@@ -218,6 +334,7 @@ const getTestById = async (req, res, next) => {
     next(error);
   }
 };
+
 
 // @desc    Get test with all questions populated (detailed)
 // @route   GET /api/tests/:id/questions
@@ -249,6 +366,7 @@ const getTestWithQuestions = async (req, res, next) => {
     }
   }
 };
+
 
 // @desc    Create new test
 // @route   POST /api/tests
@@ -288,6 +406,7 @@ const createTest = async (req, res, next) => {
   }
 };
 
+
 // @desc    Generate random test (for full mocks)
 // @route   POST /api/tests/generate
 const generateRandomTest = async (req, res, next) => {
@@ -317,6 +436,7 @@ const generateRandomTest = async (req, res, next) => {
 
     const generatedTitle = title || await autoGenerator.generateTestTitle({ testType, paper });
     const typeConfig = config.testTypes[testType];
+
     const test = await Test.create({
       title: generatedTitle,
       testType,
@@ -341,6 +461,7 @@ const generateRandomTest = async (req, res, next) => {
     next(error);
   }
 };
+
 
 // @desc    Update test
 // @route   PUT /api/tests/:id
@@ -367,6 +488,7 @@ const updateTest = async (req, res, next) => {
   }
 };
 
+
 // @desc    Update test status
 // @route   PATCH /api/tests/:id/status
 const updateTestStatus = async (req, res, next) => {
@@ -389,6 +511,7 @@ const updateTestStatus = async (req, res, next) => {
   }
 };
 
+
 // @desc    Delete test (soft delete - archive)
 // @route   DELETE /api/tests/:id
 const deleteTest = async (req, res, next) => {
@@ -404,6 +527,7 @@ const deleteTest = async (req, res, next) => {
     next(error);
   }
 };
+
 
 // @desc    Add questions to existing test
 // @route   POST /api/tests/:id/add-questions
@@ -431,6 +555,7 @@ const addQuestionsToTest = async (req, res, next) => {
   }
 };
 
+
 // @desc    Remove questions from test
 // @route   POST /api/tests/:id/remove-questions
 const removeQuestionsFromTest = async (req, res, next) => {
@@ -455,6 +580,7 @@ const removeQuestionsFromTest = async (req, res, next) => {
   }
 };
 
+
 // @desc    Get all attempts for a test
 // @route   GET /api/tests/:id/attempts
 const getTestAttempts = async (req, res, next) => {
@@ -465,6 +591,7 @@ const getTestAttempts = async (req, res, next) => {
     next(error);
   }
 };
+
 
 module.exports = {
   getTests,

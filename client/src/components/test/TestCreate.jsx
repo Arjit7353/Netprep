@@ -96,6 +96,11 @@ import Loader from '../common/Loader';
 import { useToast } from '../common/Toast';
 import QuestionLibraryModal from './QuestionLibraryModal';
 import TitleGenerator from './TitleGenerator';
+import { 
+  getUnitNamesFromKeys, 
+  getChapterNamesFromKeys, 
+  getTopicNamesFromKeys 
+} from '../../utils/testHelpers';
 
 // ============================================
 // THEME-AWARE GLASS CARD COMPONENT
@@ -1747,63 +1752,86 @@ const TestCreate = ({ language = 'hi' }) => {
       setCurrentStep(stepIndex);
     }
   };
+// ==========================================
+// FORM VALIDATION
+// ==========================================
+const validateForm = () => {
+  const newErrors = {};
+  
+  if (!isRandomMode && selectedQuestions.length === 0) {
+    newErrors.questions = t('कम से कम एक प्रश्न चुनें', 'Select at least one question');
+  }
+  
+  if (formData.duration < 1) {
+    newErrors.duration = t('अवधि 1 से अधिक होनी चाहिए', 'Duration must be greater than 0');
+  }
+  
+  if (isRandomMode && getTotalDistributed() === 0) {
+    newErrors.distribution = t('कुल प्रश्न 0 नहीं हो सकते', 'Total questions cannot be 0');
+  }
+  
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
 
-  // ==========================================
-  // FORM SUBMISSION
-  // ==========================================
-  const validateForm = () => {
-    const newErrors = {};
-    if (!isRandomMode && selectedQuestions.length === 0) {
-      newErrors.questions = t('कम से कम एक प्रश्न चुनें', 'Select at least one question');
+// ==========================================
+// FORM SUBMISSION
+// ==========================================
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  if (!validateForm()) {
+    toast.error(t('कृपया सभी त्रुटियां ठीक करें', 'Please fix all errors'));
+    return;
+  }
+
+  try {
+    const paperValue = mainFilters.papers.length === 2 
+      ? 'combined' 
+      : mainFilters.papers[0] || 'paper1';
+    
+    const finalTitle = formData.title.trim() || generateAutoTitle();
+
+    // Convert filter keys to actual names
+    const unitNames = getUnitNamesFromKeys(mainFilters.units, language);
+    const chapterNames = getChapterNamesFromKeys(mainFilters.chapters, language);
+    const topicNames = getTopicNamesFromKeys(mainFilters.topics);
+
+    let response;
+    
+    if (isRandomMode) {
+      response = await generateRandomTest({
+        ...formData,
+        paper: paperValue,
+        title: finalTitle,
+        unit: unitNames,
+        chapter: chapterNames,
+        topic: topicNames,
+        questionsPerUnit,
+        totalQuestions: getTotalDistributed()
+      });
+    } else {
+      response = await createTest({
+        ...formData,
+        paper: paperValue,
+        title: finalTitle,
+        unit: unitNames,
+        chapter: chapterNames,
+        topic: topicNames,
+        questions: selectedQuestions.map(q => q._id),
+        totalQuestions: selectedQuestions.length
+      });
     }
-    if (formData.duration < 1) {
-      newErrors.duration = t('अवधि 1 से अधिक होनी चाहिए', 'Duration must be greater than 0');
-    }
-    if (isRandomMode && getTotalDistributed() === 0) {
-      newErrors.distribution = t('कुल प्रश्न 0 नहीं हो सकते', 'Total questions cannot be 0');
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) {
-      toast.error(t('कृपया सभी त्रुटियां ठीक करें', 'Please fix all errors'));
-      return;
-    }
-
-    try {
-      const paperValue = mainFilters.papers.length === 2 ? 'combined' : mainFilters.papers[0] || 'paper1';
-      const finalTitle = formData.title.trim() || generateAutoTitle();
-
-      let response;
-      if (isRandomMode) {
-        response = await generateRandomTest({
-          ...formData,
-          paper: paperValue,
-          title: finalTitle,
-          questionsPerUnit,
-          totalQuestions: getTotalDistributed()
-        });
-      } else {
-        response = await createTest({
-          ...formData,
-          paper: paperValue,
-          title: finalTitle,
-          questions: selectedQuestions.map(q => q._id),
-          totalQuestions: selectedQuestions.length
-        });
-      }
-
-      toast.success(t('परीक्षा सफलतापूर्वक बनाई गई!', 'Test created successfully!'));
-      setCreatedTest(response);
-      setCurrentStep(STEPS.length - 1);
-    } catch (err) {
-      toast.error(err.message || t('परीक्षा बनाने में त्रुटि', 'Error creating test'));
-    }
-  };
-
+    toast.success(t('परीक्षा सफलतापूर्वक बनाई गई!', 'Test created successfully!'));
+    setCreatedTest(response.data || response);
+    setCurrentStep(STEPS.length - 1);
+    
+  } catch (err) {
+    console.error('Test creation error:', err);
+    toast.error(err.message || t('परीक्षा बनाने में त्रुटि', 'Error creating test'));
+  }
+};
   // ==========================================
   // QUICK TEMPLATES
   // ==========================================
