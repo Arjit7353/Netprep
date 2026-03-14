@@ -1,10 +1,12 @@
+// server/controllers/translateController.js
+
 const translateHelper = require('../utils/translateHelper');
 
 // @desc    Translate text
 // @route   POST /api/translate
 const translateText = async (req, res, next) => {
   try {
-    const { text, from = 'hi', to = 'en' } = req.body;
+    const { text, from, to } = req.body;
 
     if (!text) {
       return res.status(400).json({
@@ -13,21 +15,22 @@ const translateText = async (req, res, next) => {
       });
     }
 
-    const startTime = Date.now();
-    const translated = await translateHelper.translate(text, from, to);
-    const duration = Date.now() - startTime;
+    const fromLang = from || 'hi';
+    const toLang = to || (fromLang === 'hi' ? 'en' : 'hi');
+
+    const translated = await translateHelper.translate(text, fromLang, toLang);
 
     res.json({
       success: true,
       data: {
         original: text,
         translated,
-        from,
-        to,
-        durationMs: duration
+        from: fromLang,
+        to: toLang
       }
     });
   } catch (error) {
+    console.error('[Translate] Error:', error.message);
     next(error);
   }
 };
@@ -36,32 +39,40 @@ const translateText = async (req, res, next) => {
 // @route   POST /api/translate/batch
 const translateBatch = async (req, res, next) => {
   try {
-    const { texts, from = 'hi', to = 'en' } = req.body;
+    const { texts, from, to } = req.body;
 
-    if (!texts || !Array.isArray(texts)) {
+    if (!texts || !Array.isArray(texts) || texts.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Texts array is required'
+        message: 'texts array is required'
       });
     }
 
-    const startTime = Date.now();
-    const translated = await translateHelper.translateBatch(texts, from, to);
-    const duration = Date.now() - startTime;
+    // Limit batch size
+    if (texts.length > 200) {
+      return res.status(400).json({
+        success: false,
+        message: 'Maximum 200 texts per batch'
+      });
+    }
+
+    const fromLang = from || 'hi';
+    const toLang = to || (fromLang === 'hi' ? 'en' : 'hi');
+
+    const translated = await translateHelper.translateBatch(texts, fromLang, toLang);
 
     res.json({
       success: true,
       data: {
         original: texts,
         translated,
-        from,
-        to,
-        count: texts.length,
-        durationMs: duration,
-        avgPerText: Math.round(duration / texts.length)
+        from: fromLang,
+        to: toLang,
+        count: translated.length
       }
     });
   } catch (error) {
+    console.error('[TranslateBatch] Error:', error.message);
     next(error);
   }
 };
@@ -71,7 +82,10 @@ const translateBatch = async (req, res, next) => {
 const testConnection = async (req, res, next) => {
   try {
     const result = await translateHelper.testConnection();
-    res.status(result.success ? 200 : 500).json(result);
+    res.json({
+      success: result.success,
+      data: result
+    });
   } catch (error) {
     next(error);
   }
@@ -79,30 +93,22 @@ const testConnection = async (req, res, next) => {
 
 // @desc    Get translation API status
 // @route   GET /api/translate/status
-const getStatus = async (req, res, next) => {
-  try {
-    const status = translateHelper.getStatus();
-    res.json({
-      success: true,
-      data: status
-    });
-  } catch (error) {
-    next(error);
-  }
+const getStatus = async (req, res) => {
+  const status = translateHelper.getStatus();
+  res.json({
+    success: true,
+    data: status
+  });
 };
 
 // @desc    Clear translation cache
 // @route   POST /api/translate/clear-cache
-const clearCache = async (req, res, next) => {
-  try {
-    translateHelper.clearCache();
-    res.json({
-      success: true,
-      message: 'Translation cache cleared'
-    });
-  } catch (error) {
-    next(error);
-  }
+const clearCache = async (req, res) => {
+  translateHelper.clearCache();
+  res.json({
+    success: true,
+    message: 'Translation cache cleared'
+  });
 };
 
 module.exports = {

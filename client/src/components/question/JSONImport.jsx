@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import {
   Upload, FileJson, AlertCircle, CheckCircle, Copy, Download, Eye, Play,
   X, ChevronDown, ChevronUp, AlertTriangle, Sparkles, FolderOpen,
-  Loader2, RotateCcw, Layers, Clock
+  Loader2, RotateCcw, Layers, Clock, ListChecks, FileText
 } from 'lucide-react';
 import Button from '../common/Button';
 import { useToast } from '../common/Toast';
@@ -22,7 +22,15 @@ const TEMPLATE_CATEGORIES = [
   { key: 'advanced', label: 'Advanced / Mixed', labelHi: 'एडवांस / मिश्रित' },
 ];
 
-const JSONImport = ({ onImport, onValidate, language = 'hi', loading = false }) => {
+const JSONImport = ({
+  onImport,
+  onValidate,
+  language = 'hi',
+  loading = false,
+  // ★ NEW: Preview mode props
+  onPreviewReady,
+  enablePreview = true
+}) => {
   const { success, error: showError, warning } = useToast();
   const fileInputRef = useRef(null);
 
@@ -39,7 +47,6 @@ const JSONImport = ({ onImport, onValidate, language = 'hi', loading = false }) 
 
   // ── Chunked import progress ──
   const [importProgress, setImportProgress] = useState(null);
-  // { current: 2, total: 5, status: 'importing', aggregated: {...}, startTime: Date }
 
   // ── Template options ──
   const templateOptions = Object.entries(ALL_TEMPLATES).map(([key, val]) => ({
@@ -114,6 +121,21 @@ const JSONImport = ({ onImport, onValidate, language = 'hi', loading = false }) 
     } finally { setIsValidating(false); }
   };
 
+  // ★ NEW: Open Preview Panel (sends parsed data to parent)
+  const handleOpenPreview = () => {
+    if (!jsonText.trim()) { showError(language === 'hi' ? 'JSON डेटा डालें' : 'Enter JSON data'); return; }
+    let jsonData;
+    try { jsonData = JSON.parse(jsonText); }
+    catch (err) { showError('Invalid JSON: ' + err.message); return; }
+
+    const cv = validateJSONImport(jsonData);
+    if (!cv.isValid) { showError(cv.errors[0]); return; }
+
+    if (onPreviewReady) {
+      onPreviewReady(jsonData, jsonText);
+    }
+  };
+
   // ═══════════════════════════════════════════════════════════
   // ★ SMART IMPORT — auto-chunks if > CHUNK_SIZE for reliability
   // ═══════════════════════════════════════════════════════════
@@ -164,14 +186,12 @@ const JSONImport = ({ onImport, onValidate, language = 'hi', loading = false }) 
             agg.errors += chunks[i].length;
             console.error(`[Import] Chunk ${i + 1} failed after retries:`, err.message);
           } else {
-            await sleep(2000); // wait before retry
+            await sleep(2000);
           }
         }
       }
 
       setImportProgress((p) => ({ ...p, aggregated: { ...agg } }));
-
-      // Small delay between chunks to let server breathe
       if (i < chunks.length - 1) await sleep(800);
     }
 
@@ -184,7 +204,6 @@ const JSONImport = ({ onImport, onValidate, language = 'hi', loading = false }) 
         : `${agg.questions} questions imported (${elapsed}s)`
     );
 
-    // Clear editor after short delay
     setTimeout(() => { setJsonText(''); setValidation(null); setPreview(null); setSelectedTemplate(''); }, 1500);
   };
 
@@ -194,10 +213,8 @@ const JSONImport = ({ onImport, onValidate, language = 'hi', loading = false }) 
     let current = [];
     for (const item of items) {
       current.push(item);
-      // Check if this is a standalone question (not passage/DI group)
       const isGroup = item.passage || item.passageContent || item.diData ||
         (item.type && item.type.startsWith('di_') && item.diData);
-      // Flush chunk when reaching size limit (only on non-group items or end of group)
       if (current.length >= CHUNK_SIZE && !isGroup) {
         chunks.push([...current]);
         current = [];
@@ -267,8 +284,8 @@ const JSONImport = ({ onImport, onValidate, language = 'hi', loading = false }) 
                     </span>
                     <p className="text-xs text-primary-500 dark:text-primary-400 mt-0.5">
                       {language === 'hi'
-                        ? 'MCQ, अभिकथन-कारण, सुमेलन, क्रम, कथन, गद्यांश, DI (तालिका/बार/पाई/लाइन/केसलेट) — सभी एक फ़ाइल में'
-                        : 'MCQ, A-R, Match, Sequence, Statement, Passage, DI (Table/Bar/Pie/Line/Caselet) — all in one'}
+                        ? 'MCQ, अभिकथन-कारण, सुमेलन, क्रम, कथन, गद्यांश, DI — सभी एक फ़ाइल में'
+                        : 'MCQ, A-R, Match, Sequence, Statement, Passage, DI — all in one'}
                     </p>
                   </div>
                   {selectedTemplate === 'all_in_one' && <CheckCircle className="w-5 h-5 text-primary-600 ml-auto flex-shrink-0" />}
@@ -377,6 +394,20 @@ const JSONImport = ({ onImport, onValidate, language = 'hi', loading = false }) 
             <Button variant="outline" size="sm" icon={Eye} onClick={handleValidate} loading={isValidating} disabled={!jsonText.trim()}>
               {language === 'hi' ? 'मान्य करें' : 'Validate'}
             </Button>
+
+            {/* ★ NEW: Preview Button */}
+            {enablePreview && (
+              <Button
+                variant="outlinePrimary"
+                size="sm"
+                icon={ListChecks}
+                onClick={handleOpenPreview}
+                disabled={!jsonText.trim()}
+              >
+                {language === 'hi' ? 'प्रीव्यू' : 'Preview'}
+              </Button>
+            )}
+
             <Button
               variant="primary" size="sm" icon={Play}
               onClick={handleImport}
@@ -521,10 +552,27 @@ const JSONImport = ({ onImport, onValidate, language = 'hi', loading = false }) 
                   <p className="text-xs text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
                     <Layers className="w-4 h-4 flex-shrink-0" />
                     {language === 'hi'
-                      ? `${preview.totalQuestions} प्रश्न — स्वचालित रूप से ${Math.ceil((preview.totalQuestions) / CHUNK_SIZE)} भागों में आयात होगा (अधिक विश्वसनीय)`
-                      : `${preview.totalQuestions} questions — will auto-split into ${Math.ceil((preview.totalQuestions) / CHUNK_SIZE)} chunks for reliability`
+                      ? `${preview.totalQuestions} प्रश्न — स्वचालित रूप से ${Math.ceil((preview.totalQuestions) / CHUNK_SIZE)} भागों में आयात होगा`
+                      : `${preview.totalQuestions} questions — will auto-split into ${Math.ceil((preview.totalQuestions) / CHUNK_SIZE)} chunks`
                     }
                   </p>
+                </div>
+              )}
+
+              {/* ★ NEW: Preview button in validation results */}
+              {enablePreview && validation.isValid && (
+                <div className="mt-4 pt-3 border-t border-green-100 dark:border-green-900">
+                  <Button
+                    variant="outlinePrimary"
+                    size="sm"
+                    icon={ListChecks}
+                    onClick={handleOpenPreview}
+                    fullWidth
+                  >
+                    {language === 'hi'
+                      ? `${preview.totalQuestions || 0} प्रश्न प्रीव्यू और एडिट करें`
+                      : `Preview & Edit ${preview.totalQuestions || 0} Questions`}
+                  </Button>
                 </div>
               )}
 

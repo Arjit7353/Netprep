@@ -5,7 +5,6 @@ const questionService = {
   // QUESTION APIs
   // ============================================================
 
-  // Get all questions with filters
   getQuestions: async (filters = {}) => {
     const params = {
       page: filters.page || 1,
@@ -26,37 +25,30 @@ const questionService = {
       ...(filters.isPYQ !== undefined && { isPYQ: filters.isPYQ }),
       ...(filters.isActive !== undefined && { isActive: filters.isActive })
     };
-
     return apiHelper.get('/questions', params);
   },
 
-  // Get question statistics
   getStats: async (paper = null) => {
     const params = paper ? { paper } : {};
     return apiHelper.get('/questions/stats', params);
   },
 
-  // Get single question by ID
   getQuestionById: async (id) => {
     return apiHelper.get(`/questions/${id}`);
   },
 
-  // Create new question
   createQuestion: async (questionData) => {
     return apiHelper.post('/questions', questionData);
   },
 
-  // Update question
   updateQuestion: async (id, questionData) => {
     return apiHelper.put(`/questions/${id}`, questionData);
   },
 
-  // Delete question (soft delete)
   deleteQuestion: async (id) => {
     return apiHelper.delete(`/questions/${id}`);
   },
 
-  // Bulk delete questions
   bulkDeleteQuestions: async (ids) => {
     return apiHelper.post('/questions/bulk-delete', { ids });
   },
@@ -65,43 +57,38 @@ const questionService = {
   // IMPORT APIs
   // ============================================================
 
-  // Import questions from JSON (Smart Parser)
-  // ✅ UPDATED: Handles skipDuplicates and longer timeout for large batches
   importQuestions: async (jsonData, options = {}) => {
     const { skipDuplicates = true } = options;
-    
-    // Extract skipDuplicates from jsonData if passed there
     const shouldSkip = jsonData._skipDuplicates ?? skipDuplicates;
-    
-    // Clean jsonData - remove internal flag
     const cleanData = { ...jsonData };
     delete cleanData._skipDuplicates;
-    
-    // Pass skipDuplicates as query parameter
-    const url = shouldSkip 
+    const url = shouldSkip
       ? '/questions/import?skipDuplicates=true'
       : '/questions/import';
-    
-    // Use dynamic import for api instance to allow custom timeout
-    // This avoids circular dependency issues
     const apiModule = await import('./api');
     const api = apiModule.default;
-
-    // Use 3-minute timeout for imports (handles 50+ questions + translation)
     const response = await api.post(url, cleanData, { timeout: 180000 });
     return response.data;
   },
 
-  // Validate JSON before import
   validateImport: async (jsonData) => {
     return apiHelper.post('/questions/import/validate', jsonData);
+  },
+
+  // ★ NEW: Translate a single text (for preview edit)
+  translateText: async (text, from = 'hi', to = 'en') => {
+    return apiHelper.post('/translate', { text, from, to });
+  },
+
+  // ★ NEW: Batch translate multiple texts
+  translateBatch: async (texts, from = 'hi', to = 'en') => {
+    return apiHelper.post('/translate/batch', { texts, from, to });
   },
 
   // ============================================================
   // PASSAGE APIs
   // ============================================================
 
-  // Get all passages with filters
   getPassages: async (filters = {}) => {
     const params = {
       page: filters.page || 1,
@@ -113,27 +100,22 @@ const questionService = {
     return apiHelper.get('/questions/passages/list', params);
   },
 
-  // Create passage manually
   createPassage: async (passageData) => {
     return apiHelper.post('/questions/passages', passageData);
   },
 
-  // Get passage by ID with all linked questions
   getPassageById: async (id) => {
     return apiHelper.get(`/questions/passages/${id}`);
   },
 
-  // Get questions by passage ID
   getQuestionsByPassage: async (passageId) => {
     return apiHelper.get(`/questions/passage/${passageId}`);
   },
 
-  // Update passage
   updatePassage: async (id, passageData) => {
     return apiHelper.put(`/questions/passages/${id}`, passageData);
   },
 
-  // Delete passage
   deletePassage: async (id) => {
     return apiHelper.delete(`/questions/passages/${id}`);
   },
@@ -142,7 +124,6 @@ const questionService = {
   // DI DATA APIs
   // ============================================================
 
-  // Get all DI data with filters
   getDIDataList: async (filters = {}) => {
     const params = {
       page: filters.page || 1,
@@ -154,27 +135,22 @@ const questionService = {
     return apiHelper.get('/questions/di-data/list', params);
   },
 
-  // Create DI data manually
   createDIData: async (diData) => {
     return apiHelper.post('/questions/di-data', diData);
   },
 
-  // Get DI data by ID with all linked questions
   getDIDataById: async (id) => {
     return apiHelper.get(`/questions/di-data/${id}`);
   },
 
-  // Get questions by DI data ID
   getQuestionsByDI: async (diDataId) => {
     return apiHelper.get(`/questions/di/${diDataId}`);
   },
 
-  // Update DI data
   updateDIData: async (id, diData) => {
     return apiHelper.put(`/questions/di-data/${id}`, diData);
   },
 
-  // Delete DI data
   deleteDIData: async (id) => {
     return apiHelper.delete(`/questions/di-data/${id}`);
   },
@@ -183,12 +159,10 @@ const questionService = {
   // TEST GENERATION APIs
   // ============================================================
 
-  // Get random questions for test generation
   getRandomQuestions: async (config) => {
     return apiHelper.post('/questions/random', config);
   },
 
-  // Get questions for full mock (random per unit)
   getFullMockQuestions: async (paper, questionsPerUnit = 5) => {
     return apiHelper.get('/questions/full-mock', { paper, questionsPerUnit });
   },
@@ -197,24 +171,20 @@ const questionService = {
   // ANALYTICS APIs
   // ============================================================
 
-  // Update question accuracy after attempt
   updateAccuracy: async (id, isCorrect) => {
     return apiHelper.patch(`/questions/${id}/accuracy`, { isCorrect });
   },
 
-  // Get questions by difficulty
   getByDifficulty: async (difficulty, paper = null) => {
     const params = { difficulty, ...(paper && { paper }) };
     return apiHelper.get('/questions', params);
   },
 
-  // Get questions by unit
   getByUnit: async (unit, paper) => {
     const params = { unit, ...(paper && { paper }) };
     return apiHelper.get('/questions', params);
   },
 
-  // Get PYQ questions
   getPYQQuestions: async (year, paper = null, session = null) => {
     const params = {
       isPYQ: true,
@@ -225,7 +195,6 @@ const questionService = {
     return apiHelper.get('/questions', params);
   },
 
-  // Search questions
   searchQuestions: async (searchText, paper = null) => {
     const params = {
       search: searchText,
@@ -239,7 +208,6 @@ const questionService = {
   // HELPER METHODS (Client-side utilities)
   // ============================================================
 
-  // Get question type label
   getTypeLabel: (type, language = 'hi') => {
     const labels = {
       mcq: { hi: 'बहुविकल्पीय', en: 'MCQ' },
@@ -258,7 +226,6 @@ const questionService = {
     return labels[type]?.[language] || type;
   },
 
-  // Get difficulty label
   getDifficultyLabel: (difficulty, language = 'hi') => {
     const labels = {
       easy: { hi: 'सरल', en: 'Easy' },
@@ -268,92 +235,48 @@ const questionService = {
     return labels[difficulty]?.[language] || difficulty;
   },
 
-  // Check if question type is DI
-  isDIType: (type) => {
-    return type?.startsWith('di_');
-  },
+  isDIType: (type) => type?.startsWith('di_'),
 
-  // Check if question type needs passage
-  isPassageType: (type) => {
-    return type === 'passage_based';
-  },
+  isPassageType: (type) => type === 'passage_based',
 
-  // Get all question types
-  getAllQuestionTypes: () => {
-    return [
-      'mcq',
-      'assertion_reason',
-      'match_following',
-      'sequence_order',
-      'statement_based',
-      'passage_based',
-      'di_table',
-      'di_bar_chart',
-      'di_pie_chart',
-      'di_line_graph',
-      'di_mixed',
-      'di_caselet'
-    ];
-  },
+  getAllQuestionTypes: () => [
+    'mcq', 'assertion_reason', 'match_following', 'sequence_order',
+    'statement_based', 'passage_based', 'di_table', 'di_bar_chart',
+    'di_pie_chart', 'di_line_graph', 'di_mixed', 'di_caselet'
+  ],
 
-  // Get DI types only
-  getDITypes: () => {
-    return [
-      'di_table',
-      'di_bar_chart',
-      'di_pie_chart',
-      'di_line_graph',
-      'di_mixed',
-      'di_caselet'
-    ];
-  },
+  getDITypes: () => [
+    'di_table', 'di_bar_chart', 'di_pie_chart',
+    'di_line_graph', 'di_mixed', 'di_caselet'
+  ],
 
-  // Format question for display
   formatQuestionPreview: (question, language = 'hi') => {
     if (!question) return '';
-
     const getText = (field) => {
       if (!field) return '';
       if (typeof field === 'string') return field;
       return field[language] || field.hi || field.en || '';
     };
-
     switch (question.questionType) {
       case 'assertion_reason':
-        return getText(question.assertionReasonData?.assertion) || 
-               getText(question.question) ||
-               'Assertion-Reason Question';
-      
-      case 'match_following':
+        return getText(question.assertionReasonData?.assertion) || getText(question.question) || 'Assertion-Reason Question';
+      case 'match_following': {
         const listA = question.matchData?.listA;
         if (listA) {
-          const items = typeof listA === 'object' && !Array.isArray(listA)
-            ? (listA[language] || listA.hi || listA.en || [])
-            : (Array.isArray(listA) ? listA : []);
-          if (items.length > 0) {
-            return getText(question.question) || `Match: ${items[0]}...`;
-          }
+          const items = typeof listA === 'object' && !Array.isArray(listA) ? (listA[language] || listA.hi || listA.en || []) : (Array.isArray(listA) ? listA : []);
+          if (items.length > 0) return getText(question.question) || `Match: ${items[0]}...`;
         }
         return getText(question.question) || 'Match Following Question';
-      
-      case 'sequence_order':
-        return getText(question.question) || 'Sequence Order Question';
-      
-      case 'statement_based':
-        return getText(question.question) || 'Statement Based Question';
-      
-      case 'passage_based':
-        return getText(question.question) || 'Passage-based Question';
-      
+      }
+      case 'sequence_order': return getText(question.question) || 'Sequence Order Question';
+      case 'statement_based': return getText(question.question) || 'Statement Based Question';
+      case 'passage_based': return getText(question.question) || 'Passage-based Question';
       default:
-        if (question.questionType?.startsWith('di_')) {
-          return getText(question.question) || 'Data Interpretation Question';
-        }
+        if (question.questionType?.startsWith('di_')) return getText(question.question) || 'Data Interpretation Question';
         return getText(question.question);
     }
   },
 
-  // Get question type color for UI
   getTypeColor: (type) => {
     const colors = {
       mcq: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200' },
@@ -372,7 +295,6 @@ const questionService = {
     return colors[type] || { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-200' };
   },
 
-  // Get difficulty color for UI
   getDifficultyColor: (difficulty) => {
     const colors = {
       easy: { bg: 'bg-green-100', text: 'text-green-700' },
