@@ -1,7 +1,6 @@
 // client/src/pages/Dashboard.jsx
 // ═══════════════════════════════════════════════════════════════
-//  NETPREP ULTIMATE DASHBOARD V2 - PART 1 (Components)
-//  Paste Part 2 directly below this in the SAME file
+//  NETPREP ULTIMATE DASHBOARD V2 
 // ═══════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -474,7 +473,7 @@ const ExamCommandCenter = ({ data, examDate, setExamDate, language: l, navigate 
             <div className="mt-3 pt-3 border-t border-white/10">
               <p className="text-[9px] font-bold text-white/50 uppercase mb-2">{l === 'hi' ? 'तैयारी कारक' : 'Readiness Factors'}</p>
               {readiness.factors.map((f, i) => (
-                <div key={i} className="flex items-center gap-2 mb-1.5">
+                <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-[9px] text-white/50 w-20 truncate">{l === 'hi' ? f.nameHi : f.name}</span>
                   <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-700" style={{ width: `${f.score}%`, background: f.score >= 70 ? '#22c55e' : f.score >= 50 ? '#f59e0b' : '#ef4444' }} />
@@ -629,7 +628,7 @@ const GoalTracker = ({ goals, completionPct, todayDetailed, yesterdayActivity, c
         </div>
       )}
       {/* Goals */}
-      <div className="p-3 space-y-1.5 max-h-[380px] overflow-y-auto">
+      <div className="p-3 space-y-1.5 max-h-[380px] overflow-y-auto custom-scrollbar">
         {goals.map((goal, i) => {
           const Icon = iconMap[goal.icon] || Target;
           const cc = colorMap[goal.color] || colorMap.blue;
@@ -643,7 +642,7 @@ const GoalTracker = ({ goals, completionPct, todayDetailed, yesterdayActivity, c
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-0.5">
-                  <p className={`text-[11px] font-semibold truncate pr-4 ${done ? 'text-emerald-700 dark:text-emerald-400 line-through' : 'text-gray-900 dark:text-white'}`}>{l === 'hi' ? goal.titleHi : goal.title}</p>
+                  <p className={`text-[11px] font-semibold pr-4 leading-snug ${done ? 'text-emerald-700 dark:text-emerald-400 line-through' : 'text-gray-900 dark:text-white'}`}>{l === 'hi' ? goal.titleHi : goal.title}</p>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <span className={`text-[9px] font-black ${done ? 'text-emerald-600' : cc.text}`}>{goal.current}{goal.type === 'percentage' ? '%' : ''}/{goal.target}{goal.type === 'percentage' ? '%' : ''}</span>
                     {done && <span className="text-[7px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">+{goal.xp}XP</span>}
@@ -658,7 +657,7 @@ const GoalTracker = ({ goals, completionPct, todayDetailed, yesterdayActivity, c
           );
         })}
       </div>
-      <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 flex items-center justify-between">
+      <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 flex items-center justify-between shrink-0">
         <span className="text-[8px] text-gray-400">{l === 'hi' ? 'गोल स्ट्रीक' : 'Goal Streak'}: <b className="text-amber-600">{goalStreak}d</b> | XP: <b className="text-indigo-600">{todayXP}</b></span>
         {(todayDetailed?.count || 0) === 0 && (
           <button onClick={() => navigate?.('/tests')} className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[9px] font-bold rounded-lg">
@@ -682,8 +681,8 @@ const SmartRevisionHub = ({ data, language: l, navigate }) => {
   const tabData = tab === 'due' ? data.todayDue : tab === 'critical' ? data.critical : tab === 'weak' ? data.weak : tab === 'improving' ? [...data.improving, ...data.mastered] : data.all;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col h-full min-h-[400px]">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 shrink-0">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow">
@@ -715,7 +714,7 @@ const SmartRevisionHub = ({ data, language: l, navigate }) => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-100 dark:border-gray-700">
+      <div className="flex border-b border-gray-100 dark:border-gray-700 shrink-0">
         {[{ id: 'due', label: l === 'hi' ? 'आज' : 'Due', count: data.todayDue.length, color: 'text-red-600' }, { id: 'critical', label: l === 'hi' ? 'गंभीर' : 'Critical', count: data.critical.length }, { id: 'weak', label: l === 'hi' ? 'कमजोर' : 'Weak', count: data.weak.length }, { id: 'improving', label: l === 'hi' ? 'सुधार' : 'Good', count: data.improving.length + data.mastered.length }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex-1 px-2 py-2 text-[10px] font-bold transition-all ${tab === t.id ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10' : 'text-gray-500'}`}>
@@ -725,7 +724,7 @@ const SmartRevisionHub = ({ data, language: l, navigate }) => {
       </div>
 
       {/* Items */}
-      <div className="p-3 space-y-1.5 max-h-[400px] overflow-y-auto">
+      <div className="p-3 space-y-2 flex-1 overflow-y-auto custom-scrollbar max-h-[500px]">
         {tabData.length === 0 ? (
           <div className="text-center py-6"><CheckCircle className="w-8 h-8 mx-auto mb-2 text-emerald-200 dark:text-emerald-800" /><p className="text-xs text-gray-400">{l === 'hi' ? 'कोई नहीं!' : 'None!'}</p></div>
         ) : tabData.slice(0, 15).map((item, i) => {
@@ -733,46 +732,58 @@ const SmartRevisionHub = ({ data, language: l, navigate }) => {
           const CIcon = cc.icon;
           const trendIcon = item.trend === 'up' ? TrendingUp : item.trend === 'down' ? TrendingDown : Minus;
           return (
-            <div key={i} className={`group flex items-center gap-2.5 p-2.5 rounded-xl border ${cc.border} ${cc.bg} hover:shadow-lg cursor-pointer transition-all`}
+            <div key={i} className={`group flex items-center gap-3 p-2.5 rounded-xl border ${cc.border} ${cc.bg} hover:shadow-md cursor-pointer transition-all`}
               onClick={() => navigate?.(`/results/${item.lastAttempt?._id}`)}>
               {/* Priority dot */}
-              <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+              <div className="flex flex-col items-center gap-1 shrink-0">
                 <div className={`w-2 h-2 rounded-full ${item.isOverdue ? 'bg-red-500 animate-pulse' : cc.badge}`} />
-                <span className="text-[7px] text-gray-400">{item.bestScore}%</span>
+                <span className="text-[7px] text-gray-500 font-semibold">{item.bestScore}%</span>
               </div>
               {/* Score ring */}
-              <Ring pct={item.bestScore} size={32} sw={3} color={item.bestScore >= 70 ? '#22c55e' : item.bestScore >= 50 ? '#f59e0b' : '#ef4444'}>
-                <span className="text-[7px] font-bold">{item.bestScore}</span>
-              </Ring>
+              <div className="shrink-0">
+                <Ring pct={item.bestScore} size={38} sw={4} color={item.bestScore >= 70 ? '#22c55e' : item.bestScore >= 50 ? '#f59e0b' : '#ef4444'}>
+                  <span className="text-[8px] font-bold text-gray-700 dark:text-gray-300">{item.bestScore}</span>
+                </Ring>
+              </div>
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1">
-                  <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{item.title}</h4>
-                  {item.paper && <span className={`px-1 rounded text-[7px] font-bold ${item.paper === 'paper1' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{item.paper === 'paper1' ? 'P1' : 'P2'}</span>}
+                <div className="flex items-start gap-1.5 mb-1">
+                  <h4 className="text-[11px] font-bold text-gray-900 dark:text-white leading-snug">{item.title}</h4>
+                  {item.paper && <span className={`shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-[7px] font-black ${item.paper === 'paper1' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'}`}>{item.paper === 'paper1' ? 'P1' : 'P2'}</span>}
                 </div>
-                <div className="flex items-center gap-2 mt-0.5 text-[8px] text-gray-500">
-                  <span>{item.daysSinceLastAttempt}d ago</span>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5 text-[8px] text-gray-500">
+                  <span className="font-medium">{item.daysSinceLastAttempt}d ago</span>
+                  <span>•</span>
                   <span>{item.attempts} att</span>
+                  <span>•</span>
                   <span className={`font-bold ${cc.text}`}>{item.srsLabel}</span>
-                  {item.isOverdue && <span className="text-red-500 font-bold">{item.overdueBy}d overdue!</span>}
+                  {item.isOverdue && (
+                    <>
+                      <span>•</span>
+                      <span className="text-red-500 font-bold">{item.overdueBy}d overdue!</span>
+                    </>
+                  )}
                   {item.improvement !== 0 && (
-                    <span className={`flex items-center gap-0.5 ${item.improvement > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {React.createElement(trendIcon, { className: 'w-2.5 h-2.5' })}
-                      {item.improvement > 0 ? '+' : ''}{item.improvement}%
-                    </span>
+                    <>
+                      <span>•</span>
+                      <span className={`flex items-center gap-0.5 font-bold ${item.improvement > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {React.createElement(trendIcon, { className: 'w-2.5 h-2.5' })}
+                        {item.improvement > 0 ? '+' : ''}{item.improvement}%
+                      </span>
+                    </>
                   )}
                 </div>
                 {/* Score history mini */}
                 {item.allScores.length > 1 && (
-                  <div className="flex items-center gap-0.5 mt-1">
+                  <div className="flex items-center gap-0.5 mt-1.5">
                     {item.allScores.slice(-5).map((s, si) => (
-                      <div key={si} className={`h-1 rounded-full ${s.score >= 70 ? 'bg-emerald-400' : s.score >= 50 ? 'bg-amber-400' : 'bg-red-400'}`} style={{ width: `${Math.max(s.score / 5, 3)}px` }} />
+                      <div key={si} className={`h-1.5 rounded-full ${s.score >= 70 ? 'bg-emerald-400' : s.score >= 50 ? 'bg-amber-400' : 'bg-red-400'}`} style={{ width: `${Math.max(s.score / 5, 4)}px` }} />
                     ))}
                   </div>
                 )}
               </div>
               <button onClick={(e) => { e.stopPropagation(); navigate?.(`/test/${item.testId}`); }}
-                className="p-1.5 rounded-lg bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 hover:bg-rose-200 transition flex-shrink-0">
+                className="shrink-0 p-2 rounded-lg bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400 hover:bg-rose-200 transition hover:scale-105">
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -781,10 +792,10 @@ const SmartRevisionHub = ({ data, language: l, navigate }) => {
       </div>
 
       {/* SRS Schedule */}
-      <div className="px-4 py-2.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-        <div className="flex items-center justify-between text-[8px] text-gray-400">
-          <span>{l === 'hi' ? 'आज' : 'Today'}: <b className="text-red-600">{data.stats.dueToday}</b> | {l === 'hi' ? 'इस हफ्ते' : 'Week'}: <b className="text-amber-600">{data.stats.dueThisWeek}</b></span>
-          <span>{l === 'hi' ? 'कुल रिवीज़न' : 'Total'}: {data.stats.totalRevisions}</span>
+      <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 shrink-0">
+        <div className="flex items-center justify-between text-[9px] text-gray-500">
+          <span>{l === 'hi' ? 'आज' : 'Today'}: <b className="text-red-600 dark:text-red-400">{data.stats.dueToday}</b> | {l === 'hi' ? 'इस हफ्ते' : 'Week'}: <b className="text-amber-600 dark:text-amber-400">{data.stats.dueThisWeek}</b></span>
+          <span className="font-semibold">{l === 'hi' ? 'कुल रिवीज़न' : 'Total Revisions'}: {data.stats.totalRevisions}</span>
         </div>
       </div>
     </div>
@@ -803,8 +814,8 @@ const WeeklyChapterMatrix = ({ data, language: l }) => {
   const comp = weekIdx === 0 ? data.comparison : null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col h-full min-h-[400px]">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 shrink-0">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow">
@@ -827,12 +838,12 @@ const WeeklyChapterMatrix = ({ data, language: l }) => {
         </div>
 
         {/* Week overview */}
-        <div className="flex items-center gap-3 text-[9px]">
+        <div className="flex items-center gap-3 text-[9px] flex-wrap">
           <span className="px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-bold">{week.stats.totalTests} {l === 'hi' ? 'टेस्ट' : 'tests'}</span>
           <span className="px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-bold">{week.stats.chaptersCovered}/{week.stats.totalChapters} {l === 'hi' ? 'अध्याय' : 'chapters'}</span>
           <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 font-bold">{week.stats.avgScore}% avg</span>
           {comp && (
-            <span className={`px-2 py-0.5 rounded font-bold flex items-center gap-0.5 ${comp.scoreChange > 0 ? 'bg-emerald-100 text-emerald-700' : comp.scoreChange < 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>
+            <span className={`px-2 py-0.5 rounded font-bold flex items-center gap-0.5 ${comp.scoreChange > 0 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : comp.scoreChange < 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800'}`}>
               {comp.scoreChange > 0 ? <ArrowUp className="w-2.5 h-2.5" /> : comp.scoreChange < 0 ? <ArrowDown className="w-2.5 h-2.5" /> : <Minus className="w-2.5 h-2.5" />}
               {comp.scoreChange > 0 ? '+' : ''}{comp.scoreChange}% vs {l === 'hi' ? 'पिछला' : 'last'}
             </span>
@@ -841,37 +852,41 @@ const WeeklyChapterMatrix = ({ data, language: l }) => {
       </div>
 
       {/* Chapter ranking */}
-      <div className="p-3 space-y-1.5 max-h-[350px] overflow-y-auto">
+      <div className="p-3 space-y-2 flex-1 overflow-y-auto custom-scrollbar max-h-[450px]">
         {week.chapters.length > 0 ? (
           <>
             {week.chapters.map((ch, i) => {
               const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
               const change = ch.changeVsLastWeek;
               return (
-                <div key={i} className="flex items-center gap-2.5 p-2 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20 hover:shadow-md transition-all">
-                  <span className="text-sm w-6 text-center flex-shrink-0">{medal}</span>
+                <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20 hover:shadow-md transition-all">
+                  <span className="text-sm w-6 text-center shrink-0">{medal}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1 mb-0.5">
-                      <p className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{ch.name}</p>
-                      <span className={`px-1 rounded text-[7px] font-bold ${ch.paper === 'paper1' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{ch.paper === 'paper1' ? 'P1' : 'P2'}</span>
+                    <div className="flex items-start gap-1.5 mb-1">
+                      <p className="text-[11px] font-bold text-gray-900 dark:text-white leading-snug">{ch.name}</p>
+                      <span className={`shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-[7px] font-black ${ch.paper === 'paper1' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'}`}>{ch.paper === 'paper1' ? 'P1' : 'P2'}</span>
                     </div>
-                    <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-0.5">
+                    <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-1">
                       <div className="h-full rounded-full transition-all duration-700" style={{ width: `${ch.avgScore}%`, background: ch.avgScore >= 70 ? '#22c55e' : ch.avgScore >= 50 ? '#f59e0b' : '#ef4444' }} />
                     </div>
-                    <div className="flex items-center gap-2 text-[8px] text-gray-500">
-                      <span>{ch.testsCount} tests</span>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[8px] text-gray-500">
+                      <span className="font-medium">{ch.testsCount} tests</span>
+                      <span>•</span>
                       <span>✓{ch.correct} ✗{ch.wrong}</span>
                       {change !== null && change !== undefined && (
-                        <span className={`font-bold flex items-center gap-0.5 ${change > 0 ? 'text-emerald-600' : change < 0 ? 'text-red-600' : 'text-gray-400'}`}>
-                          {change > 0 ? <ArrowUp className="w-2.5 h-2.5" /> : change < 0 ? <ArrowDown className="w-2.5 h-2.5" /> : null}
-                          {change > 0 ? '+' : ''}{change}%
-                        </span>
+                        <>
+                          <span>•</span>
+                          <span className={`font-bold flex items-center gap-0.5 ${change > 0 ? 'text-emerald-600' : change < 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                            {change > 0 ? <ArrowUp className="w-2.5 h-2.5" /> : change < 0 ? <ArrowDown className="w-2.5 h-2.5" /> : null}
+                            {change > 0 ? '+' : ''}{change}%
+                          </span>
+                        </>
                       )}
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
+                  <div className="text-right shrink-0">
                     <p className={`text-base font-black ${ch.avgScore >= 70 ? 'text-emerald-600' : ch.avgScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>{ch.avgScore}%</p>
-                    <p className="text-[7px] text-gray-400">{l === 'hi' ? 'सर्वश्रेष्ठ' : 'Best'}: {ch.bestScore}%</p>
+                    <p className="text-[7px] text-gray-400 font-semibold">{l === 'hi' ? 'सर्वश्रेष्ठ' : 'Best'}: {ch.bestScore}%</p>
                   </div>
                 </div>
               );
@@ -879,13 +894,13 @@ const WeeklyChapterMatrix = ({ data, language: l }) => {
 
             {/* Uncovered */}
             {week.uncovered.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                <p className="text-[9px] font-bold text-gray-500 uppercase mb-1.5 flex items-center gap-1">
+              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <p className="text-[9px] font-bold text-gray-500 uppercase mb-2 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3 text-amber-500" />{l === 'hi' ? 'इस हफ्ते नहीं' : 'Not Covered'}
                 </p>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {week.uncovered.slice(0, 8).map((u, i) => (
-                    <span key={i} className={`text-[8px] px-1.5 py-0.5 rounded border ${u.daysSince !== null && u.daysSince > 14 ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/10 dark:border-red-800 dark:text-red-400' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-700/30 dark:border-gray-700 dark:text-gray-400'}`}>
+                    <span key={i} className={`text-[8px] px-2 py-1 rounded-md border ${u.daysSince !== null && u.daysSince > 14 ? 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/10 dark:border-red-800 dark:text-red-400' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-700/30 dark:border-gray-700 dark:text-gray-400'}`}>
                       {u.name} {u.daysSince !== null ? `(${u.daysSince}d)` : ''}
                     </span>
                   ))}
@@ -894,16 +909,17 @@ const WeeklyChapterMatrix = ({ data, language: l }) => {
             )}
           </>
         ) : (
-          <div className="text-center py-6"><Inbox className="w-8 h-8 mx-auto mb-2 text-gray-200" /><p className="text-xs text-gray-400">{l === 'hi' ? 'इस हफ्ते कोई टेस्ट नहीं' : 'No tests this week'}</p></div>
+          <div className="text-center py-8"><Inbox className="w-10 h-10 mx-auto mb-2 text-gray-200 dark:text-gray-700" /><p className="text-xs text-gray-400">{l === 'hi' ? 'इस हफ्ते कोई टेस्ट नहीं' : 'No tests this week'}</p></div>
         )}
       </div>
 
       {/* Insights */}
       {data.insights.length > 0 && (
-        <div className="px-4 py-2.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 space-y-1">
+        <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 space-y-1.5 shrink-0">
           {data.insights.slice(0, 3).map((ins, i) => (
-            <p key={i} className={`text-[9px] flex items-center gap-1 ${ins.type === 'critical' ? 'text-red-600 font-bold' : ins.type === 'warning' ? 'text-amber-600' : ins.type === 'positive' ? 'text-emerald-600' : 'text-gray-500'}`}>
-              <Lightbulb className="w-3 h-3 flex-shrink-0" />{l === 'hi' ? ins.textHi : ins.text}
+            <p key={i} className={`text-[9px] flex items-start gap-1.5 ${ins.type === 'critical' ? 'text-red-600 font-bold' : ins.type === 'warning' ? 'text-amber-600' : ins.type === 'positive' ? 'text-emerald-600' : 'text-gray-500'}`}>
+              <Lightbulb className="w-3 h-3 shrink-0 mt-0.5" />
+              <span className="leading-snug">{l === 'hi' ? ins.textHi : ins.text}</span>
             </p>
           ))}
         </div>
@@ -981,7 +997,7 @@ const DailyReportCard = ({ data, language: l }) => {
           <p className="text-[9px] font-bold text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
             <Crosshair className="w-3 h-3" />{l === 'hi' ? 'कल का फोकस' : "Tomorrow's Focus"}
           </p>
-          <p className="text-[10px] font-semibold text-indigo-900 dark:text-indigo-200 mt-0.5">{data.tomorrowFocus.unit}</p>
+          <p className="text-[10px] font-semibold text-indigo-900 dark:text-indigo-200 mt-0.5 leading-snug">{data.tomorrowFocus.unit}</p>
           <p className="text-[8px] text-indigo-500">{l === 'hi' ? data.tomorrowFocus.reasonHi : data.tomorrowFocus.reason}</p>
         </div>
       </div>
@@ -1037,14 +1053,14 @@ const MistakeJournal = ({ data, language: l }) => {
             <div className="space-y-1">
               {data.mostRepeated.slice(0, 5).map((m, i) => (
                 <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-red-50/50 dark:bg-red-900/5 border border-red-100 dark:border-red-900/20">
-                  <span className="text-[9px] font-bold text-red-600 w-5 text-center flex-shrink-0">{m.wrong}</span>
+                  <span className="text-[9px] font-bold text-red-600 w-5 text-center shrink-0">{m.wrong}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-semibold text-gray-900 dark:text-white truncate">{m.unit}</p>
-                    <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-0.5">
+                    <p className="text-[10px] font-semibold text-gray-900 dark:text-white leading-snug">{m.unit}</p>
+                    <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-1">
                       <div className="h-full bg-red-500 rounded-full" style={{ width: `${m.errorRate}%` }} />
                     </div>
                   </div>
-                  <span className="text-[9px] font-bold text-red-600 flex-shrink-0">{m.errorRate}%</span>
+                  <span className="text-[9px] font-bold text-red-600 shrink-0">{m.errorRate}%</span>
                 </div>
               ))}
             </div>
@@ -1056,8 +1072,8 @@ const MistakeJournal = ({ data, language: l }) => {
           <div className="space-y-1">
             {data.suggestions.map((s, i) => (
               <div key={i} className={`flex items-start gap-1.5 text-[9px] p-1.5 rounded-lg ${s.priority === 'critical' ? 'bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-400' : s.priority === 'high' ? 'bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                <Lightbulb className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                <span>{l === 'hi' ? s.textHi : s.text}</span>
+                <Lightbulb className="w-3 h-3 shrink-0 mt-0.5" />
+                <span className="leading-snug">{l === 'hi' ? s.textHi : s.text}</span>
               </div>
             ))}
           </div>
@@ -1108,9 +1124,10 @@ const SyllabusCoverageMap = ({ coverage, language: l }) => {
                 <span className="text-[8px] font-bold text-gray-500 uppercase">{u.unit}</span>
                 {u.accuracy > 0 && <span className={`text-[7px] font-bold px-1 py-0.5 rounded-full ${ll.color} text-white`}>{u.accuracy}%</span>}
               </div>
-              <p className="text-[10px] font-semibold text-gray-800 dark:text-gray-200 truncate mb-1">{u.name}</p>
-              <div className="flex items-center gap-1.5 text-[8px] text-gray-500 mb-1">
+              <p className="text-[10px] font-semibold text-gray-800 dark:text-gray-200 leading-snug mb-1">{u.name}</p>
+              <div className="flex flex-wrap items-center gap-1.5 text-[8px] text-gray-500 mb-1">
                 <span><ClipboardList className="w-2.5 h-2.5 inline" />{u.attemptedCount}/{u.totalTests}</span>
+                <span>{u.totalAttempts || 0} {l === 'hi' ? 'प्रयास' : 'attempts'}</span>
                 {u.bestScore > 0 && <span><Trophy className="w-2.5 h-2.5 inline text-amber-500" />{u.bestScore}%</span>}
               </div>
               {u.testTypeBreakdown && Object.keys(u.testTypeBreakdown).length > 0 && (
@@ -1120,7 +1137,7 @@ const SyllabusCoverageMap = ({ coverage, language: l }) => {
                   ))}
                 </div>
               )}
-              <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-1.5">
                 <div className="h-full rounded-full transition-all" style={{ width: `${u.totalTests > 0 ? Math.round((u.attemptedCount / u.totalTests) * 100) : 0}%`, backgroundColor: u.color }} />
               </div>
             </div>
@@ -1135,7 +1152,6 @@ const SyllabusCoverageMap = ({ coverage, language: l }) => {
 //  SPEED, RECOMMENDATIONS, SCORES, RECORDS, TIME, HEATMAP,
 //  WEEKLY, TRENDS, ERROR, RADAR, ATTENTION, PENDING,
 //  ACTIVITY, PAPER, ACHIEVEMENTS, STREAK, QUOTE, ACTIONS
-//  (Keeping same as before with minor fixes)
 // ════════════════════════════════════════════════════════════
 const SpeedAnalyticsCard = ({ data, language: l }) => {
   if (!data || data.speedTrend.length === 0) return null;
@@ -1167,11 +1183,114 @@ const StudyRecommendations = ({ recommendations, language: l }) => {
       <div className="p-3 space-y-1.5">
         {recommendations.map((r, i) => { const I = iconMap[r.icon] || Lightbulb; return (
           <div key={i} className="flex items-start gap-2 p-2 rounded-xl border border-gray-100 dark:border-gray-700 hover:shadow-md transition-all">
-            <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${colorBg[r.color] || colorBg.blue} flex items-center justify-center shadow-sm flex-shrink-0 mt-0.5`}><I className="w-3.5 h-3.5 text-white" /></div>
-            <div className="flex-1 min-w-0"><p className="text-[11px] font-semibold text-gray-900 dark:text-white">{l === 'hi' ? r.titleHi : r.title}</p><p className="text-[9px] text-gray-500 mt-0.5">{l === 'hi' ? r.detailHi : r.detail}</p></div>
-            <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${r.priority === 'critical' ? 'bg-red-100 text-red-600' : r.priority === 'high' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>{r.priority}</span>
+            <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${colorBg[r.color] || colorBg.blue} flex items-center justify-center shadow-sm shrink-0 mt-0.5`}><I className="w-3.5 h-3.5 text-white" /></div>
+            <div className="flex-1 min-w-0"><p className="text-[11px] font-semibold text-gray-900 dark:text-white leading-snug">{l === 'hi' ? r.titleHi : r.title}</p><p className="text-[9px] text-gray-500 mt-0.5">{l === 'hi' ? r.detailHi : r.detail}</p></div>
+            <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${r.priority === 'critical' ? 'bg-red-100 text-red-600' : r.priority === 'high' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>{r.priority}</span>
           </div>
         ); })}
+      </div>
+    </div>
+  );
+};
+
+// -----------------------------------------------------------------------------
+//  TEST SCORE RANKING CARD
+// -----------------------------------------------------------------------------
+const TestScoreRankingCard = ({ ranking, language: l, navigate }) => {
+  if (!ranking || ranking.length === 0) return null;
+
+  const catColors = { 
+    'Critical': { bg: 'bg-red-50 dark:bg-red-900/10', border: 'border-red-200 dark:border-red-800', text: 'text-red-700 dark:text-red-400', badge: 'bg-red-500' }, 
+    'Weak': { bg: 'bg-orange-50 dark:bg-orange-900/10', border: 'border-orange-200 dark:border-orange-800', text: 'text-orange-700 dark:text-orange-400', badge: 'bg-orange-500' }, 
+    'Good': { bg: 'bg-blue-50 dark:bg-blue-900/10', border: 'border-blue-200 dark:border-blue-800', text: 'text-blue-700 dark:text-blue-400', badge: 'bg-blue-500' }, 
+    'Mastered': { bg: 'bg-emerald-50 dark:bg-emerald-900/10', border: 'border-emerald-200 dark:border-emerald-800', text: 'text-emerald-700 dark:text-emerald-400', badge: 'bg-emerald-500' },
+    'Not Attempted': { bg: 'bg-gray-50 dark:bg-gray-800/50', border: 'border-gray-200 dark:border-gray-700', text: 'text-gray-500 dark:text-gray-400', badge: 'bg-gray-400' }
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col h-full min-h-[400px] max-h-[650px]">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-fuchsia-600 flex items-center justify-center shadow">
+            <ListOrdered className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'स्मार्ट टेस्ट रैंकिंग' : 'Smart Test Ranking'}</h3>
+            <p className="text-[9px] text-gray-500">{l === 'hi' ? 'कमजोर से मजबूत (सभी टेस्ट)' : 'Weakest to Strongest (All Tests)'}</p>
+          </div>
+        </div>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+            {ranking.length} {l === 'hi' ? 'टेस्ट' : 'Tests'}
+        </span>
+      </div>
+      
+      <div className="p-3 space-y-2 overflow-y-auto flex-1 custom-scrollbar">
+        {ranking.map((t, i) => {
+          const cc = catColors[t.category] || catColors['Not Attempted'];
+          const scoreColor = t.bestScore >= 80 ? '#22c55e' : t.bestScore >= 60 ? '#3b82f6' : t.bestScore >= 40 ? '#f59e0b' : t.attempts > 0 ? '#ef4444' : '#9ca3af';
+
+          return (
+            <div key={t.testId || i} className={`group flex items-center gap-3 p-2.5 rounded-xl border ${cc.border} ${cc.bg} hover:shadow-md transition-all`}>
+              
+              {/* Left: Score Ring */}
+              <div className="flex flex-col items-center gap-1 shrink-0">
+                 <Ring pct={t.attempts > 0 ? t.bestScore : 0} size={38} sw={4} color={scoreColor}>
+                    <span className="text-[9px] font-bold text-gray-700 dark:text-gray-300">
+                        {t.attempts > 0 ? `${t.bestScore}%` : '--'}
+                    </span>
+                 </Ring>
+                 <span className="text-[7px] text-gray-500 font-semibold">#{i + 1} Rank</span>
+              </div>
+
+              {/* Middle: Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start gap-1.5 mb-1">
+                  <h4 className="text-[11px] font-bold text-gray-900 dark:text-white leading-snug">{t.title}</h4>
+                  {t.paper && (
+                      <span className={`shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-[7px] font-black ${t.paper === 'paper1' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'}`}>
+                          {t.paper === 'paper1' ? 'P1' : 'P2'}
+                      </span>
+                  )}
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[8px] text-gray-500 mb-1.5">
+                    {t.unit && <span className="font-medium text-gray-600 dark:text-gray-400 break-words">{t.unit}</span>}
+                    {t.unit && <span>•</span>}
+                    <span className="shrink-0">{t.totalQuestions} Qs</span>
+                    <span>•</span>
+                    <span className="shrink-0">{t.attempts} {l === 'hi' ? 'प्रयास' : 'att'}</span>
+                    {t.attempts > 0 && (
+                        <>
+                            <span>•</span>
+                            <span className="font-semibold shrink-0">Avg: {t.avgScore}%</span>
+                        </>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                    <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-md ${cc.bg} ${cc.text} border ${cc.border}`}>
+                        {l === 'hi' ? (t.category === 'Critical' ? 'गंभीर' : t.category === 'Weak' ? 'कमजोर' : t.category === 'Good' ? 'अच्छा' : t.category === 'Mastered' ? 'माहिर' : 'शुरू नहीं किया') : t.category}
+                    </span>
+                </div>
+              </div>
+
+              {/* Right: Action Button */}
+              <button
+                onClick={() => t.testId && navigate?.(`/test/${t.testId}`)}
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold text-white shadow-sm transition-all hover:scale-105 disabled:opacity-40 ${
+                    t.attempts === 0 
+                        ? 'bg-gradient-to-r from-blue-500 to-indigo-600' 
+                        : t.bestScore < 60 
+                            ? 'bg-gradient-to-r from-orange-500 to-red-600'
+                            : 'bg-gradient-to-r from-emerald-500 to-teal-600'
+                }`}
+                disabled={!t.testId}
+              >
+                {t.attempts === 0 ? (l === 'hi' ? 'शुरू करें' : 'Start') : (l === 'hi' ? 'दोबारा दें' : 'Retry')}
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1284,11 +1403,11 @@ const ErrorAnalysisCard = ({ data, language: l }) => {
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow"><AlertTriangle className="w-4 h-4 text-white" /></div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'गलती विश्लेषण' : 'Error Analysis'}</h3></div><span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{data.errorRate}%</span></div>
       <div className="p-4">
         <div className="grid grid-cols-2 gap-3 mb-3">
-          <div className="bg-red-50 dark:bg-red-900/10 rounded-xl p-2.5 border border-red-200/50"><p className="text-[9px] font-bold text-red-700 mb-1">{l === 'hi' ? 'कमजोर' : 'Weak'} ({data.weakUnits.length})</p>{data.weakUnits.slice(0, 3).map((u, i) => <p key={i} className="text-[8px] text-red-600/70 truncate">{u.unit}: {u.accuracy}%</p>)}</div>
-          <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-xl p-2.5 border border-emerald-200/50"><p className="text-[9px] font-bold text-emerald-700 mb-1">{l === 'hi' ? 'मजबूत' : 'Strong'} ({data.strongUnits.length})</p>{data.strongUnits.slice(0, 3).map((u, i) => <p key={i} className="text-[8px] text-emerald-600/70 truncate">{u.unit}: {u.accuracy}%</p>)}</div>
+          <div className="bg-red-50 dark:bg-red-900/10 rounded-xl p-2.5 border border-red-200/50"><p className="text-[9px] font-bold text-red-700 mb-1">{l === 'hi' ? 'कमजोर' : 'Weak'} ({data.weakUnits.length})</p>{data.weakUnits.slice(0, 3).map((u, i) => <p key={i} className="text-[8px] text-red-600/70 leading-snug">{u.unit}: {u.accuracy}%</p>)}</div>
+          <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-xl p-2.5 border border-emerald-200/50"><p className="text-[9px] font-bold text-emerald-700 mb-1">{l === 'hi' ? 'मजबूत' : 'Strong'} ({data.strongUnits.length})</p>{data.strongUnits.slice(0, 3).map((u, i) => <p key={i} className="text-[8px] text-emerald-600/70 leading-snug">{u.unit}: {u.accuracy}%</p>)}</div>
         </div>
-        <div className="space-y-1 max-h-[180px] overflow-y-auto">
-          {data.unitPerformance.slice(0, 10).map((u, i) => (<div key={i} className="flex items-center gap-2"><span className="text-[9px] text-gray-600 w-24 truncate flex-shrink-0">{u.unit}</span><div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${u.accuracy}%`, background: u.accuracy >= 70 ? '#22c55e' : u.accuracy >= 50 ? '#3b82f6' : u.accuracy >= 30 ? '#f59e0b' : '#ef4444' }} /></div><span className="text-[9px] font-bold w-8 text-right">{u.accuracy}%</span></div>))}
+        <div className="space-y-1.5 max-h-[180px] overflow-y-auto">
+          {data.unitPerformance.slice(0, 10).map((u, i) => (<div key={i} className="flex items-center gap-2"><span className="text-[9px] text-gray-600 w-24 leading-snug shrink-0">{u.unit}</span><div className="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${u.accuracy}%`, background: u.accuracy >= 70 ? '#22c55e' : u.accuracy >= 50 ? '#3b82f6' : u.accuracy >= 30 ? '#f59e0b' : '#ef4444' }} /></div><span className="text-[9px] font-bold w-8 text-right">{u.accuracy}%</span></div>))}
         </div>
       </div>
     </div>
@@ -1309,15 +1428,26 @@ const TopicMasteryRadar = ({ data, language: l }) => {
 const NeedsAttentionCard = ({ tests, language: l, navigate }) => {
   if (!tests?.length) return null;
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-red-200/50 dark:border-red-800/30 overflow-hidden">
-      <div className="bg-red-50 dark:bg-red-900/10 px-4 py-3 border-b border-red-200/50 flex items-center justify-between"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow"><AlertTriangle className="w-4 h-4 text-white" /></div><h3 className="text-sm font-bold text-red-800 dark:text-red-300">{l === 'hi' ? 'ध्यान दें' : 'Needs Attention'}</h3></div><span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{tests.length}</span></div>
-      <div className="p-3 space-y-1.5 max-h-[250px] overflow-y-auto">
-        {tests.slice(0, 5).map((t, i) => { const { g, c } = grd(t.bestScore); return (
-          <div key={i} onClick={() => navigate?.(`/results/${t.lastAttempt?._id}`)} className="group flex items-center gap-2.5 p-2.5 rounded-xl bg-red-50/50 dark:bg-red-900/5 border border-red-100 dark:border-red-900/20 hover:bg-white hover:shadow-lg cursor-pointer transition-all">
-            <div className={`w-9 h-9 rounded-lg border flex items-center justify-center font-black text-sm ${GC[c]}`}>{g}</div>
-            <div className="flex-1 min-w-0"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.test?.title || 'Test'}</h4><p className="text-[9px] text-gray-500">Best: {t.bestScore}% | {t.attempts} att</p></div>
-            <p className="text-lg font-black text-red-600 flex-shrink-0">{t.bestScore}%</p>
-            <button onClick={e => { e.stopPropagation(); navigate?.(`/test/${t.testId}`); }} className="p-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200"><RefreshCw className="w-3.5 h-3.5" /></button>
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-red-200/50 dark:border-red-800/30 overflow-hidden flex flex-col h-full min-h-[400px]">
+      <div className="bg-red-50 dark:bg-red-900/10 px-4 py-3 border-b border-red-200/50 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow">
+            <AlertTriangle className="w-4 h-4 text-white" />
+          </div>
+          <h3 className="text-sm font-bold text-red-800 dark:text-red-300">{l === 'hi' ? 'ध्यान दें' : 'Needs Attention'}</h3>
+        </div>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{tests.length}</span>
+      </div>
+      <div className="p-3 space-y-2 overflow-y-auto flex-1 custom-scrollbar max-h-[450px]">
+        {tests.map((t, i) => { const { g, c } = grd(t.bestScore); return (
+          <div key={i} onClick={() => navigate?.(`/results/${t.lastAttempt?._id}`)} className="group flex items-center gap-3 p-2.5 rounded-xl bg-red-50/50 dark:bg-red-900/5 border border-red-100 dark:border-red-900/20 hover:bg-white hover:shadow-md cursor-pointer transition-all">
+            <div className={`w-10 h-10 rounded-lg border flex items-center justify-center font-black text-base ${GC[c]} shrink-0`}>{g}</div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white leading-snug mb-1">{t.test?.title || 'Test'}</h4>
+              <p className="text-[9px] text-gray-500">Best: {t.bestScore}% | {t.attempts} att</p>
+            </div>
+            <p className="text-lg font-black text-red-600 shrink-0">{t.bestScore}%</p>
+            <button onClick={e => { e.stopPropagation(); navigate?.(`/test/${t.testId}`); }} className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 shrink-0 transition hover:scale-105"><RefreshCw className="w-4 h-4" /></button>
           </div>
         ); })}
       </div>
@@ -1333,23 +1463,47 @@ const PendingTimeline = ({ notAttemptedTests, paper1NotAttempted, paper2NotAttem
   }, [notAttemptedTests, paper1NotAttempted, paper2NotAttempted, tab]);
   if (notAttemptedTests.length === 0) return null;
   const getDO = d => Math.floor((Date.now() - new Date(d).getTime()) / 86400000);
+  
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow"><Calendar className="w-4 h-4 text-white" /></div><h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'बाकी टेस्ट' : 'Pending'}</h3></div></div>
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col h-full min-h-[400px]">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 shrink-0">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow">
+              <Calendar className="w-4 h-4 text-white" />
+            </div>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{l === 'hi' ? 'बाकी टेस्ट' : 'Pending'}</h3>
+          </div>
+        </div>
         <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
           {[{ id: 'all', l: l === 'hi' ? 'सभी' : 'All', c: notAttemptedTests.length }, { id: 'paper1', l: 'P1', c: paper1NotAttempted.length }, { id: 'paper2', l: 'P2', c: paper2NotAttempted.length }].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`flex-1 px-2 py-1.5 rounded-md text-[10px] font-bold transition-all ${tab === t.id ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>{t.l} <span className="text-[8px] ml-0.5 px-1 rounded-full bg-gray-200 dark:bg-gray-600">{t.c}</span></button>
+            <button key={t.id} onClick={() => setTab(t.id)} className={`flex-1 px-2 py-1.5 rounded-md text-[10px] font-bold transition-all ${tab === t.id ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>
+              {t.l} <span className="text-[8px] ml-0.5 px-1 rounded-full bg-gray-200 dark:bg-gray-600">{t.c}</span>
+            </button>
           ))}
         </div>
-        {sorted[0] && <button onClick={() => navigate?.(`/test/${sorted[0]._id}`)} className="w-full mt-2 p-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white flex items-center justify-center gap-2 hover:shadow-xl"><Rocket className="w-3.5 h-3.5" /><span className="text-[10px] font-bold">{l === 'hi' ? 'मैराथन' : 'Marathon'}</span></button>}
+        {sorted[0] && <button onClick={() => navigate?.(`/test/${sorted[0]._id}`)} className="w-full mt-2 p-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white flex items-center justify-center gap-2 hover:shadow-md transition-all"><Rocket className="w-3.5 h-3.5" /><span className="text-[10px] font-bold">{l === 'hi' ? 'मैराथन' : 'Marathon'}</span></button>}
       </div>
-      <div className="p-3 max-h-[350px] overflow-y-auto space-y-1.5">
-        {sorted.slice(0, 10).map((t, i) => { const d = getDO(t.createdAt); return (
-          <div key={t._id || i} className={`flex items-center gap-2.5 p-2.5 rounded-xl border hover:shadow-lg transition-all ${d >= 14 ? 'border-red-200 bg-red-50/30' : d >= 7 ? 'border-orange-200 bg-orange-50/20' : 'border-gray-100 bg-gray-50/30'}`}>
-            <div className="text-center w-8 flex-shrink-0"><p className="text-sm font-black text-gray-900 dark:text-white">{new Date(t.createdAt).getDate()}</p><p className="text-[7px] text-gray-400">{new Date(t.createdAt).toLocaleDateString('en', { month: 'short' })}</p></div>
-            <div className="flex-1 min-w-0"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title || 'Untitled'}</h4><div className="flex items-center gap-2 text-[8px] text-gray-500"><span>{t.totalQuestions || 0}Q</span><span>{t.duration || 0}m</span><span className={d >= 14 ? 'text-red-500 font-bold' : ''}>{d}d ago</span></div></div>
-            <button onClick={() => navigate?.(`/test/${t._id}`)} className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-lg flex-shrink-0"><Play className="w-3 h-3 inline mr-0.5" />{l === 'hi' ? 'दें' : 'Take'}</button>
+      <div className="p-3 space-y-2 overflow-y-auto flex-1 custom-scrollbar max-h-[450px]">
+        {sorted.map((t, i) => { const d = getDO(t.createdAt); return (
+          <div key={t._id || i} className={`flex items-center gap-3 p-2.5 rounded-xl border hover:shadow-md transition-all ${d >= 14 ? 'border-red-200 bg-red-50/30' : d >= 7 ? 'border-orange-200 bg-orange-50/20' : 'border-gray-100 bg-gray-50/30'}`}>
+            <div className="text-center w-8 shrink-0">
+              <p className="text-sm font-black text-gray-900 dark:text-white">{new Date(t.createdAt).getDate()}</p>
+              <p className="text-[7px] text-gray-400 uppercase">{new Date(t.createdAt).toLocaleDateString('en', { month: 'short' })}</p>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white leading-snug mb-1">{t.title || 'Untitled'}</h4>
+              <div className="flex flex-wrap items-center gap-2 text-[8px] text-gray-500">
+                <span className="font-medium">{t.totalQuestions || 0}Q</span>
+                <span>•</span>
+                <span>{t.duration || 0}m</span>
+                <span>•</span>
+                <span className={d >= 14 ? 'text-red-500 font-bold' : ''}>{d}d ago</span>
+              </div>
+            </div>
+            <button onClick={() => navigate?.(`/test/${t._id}`)} className="shrink-0 px-3 py-1.5 rounded-lg text-[9px] font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:shadow-md transition hover:scale-105">
+              <Play className="w-3 h-3 inline mr-0.5" />{l === 'hi' ? 'दें' : 'Take'}
+            </button>
           </div>
         ); })}
       </div>
@@ -1364,23 +1518,68 @@ const PaperTabbedActivity = ({ allAttempts, paper1Attempts, paper2Attempts, allT
   const fA = pF === 'paper1' ? paper1Attempts : pF === 'paper2' ? paper2Attempts : allAttempts;
   const fT = pF === 'paper1' ? paper1Tests : pF === 'paper2' ? paper2Tests : allTests;
   const fN = pF === 'paper1' ? paper1NotAttempted : pF === 'paper2' ? paper2NotAttempted : notAttemptedTests;
+  
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="flex items-center justify-between px-4 pt-3 pb-1"><h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5"><History className="w-4 h-4 text-indigo-500" />{l === 'hi' ? 'गतिविधि' : 'Activity'}</h3><div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">{[{ id: 'all', l: 'All' }, { id: 'paper1', l: 'P1' }, { id: 'paper2', l: 'P2' }].map(p => (<button key={p.id} onClick={() => setPF(p.id)} className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${pF === p.id ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>{p.l}</button>))}</div></div>
-      <div className="flex border-b border-gray-100 dark:border-gray-700 px-1">{[{ id: 'attempted', l: l === 'hi' ? 'दिए' : 'Taken', I: CheckCircle, c: fA.length }, { id: 'created', l: l === 'hi' ? 'बनाए' : 'Created', I: PlusCircle, c: fT.length }, { id: 'pending', l: l === 'hi' ? 'बाकी' : 'Pending', I: Clock, c: fN.length }].map(t => (<button key={t.id} onClick={() => setMT(t.id)} className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 text-[11px] font-semibold ${mT === t.id ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500'}`}><t.I className="w-3 h-3" />{t.l}<span className="text-[8px] px-1 rounded-full bg-gray-100 dark:bg-gray-700">{t.c}</span></button>))}</div>
-      <div className="p-3 max-h-[350px] overflow-y-auto">
-        {mT === 'attempted' && (la ? <div className="space-y-2">{[1, 2, 3].map(i => <Sk key={i} className="h-14 w-full" />)}</div>
-          : fA.length > 0 ? <div className="space-y-1.5">{fA.slice(0, 10).map((a, i) => { const pct = a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0; const { g, c } = grd(pct); return (
-            <div key={a._id || i} onClick={() => navigate(`/results/${a._id}`)} className="group flex items-center gap-2 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700/50 hover:shadow-lg cursor-pointer transition-all">
-              <div className={`w-9 h-9 rounded-lg border flex items-center justify-center font-black text-sm ${GC[c]}`}>{g}</div>
-              <div className="flex-1 min-w-0"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{a.testId?.title || 'Test'}</h4><div className="flex items-center gap-2 text-[9px] text-gray-500"><span>✓{a.correctCount || 0}</span><span>✗{a.wrongCount || 0}</span><span>{tAgo(a.completedAt, l)}</span></div></div>
-              <p className="text-base font-black text-gray-900 dark:text-white">{pct}%</p><ChevronRight className="w-3 h-3 text-gray-300" />
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col h-full min-h-[400px]">
+      <div className="flex items-center justify-between px-4 pt-3 pb-2 shrink-0">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+          <History className="w-4 h-4 text-indigo-500" />{l === 'hi' ? 'गतिविधि' : 'Activity'}
+        </h3>
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5">
+          {[{ id: 'all', l: 'All' }, { id: 'paper1', l: 'P1' }, { id: 'paper2', l: 'P2' }].map(p => (
+            <button key={p.id} onClick={() => setPF(p.id)} className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${pF === p.id ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'}`}>
+              {p.l}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex border-b border-gray-100 dark:border-gray-700 px-1 shrink-0">
+        {[{ id: 'attempted', l: l === 'hi' ? 'दिए' : 'Taken', I: CheckCircle, c: fA.length }, { id: 'created', l: l === 'hi' ? 'बनाए' : 'Created', I: PlusCircle, c: fT.length }, { id: 'pending', l: l === 'hi' ? 'बाकी' : 'Pending', I: Clock, c: fN.length }].map(t => (
+          <button key={t.id} onClick={() => setMT(t.id)} className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 text-[11px] font-semibold transition-all ${mT === t.id ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+            <t.I className="w-3 h-3" />{t.l}<span className="text-[8px] px-1 rounded-full bg-gray-100 dark:bg-gray-700">{t.c}</span>
+          </button>
+        ))}
+      </div>
+      <div className="p-3 space-y-2 overflow-y-auto flex-1 custom-scrollbar max-h-[500px]">
+        {mT === 'attempted' && (la ? <div className="space-y-2">{[1, 2, 3].map(i => <Sk key={i} className="h-16 w-full" />)}</div>
+          : fA.length > 0 ? <div className="space-y-2">{fA.map((a, i) => { const pct = a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0; const { g, c } = grd(pct); return (
+            <div key={a._id || i} onClick={() => navigate(`/results/${a._id}`)} className="group flex items-center gap-3 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700/50 hover:shadow-md cursor-pointer transition-all">
+              <div className={`w-10 h-10 rounded-lg border flex items-center justify-center font-black text-base ${GC[c]} shrink-0`}>{g}</div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white leading-snug mb-1">{a.testId?.title || 'Test'}</h4>
+                <div className="flex flex-wrap items-center gap-2 text-[9px] text-gray-500">
+                  <span className="font-medium text-emerald-600">✓{a.correctCount || 0}</span>
+                  <span className="font-medium text-red-600">✗{a.wrongCount || 0}</span>
+                  <span>•</span>
+                  <span>{tAgo(a.completedAt, l)}</span>
+                </div>
+              </div>
+              <p className="text-lg font-black text-gray-900 dark:text-white shrink-0">{pct}%</p>
+              <ChevronRight className="w-4 h-4 text-gray-300 shrink-0 group-hover:text-indigo-500 transition-colors" />
             </div>
-          ); })}<Link to="/results" className="flex items-center justify-center gap-1 p-2 rounded-xl border border-dashed text-[10px] font-semibold text-gray-500 hover:text-indigo-600"><History className="w-3 h-3" />{l === 'hi' ? 'सभी' : 'All'}<ArrowRight className="w-3 h-3" /></Link></div>
-          : <div className="text-center py-8"><ClipboardList className="w-10 h-10 mx-auto mb-2 text-gray-200" /><p className="text-xs text-gray-400">No tests</p><button onClick={() => navigate('/tests')} className="mt-2 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-semibold rounded-lg"><Play className="w-3 h-3 inline mr-1" />Take Test</button></div>
+          ); })}</div>
+          : <div className="text-center py-10"><ClipboardList className="w-10 h-10 mx-auto mb-2 text-gray-200" /><p className="text-xs text-gray-400">No tests taken</p></div>
         )}
-        {mT === 'created' && (fT.length > 0 ? <div className="space-y-1.5">{fT.slice(0, 10).map((t, i) => (<div key={t._id || i} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700/50 hover:shadow-lg transition-all"><div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow"><FileText className="w-4 h-4 text-white" /></div><div className="flex-1 min-w-0"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title || 'Untitled'}</h4><p className="text-[9px] text-gray-500">{t.totalQuestions || 0}Q | {tAgo(t.createdAt, l)}</p></div><button onClick={() => navigate(`/test/${t._id}`)} className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100"><Play className="w-3 h-3" /></button></div>))}</div> : <div className="text-center py-8"><PlusCircle className="w-10 h-10 mx-auto mb-2 text-gray-200" /><p className="text-xs text-gray-400">None</p></div>)}
-        {mT === 'pending' && (fN.length > 0 ? <div className="space-y-1.5">{fN.slice(0, 10).map((t, i) => (<div key={t._id || i} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-amber-50/30 border border-amber-100 dark:border-amber-900/20 hover:shadow-lg"><div className="w-9 h-9 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center"><Clock className="w-4 h-4 text-amber-600" /></div><div className="flex-1 min-w-0"><h4 className="text-[11px] font-semibold text-gray-900 dark:text-white truncate">{t.title}</h4><p className="text-[9px] text-gray-500">{t.totalQuestions || 0}Q</p></div><button onClick={() => navigate(`/test/${t._id}`)} className="px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold rounded-lg"><Play className="w-3 h-3 inline mr-0.5" />{l === 'hi' ? 'दें' : 'Take'}</button></div>))}</div> : <div className="text-center py-8"><CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-200" /><p className="text-xs text-gray-400">All done!</p></div>)}
+        {mT === 'created' && (fT.length > 0 ? <div className="space-y-2">{fT.map((t, i) => (
+          <div key={t._id || i} className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700/50 hover:shadow-md transition-all">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow shrink-0"><FileText className="w-5 h-5 text-white" /></div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white leading-snug mb-1">{t.title || 'Untitled'}</h4>
+              <p className="text-[9px] text-gray-500 font-medium">{t.totalQuestions || 0}Q • {tAgo(t.createdAt, l)}</p>
+            </div>
+            <button onClick={() => navigate(`/test/${t._id}`)} className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 shrink-0 transition hover:scale-105"><Play className="w-4 h-4" /></button>
+          </div>
+        ))}</div> : <div className="text-center py-10"><PlusCircle className="w-10 h-10 mx-auto mb-2 text-gray-200" /><p className="text-xs text-gray-400">None</p></div>)}
+        {mT === 'pending' && (fN.length > 0 ? <div className="space-y-2">{fN.map((t, i) => (
+          <div key={t._id || i} className="flex items-center gap-3 p-2.5 rounded-xl bg-amber-50/30 border border-amber-100 dark:border-amber-900/20 hover:shadow-md transition-all">
+            <div className="w-10 h-10 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center shrink-0"><Clock className="w-5 h-5 text-amber-600" /></div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-[11px] font-semibold text-gray-900 dark:text-white leading-snug mb-1">{t.title}</h4>
+              <p className="text-[9px] text-gray-500 font-medium">{t.totalQuestions || 0}Q</p>
+            </div>
+            <button onClick={() => navigate(`/test/${t._id}`)} className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold rounded-lg shrink-0 transition hover:scale-105"><Play className="w-3 h-3 inline mr-0.5" />{l === 'hi' ? 'दें' : 'Take'}</button>
+          </div>
+        ))}</div> : <div className="text-center py-10"><CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-200" /><p className="text-xs text-gray-400">All done!</p></div>)}
       </div>
     </div>
   );
@@ -1393,12 +1592,11 @@ const PaperSection = ({ paper, title, subtitle, Icon, color, units, total, langu
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-2xl border-2 ${c.bdr} overflow-hidden`}>
       <div className={`bg-gradient-to-r ${c.gradL} p-4 border-b ${c.bdr}`}><div className="flex items-center justify-between"><div className="flex items-center gap-2.5"><div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${c.iconBg} flex items-center justify-center shadow-lg`}><Icon className="w-5 h-5 text-white" /></div><div><h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">{title}<span className={`text-[9px] px-1.5 py-0.5 rounded-full bg-white/80 dark:bg-gray-700/80 ${c.txt}`}>{total} Qs</span></h3><p className="text-[10px] text-gray-500">{subtitle}</p></div></div><button onClick={() => setOpen(!open)} className="p-1 rounded-lg hover:bg-white/60">{open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}</button></div></div>
-      {open && <div className="p-3">{sorted.length > 0 ? <div className="space-y-1">{sorted.map((u, i) => { const pct = total > 0 ? Math.round((u.count / total) * 100) : 0; return (<div key={i} onClick={() => navigate?.(`/questions?paper=${paper}&unit=${encodeURIComponent(u._id?.unit || '')}`)} className="group flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-all"><div className={`w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center ${i === 0 ? `bg-gradient-to-br ${c.grad} text-white shadow` : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>{i + 1}</div><div className="flex-1 min-w-0"><p className="text-[11px] font-semibold text-gray-800 dark:text-gray-200 truncate">{u._id?.unit || '?'}</p><div className="h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"><div className={`h-full bg-gradient-to-r ${c.bar} rounded-full`} style={{ width: `${pct}%` }} /></div></div><div className="text-right flex-shrink-0"><p className="text-[11px] font-bold text-gray-900 dark:text-white">{u.count}</p><p className="text-[8px] text-gray-400">{pct}%</p></div><ChevronRight className="w-3 h-3 text-gray-300" /></div>); })}</div> : <div className="text-center py-6"><FileQuestion className="w-8 h-8 mx-auto mb-2 text-gray-200" /><p className="text-[10px] text-gray-400">No questions</p></div>}</div>}
+      {open && <div className="p-3">{sorted.length > 0 ? <div className="space-y-1">{sorted.map((u, i) => { const pct = total > 0 ? Math.round((u.count / total) * 100) : 0; return (<div key={i} onClick={() => navigate?.(`/questions?paper=${paper}&unit=${encodeURIComponent(u._id?.unit || '')}`)} className="group flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-all"><div className={`w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center ${i === 0 ? `bg-gradient-to-br ${c.grad} text-white shadow` : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>{i + 1}</div><div className="flex-1 min-w-0"><p className="text-[11px] font-semibold text-gray-800 dark:text-gray-200 leading-snug">{u._id?.unit || '?'}</p><div className="h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mt-1"><div className={`h-full bg-gradient-to-r ${c.bar} rounded-full`} style={{ width: `${pct}%` }} /></div></div><div className="text-right flex-shrink-0"><p className="text-[11px] font-bold text-gray-900 dark:text-white">{u.count}</p><p className="text-[8px] text-gray-400">{pct}%</p></div><ChevronRight className="w-3 h-3 text-gray-300" /></div>); })}</div> : <div className="text-center py-6"><FileQuestion className="w-8 h-8 mx-auto mb-2 text-gray-200" /><p className="text-[10px] text-gray-400">No questions</p></div>}</div>}
     </div>
   );
 };
 
-// ── Small components ──
 const iconMapA = { Layers, Crown, Play, Flame, Medal, Star, Target, PlusCircle };
 const AchievementCard = ({ achievements, language: l }) => {
   const un = achievements.filter(a => a.unlocked).length;
@@ -1429,11 +1627,6 @@ const QAction = ({ icon: Icon, title, desc, to, gradient, badge, delay = 0 }) =>
   useEffect(() => { const t = setTimeout(() => setV(true), delay); return () => clearTimeout(t); }, [delay]);
   return (<Link to={to} className={`group relative overflow-hidden bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-3.5 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 ${v ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}><div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-100 transition-opacity`} /><div className="relative z-10"><div className="flex items-start justify-between mb-1.5"><div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg group-hover:scale-110 transition-all`}><Icon className="w-4 h-4 text-white" /></div>{badge && <span className="px-1.5 py-0.5 text-[8px] font-bold bg-amber-100 text-amber-700 rounded-full">{badge}</span>}</div><h3 className="font-bold text-gray-900 dark:text-white group-hover:text-white text-xs">{title}</h3><p className="text-[9px] text-gray-500 group-hover:text-white/70 mt-0.5">{desc}</p></div></Link>);
 };
-
-// ════════════════════════════════════════════════════════════
-//  DASHBOARD.JSX - PART 2 (Main Component)
-//  Paste directly below Part 1 in the SAME file
-// ════════════════════════════════════════════════════════════
 
 const Dashboard = ({ language: propLanguage, setLanguage }) => {
   const navigate = useNavigate();
@@ -1701,12 +1894,13 @@ const Dashboard = ({ language: propLanguage, setLanguage }) => {
             {/* ═══════════════════════════════════════════════
                  SYLLABUS + RECOMMENDATIONS
             ═══════════════════════════════════════════════ */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
               <div className="lg:col-span-2">
                 <SyllabusCoverageMap coverage={d.syllabusCoverage} language={l} />
               </div>
-              <div className="space-y-4">
+              <div className="lg:col-span-2 space-y-4">
                 <StudyRecommendations recommendations={d.studyRecommendations} language={l} />
+                <TestScoreRankingCard ranking={d.testScoreRanking} language={l} navigate={navigate} />
               </div>
             </div>
 

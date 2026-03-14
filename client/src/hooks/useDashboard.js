@@ -110,8 +110,18 @@ const useDashboard = () => {
 
   const allCompletedAttempts = useMemo(() => {
     const a = allAttempts.length > 0 ? allAttempts : recentAttempts;
-    return a.filter(at => at.status === 'completed' || at.completedAt);
-  }, [allAttempts, recentAttempts]);
+    const testMap = new Map(createdTests.map(t => [t._id?.toString(), t]));
+    return a.filter(at => at.status === 'completed' || at.completedAt).map(at => {
+      const tid = at.testId;
+      const id = (tid && typeof tid === 'object' ? (tid._id?.toString() || '') : (tid || '').toString());
+      const fromMap = id ? testMap.get(id) : null;
+      const testInfo = fromMap || (tid && typeof tid === 'object' ? tid : null);
+      const unitFromTest = testInfo?.unit;
+      const unit = at.unit || unitFromTest || (tid && tid.unit) || undefined;
+      const mergedTestId = testInfo ? { ...testInfo, _id: id } : { _id: id };
+      return { ...at, unit, testId: mergedTestId };
+    });
+  }, [allAttempts, recentAttempts, createdTests]);
 
   const paper1Attempts = useMemo(() => allCompletedAttempts.filter(a => a.testId?.paper === 'paper1'), [allCompletedAttempts]);
   const paper2Attempts = useMemo(() => allCompletedAttempts.filter(a => a.testId?.paper === 'paper2'), [allCompletedAttempts]);
@@ -297,29 +307,73 @@ const useDashboard = () => {
   }, [allCompletedAttempts]);
 
   // ════════════════════════════════════════════════════════════
-  //  §8 SYLLABUS COVERAGE
+  //  §8 SYLLABUS COVERAGE & NEW TEST RANKING
   // ════════════════════════════════════════════════════════════
-  const normalizeUnit = (str) => str ? str.toLowerCase().replace(/\s+/g, ' ').trim() : '';
-  const matchUnit = (testUnit, syllabusUnit) => {
-    if (!testUnit) return false;
-    const t = normalizeUnit(testUnit), s = normalizeUnit(syllabusUnit);
-    if (t === s || t.includes(s) || s.includes(t)) return true;
-    const ex = (str) => { const m = str.match(/unit\s*(i{1,3}|iv|v|vi{0,3}|ix|x)/i); return m ? m[1].toLowerCase() : ''; };
-    return ex(t) && ex(t) === ex(s);
+  const toRoman = (num) => {
+    if (!num || typeof num !== 'number' || num < 1) return null;
+    const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+    return romans[num - 1] || null;
   };
+
+  const normalizeUnit = (str) => str ? str.toString().toLowerCase().replace(/[\s\-–_]+/g, ' ').replace(/[^a-z0-9 ]/g, '').trim() : '';
+  const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const extractUnitNumber = (str) => {
+    if (!str) return null;
+    const norm = normalizeUnit(str);
+    const m = norm.match(/unit\s*(\d+|i{1,3}|iv|v|vi{0,3}|ix|x)\b/i);
+    if (!m) return null;
+    const val = m[1].toLowerCase();
+    const romanToNum = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10 };
+    if (romanToNum[val]) return romanToNum[val];
+    const num = parseInt(val, 10);
+    return Number.isNaN(num) ? null : num;
+  };
+
+  const normalizeUnitId = (str) => {
+    const num = extractUnitNumber(str);
+    if (num) {
+      const roman = toRoman(num);
+      return roman ? `UNIT ${roman}` : `UNIT ${num}`;
+    }
+    return str ? str.toString().trim().toUpperCase() : '';
+  };
+
+  const matchUnit = (testUnit, syllabusUnit) => {
+    if (!testUnit || !syllabusUnit) return false;
+    const tId = normalizeUnitId(testUnit);
+    const sId = normalizeUnitId(syllabusUnit);
+    if (tId === sId) return true;
+
+    const tNorm = normalizeUnit(testUnit);
+    const sNorm = normalizeUnit(syllabusUnit);
+    const wordMatch = (hay, needle) => new RegExp(`\\b${escapeRegExp(needle)}\\b`, 'i').test(hay);
+    if (wordMatch(tNorm, sNorm) || wordMatch(sNorm, tNorm)) return true;
+
+    const tNum = extractUnitNumber(testUnit);
+    const sNum = extractUnitNumber(syllabusUnit);
+    if (tNum && sNum) return tNum === sNum;
+
+    return false;
+  };
+
+  const splitUnits = (str) => (typeof str === 'string' ? str.split(',').map(s => s.trim()).filter(Boolean) : []);
+  const getTestUnitOptions = (t) => [...splitUnits(t.unit), ...splitUnits(t.chapter), ...splitUnits(t.topic)];
+  const getAttemptUnitOptions = (a) => [...splitUnits(a.unit), ...splitUnits(a.testId?.unit), ...splitUnits(a.testId?.chapter), ...splitUnits(a.testId?.topic)];
 
   const syllabusCoverage = useMemo(() => {
     const TW = { dpp: 10, topic_test: 15, chapter_test: 25, unit_test: 35, practice: 20, pyq_year: 30, full_mock_p1: 20, full_mock_p2: 20, full_mock_combined: 15 };
+
     const buildCov = (syllabusUnits, unitNames, paperTests, paperAttempts) => {
       const attemptedIds = new Set(paperAttempts.map(a => (a.testId?._id || a.testId)?.toString()));
       return syllabusUnits.map(unit => {
-        const unitTests = paperTests.filter(t => matchUnit(t.unit, unit));
+        const unitTests = paperTests.filter(t => getTestUnitOptions(t).some(u => matchUnit(u, unit)));
         const totalTests = unitTests.length;
         const attemptedTests = unitTests.filter(t => attemptedIds.has(t._id?.toString()));
         const attemptedCount = attemptedTests.length;
         const ttBreak = {};
         unitTests.forEach(t => { const ty = t.testType || 'practice'; if (!ttBreak[ty]) ttBreak[ty] = { total: 0, attempted: 0 }; ttBreak[ty].total += 1; if (attemptedIds.has(t._id?.toString())) ttBreak[ty].attempted += 1; });
-        const unitAttempts = paperAttempts.filter(a => matchUnit(a.testId?.unit, unit));
+        const unitAttempts = paperAttempts.filter(a => getAttemptUnitOptions(a).some(u => matchUnit(u, unit)));
         const td = { correct: 0, wrong: 0, skipped: 0, total: 0 };
         paperAttempts.forEach(a => { (a.topicAnalysis || []).forEach(ta => { if (matchUnit(ta.unit, unit)) { td.correct += ta.correct || 0; td.wrong += ta.wrong || 0; td.skipped += ta.skipped || 0; td.total += ta.total || 0; } }); });
         const accuracy = td.total > 0 ? Math.round((td.correct / td.total) * 100) : 0;
@@ -350,6 +404,136 @@ const useDashboard = () => {
     const p1S = calcSum(p1Cov), p2S = calcSum(p2Cov);
     return { paper1: p1Cov, paper2: p2Cov, paper1Summary: p1S, paper2Summary: p2S, overallPct: Math.round((p1S.overallPct + p2S.overallPct) / 2) };
   }, [paper1Tests, paper2Tests, paper1Attempts, paper2Attempts]);
+
+  const unitScoreRanking = useMemo(() => {
+    const units = [...syllabusCoverage.paper1, ...syllabusCoverage.paper2];
+    const attemptsByTest = new Map();
+    allCompletedAttempts.forEach(a => {
+      const tid = (a.testId?._id || a.testId)?.toString();
+      if (!tid) return;
+      if (!attemptsByTest.has(tid)) attemptsByTest.set(tid, []);
+      attemptsByTest.get(tid).push(a);
+    });
+
+    return units.map(u => {
+      // Try to find tests directly matching the unit
+      let tests = createdTests.filter(t => {
+        if (t.paper !== u.paper) return false;
+        return getTestUnitOptions(t).some(x => matchUnit(x, u.unit));
+      });
+
+      // If no direct match, try matching by similar unit/chapter patterns
+      if (tests.length === 0 && u.paper === 'paper2') {
+        // For Paper 2, be more lenient - match attempts that belong to this unit
+        const unitAttempts = allCompletedAttempts.filter(a => a.testId?.paper === u.paper && getAttemptUnitOptions(a).some(x => matchUnit(x, u.unit)));
+        if (unitAttempts.length > 0) {
+          const testIds = new Set(unitAttempts.map(a => (a.testId?._id || a.testId)?.toString()));
+          tests = createdTests.filter(t => testIds.has(t._id?.toString()));
+        }
+      }
+
+      // Find recommended test: prefer unattempted, else lowest score
+      let recommendedTest = null;
+      const unattempted = tests.filter(t => { const id = t._id?.toString(); return id && !attemptsByTest.has(id); });
+      if (unattempted.length > 0) {
+        recommendedTest = unattempted[0];
+      } else if (tests.length > 0) {
+        let lowestScore = 101;
+        tests.forEach(t => {
+          const id = t._id?.toString();
+          const atts = attemptsByTest.get(id) || [];
+          const bestScore = atts.length > 0 ? Math.max(...atts.map(a => a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0)) : 0;
+          if (bestScore < lowestScore) { lowestScore = bestScore; recommendedTest = t; }
+        });
+      }
+
+      // Fallback: If still no test, try to get title from best attempt for this unit
+      let displayTitle = recommendedTest?.title || null;
+      let allTestTitles = [];
+      
+      if (tests.length > 0) {
+        allTestTitles = tests.map(t => t.title).filter(Boolean);
+      }
+      
+      if (!displayTitle && u.paper) {
+        const unitAttempts = allCompletedAttempts.filter(a => a.testId?.paper === u.paper && getAttemptUnitOptions(a).some(x => matchUnit(x, u.unit)));
+        if (unitAttempts.length > 0) {
+          // Get best scoring attempt for this unit
+          const best = unitAttempts.reduce((max, a) => {
+            const score = a.totalMarks > 0 ? (a.score / a.totalMarks) * 100 : 0;
+            const maxScore = max.totalMarks > 0 ? (max.score / max.totalMarks) * 100 : 0;
+            return score < maxScore ? a : max;
+          });
+          if (best.testId?.title) {
+            displayTitle = best.testId.title;
+            if (!recommendedTest) recommendedTest = best.testId; // use this for the link
+          }
+          // Collect all test titles from attempts
+          if (allTestTitles.length === 0) {
+            const attemptTitles = unitAttempts
+              .map(a => a.testId?.title)
+              .filter((t, i, arr) => t && arr.indexOf(t) === i);
+            allTestTitles = attemptTitles;
+          }
+        }
+      }
+
+      return {
+        unit: u.unit,
+        name: u.name,
+        paper: u.paper,
+        avgScore: u.avgScore,
+        totalTests: u.totalTests,
+        attemptedCount: u.attemptedCount,
+        totalAttempts: u.totalAttempts,
+        recommendedTestId: recommendedTest?._id || (typeof recommendedTest === 'string' ? recommendedTest : null),
+        recommendedTestTitle: displayTitle,
+        allTestTitles: allTestTitles,
+      };
+    }).sort((a, b) => a.avgScore - b.avgScore);
+  }, [syllabusCoverage, createdTests, allCompletedAttempts]);
+
+  // NEW: Rank individual tests instead of units based on user feedback
+  const testScoreRanking = useMemo(() => {
+    return createdTests.map(t => {
+      const tid = t._id?.toString();
+      const perf = tid ? testPerfMap[tid] : null;
+      const avgScore = perf?.allScores?.length > 0
+          ? Math.round(perf.allScores.reduce((sum, s) => sum + s.score, 0) / perf.allScores.length)
+          : 0;
+      const bestScore = perf?.bestScore || 0;
+
+      // Smart features: categorize based on score
+      let category = 'Not Attempted';
+      if (perf?.attempts > 0) {
+          if (bestScore < 40) category = 'Critical';
+          else if (bestScore < 60) category = 'Weak';
+          else if (bestScore < 80) category = 'Good';
+          else category = 'Mastered';
+      }
+
+      return {
+          testId: tid,
+          title: t.title || 'Untitled Test',
+          paper: t.paper,
+          unit: t.unit || t.chapter || t.topic || '',
+          avgScore: avgScore,
+          bestScore: bestScore,
+          attempts: perf?.attempts || 0,
+          totalQuestions: t.totalQuestions || 0,
+          category: category,
+          trend: perf?.trend || 'neutral'
+      };
+    }).sort((a, b) => {
+        // Push unattempted to bottom
+        if (a.attempts === 0 && b.attempts > 0) return 1;
+        if (b.attempts === 0 && a.attempts > 0) return -1;
+        // Sort lowest average score first
+        if (a.bestScore !== b.bestScore) return a.bestScore - b.bestScore;
+        // Then sort by attempts
+        return a.attempts - b.attempts;
+    });
+  }, [createdTests, testPerfMap]);
 
   // ════════════════════════════════════════════════════════════
   //  §9 JRF PROBABILITY METER
@@ -761,12 +945,13 @@ const useDashboard = () => {
       const unitStats = {};
       attempts.forEach(a => {
         const paper = a.testId?.paper;
-        const unit = a.testId?.unit;
+        const unitId = normalizeUnitId(a.unit || a.testId?.unit);
 
         // From topicAnalysis
         (a.topicAnalysis || []).forEach(ta => {
-          const k = `${paper}|${ta.unit || unit || 'Other'}`;
-          if (!unitStats[k]) unitStats[k] = { correct: 0, wrong: 0, skipped: 0, total: 0, scores: [], testsCount: 0, paper, unit: ta.unit || unit };
+          const taUnitId = normalizeUnitId(ta.unit || unitId);
+          const k = `${paper}|${taUnitId || 'Other'}`;
+          if (!unitStats[k]) unitStats[k] = { correct: 0, wrong: 0, skipped: 0, total: 0, scores: [], testsCount: 0, paper, unit: taUnitId || unitId };
           unitStats[k].correct += ta.correct || 0;
           unitStats[k].wrong += ta.wrong || 0;
           unitStats[k].skipped += ta.skipped || 0;
@@ -774,9 +959,9 @@ const useDashboard = () => {
         });
 
         // Count tests per unit
-        if (unit) {
-          const k = `${paper}|${unit}`;
-          if (!unitStats[k]) unitStats[k] = { correct: 0, wrong: 0, skipped: 0, total: 0, scores: [], testsCount: 0, paper, unit };
+        if (unitId) {
+          const k = `${paper}|${unitId}`;
+          if (!unitStats[k]) unitStats[k] = { correct: 0, wrong: 0, skipped: 0, total: 0, scores: [], testsCount: 0, paper, unit: unitId };
           unitStats[k].testsCount += 1;
           const pct = a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0;
           unitStats[k].scores.push(pct);
@@ -796,7 +981,7 @@ const useDashboard = () => {
       const coveredUnits = new Set(chapters.map(c => `${c.paper}|${c.unit}`));
       const uncovered = allUnits.filter(u => !coveredUnits.has(`${u.paper}|${u.unit}`)).map(u => {
         // Find last practice date for this unit
-        const lastPractice = allCompletedAttempts.filter(a => a.testId?.paper === u.paper && matchUnit(a.testId?.unit, u.unit))
+        const lastPractice = allCompletedAttempts.filter(a => a.testId?.paper === u.paper && matchUnit(a.unit || a.testId?.unit, u.unit))
           .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))[0];
         const daysSince = lastPractice ? Math.floor((Date.now() - new Date(lastPractice.completedAt).getTime()) / 86400000) : Infinity;
         return { ...u, lastPracticed: lastPractice?.completedAt || null, daysSince: daysSince === Infinity ? null : daysSince };
@@ -806,7 +991,7 @@ const useDashboard = () => {
       const dayMap = {};
       attempts.forEach(a => {
         const dayKey = new Date(a.completedAt || a.createdAt).getDay();
-        const unit = a.testId?.unit;
+        const unit = a.unit || a.testId?.unit;
         if (!unit) return;
         const k = `${dayKey}|${a.testId?.paper}|${unit}`;
         const pct = a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0;
@@ -1198,8 +1383,8 @@ const useDashboard = () => {
     scoreDistribution, personalRecords, timeOfDayAnalysis,
     // Activity
     activityMap, streak, longestStreak, weeklyComparison, achievements,
-    // Analytics
-    jrfProbability, syllabusCoverage, speedAnalytics, errorPatterns, studyRecommendations,
+    // Analytics (ADDED testScoreRanking HERE)
+    jrfProbability, syllabusCoverage, unitScoreRanking, testScoreRanking, speedAnalytics, errorPatterns, studyRecommendations,
     // Goals
     examDate, setExamDate, daysUntilExam,
     customTargets, updateCustomTargets,
