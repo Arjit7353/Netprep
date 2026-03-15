@@ -1,6 +1,6 @@
 // client/src/hooks/useDashboard.js
 // ═══════════════════════════════════════════════════════════════
-//  NETPREP ULTIMATE DASHBOARD HOOK - V2 (All Features)
+//  NETPREP ULTIMATE DASHBOARD HOOK - V3 (Advanced AI & Locking)
 // ═══════════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import questionService from '../services/questionService';
@@ -24,7 +24,6 @@ const PAPER2_UNIT_NAMES = {
 };
 const JRF_CUTOFF = 80, NET_CUTOFF = 70;
 
-// SRS intervals in days based on score percentage
 const SRS_INTERVALS = [
   { maxScore: 30, interval: 1, label: 'Critical' },
   { maxScore: 50, interval: 3, label: 'Weak' },
@@ -51,10 +50,11 @@ const useDashboard = () => {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const fetchedRef = useRef(false);
 
-  // Goal state (localStorage persisted)
+  // Goal state (localStorage persisted reliably)
   const [examDate, setExamDateState] = useState(() => {
     try { return localStorage.getItem('netprep_exam_date') || ''; } catch { return ''; }
   });
+  
   const [customTargets, setCustomTargets] = useState(() => {
     try {
       const s = localStorage.getItem('netprep_custom_targets');
@@ -206,7 +206,6 @@ const useDashboard = () => {
   const paper1NotAttempted = useMemo(() => notAttemptedTests.filter(t => t.paper === 'paper1'), [notAttemptedTests]);
   const paper2NotAttempted = useMemo(() => notAttemptedTests.filter(t => t.paper === 'paper2'), [notAttemptedTests]);
 
-  // Test performance map: testId -> { bestScore, lastDate, attempts, allScores, trend, test }
   const testPerfMap = useMemo(() => {
     const map = {};
     allCompletedAttempts.forEach(a => {
@@ -227,7 +226,6 @@ const useDashboard = () => {
         map[tid].lastAttempt = a;
       }
     });
-    // Calculate trend per test
     Object.values(map).forEach(t => {
       const scores = t.allScores.sort((a, b) => new Date(a.date) - new Date(b.date));
       if (scores.length >= 2) {
@@ -293,9 +291,6 @@ const useDashboard = () => {
     return max;
   }, [activityMap]);
 
-  // ════════════════════════════════════════════
-  //  §7 WEEKLY COMPARISON
-  // ════════════════════════════════════════════
   const weeklyComparison = useMemo(() => {
     const now = new Date();
     const twStart = new Date(now); twStart.setDate(now.getDate() - now.getDay()); twStart.setHours(0, 0, 0, 0);
@@ -416,15 +411,12 @@ const useDashboard = () => {
     });
 
     return units.map(u => {
-      // Try to find tests directly matching the unit
       let tests = createdTests.filter(t => {
         if (t.paper !== u.paper) return false;
         return getTestUnitOptions(t).some(x => matchUnit(x, u.unit));
       });
 
-      // If no direct match, try matching by similar unit/chapter patterns
       if (tests.length === 0 && u.paper === 'paper2') {
-        // For Paper 2, be more lenient - match attempts that belong to this unit
         const unitAttempts = allCompletedAttempts.filter(a => a.testId?.paper === u.paper && getAttemptUnitOptions(a).some(x => matchUnit(x, u.unit)));
         if (unitAttempts.length > 0) {
           const testIds = new Set(unitAttempts.map(a => (a.testId?._id || a.testId)?.toString()));
@@ -432,7 +424,6 @@ const useDashboard = () => {
         }
       }
 
-      // Find recommended test: prefer unattempted, else lowest score
       let recommendedTest = null;
       const unattempted = tests.filter(t => { const id = t._id?.toString(); return id && !attemptsByTest.has(id); });
       if (unattempted.length > 0) {
@@ -447,7 +438,6 @@ const useDashboard = () => {
         });
       }
 
-      // Fallback: If still no test, try to get title from best attempt for this unit
       let displayTitle = recommendedTest?.title || null;
       let allTestTitles = [];
       
@@ -458,7 +448,6 @@ const useDashboard = () => {
       if (!displayTitle && u.paper) {
         const unitAttempts = allCompletedAttempts.filter(a => a.testId?.paper === u.paper && getAttemptUnitOptions(a).some(x => matchUnit(x, u.unit)));
         if (unitAttempts.length > 0) {
-          // Get best scoring attempt for this unit
           const best = unitAttempts.reduce((max, a) => {
             const score = a.totalMarks > 0 ? (a.score / a.totalMarks) * 100 : 0;
             const maxScore = max.totalMarks > 0 ? (max.score / max.totalMarks) * 100 : 0;
@@ -466,9 +455,8 @@ const useDashboard = () => {
           });
           if (best.testId?.title) {
             displayTitle = best.testId.title;
-            if (!recommendedTest) recommendedTest = best.testId; // use this for the link
+            if (!recommendedTest) recommendedTest = best.testId;
           }
-          // Collect all test titles from attempts
           if (allTestTitles.length === 0) {
             const attemptTitles = unitAttempts
               .map(a => a.testId?.title)
@@ -479,21 +467,14 @@ const useDashboard = () => {
       }
 
       return {
-        unit: u.unit,
-        name: u.name,
-        paper: u.paper,
-        avgScore: u.avgScore,
-        totalTests: u.totalTests,
-        attemptedCount: u.attemptedCount,
-        totalAttempts: u.totalAttempts,
+        unit: u.unit, name: u.name, paper: u.paper, avgScore: u.avgScore,
+        totalTests: u.totalTests, attemptedCount: u.attemptedCount, totalAttempts: u.totalAttempts,
         recommendedTestId: recommendedTest?._id || (typeof recommendedTest === 'string' ? recommendedTest : null),
-        recommendedTestTitle: displayTitle,
-        allTestTitles: allTestTitles,
+        recommendedTestTitle: displayTitle, allTestTitles: allTestTitles,
       };
     }).sort((a, b) => a.avgScore - b.avgScore);
   }, [syllabusCoverage, createdTests, allCompletedAttempts]);
 
-  // NEW: Rank individual tests instead of units based on user feedback
   const testScoreRanking = useMemo(() => {
     return createdTests.map(t => {
       const tid = t._id?.toString();
@@ -503,7 +484,6 @@ const useDashboard = () => {
           : 0;
       const bestScore = perf?.bestScore || 0;
 
-      // Smart features: categorize based on score
       let category = 'Not Attempted';
       if (perf?.attempts > 0) {
           if (bestScore < 40) category = 'Critical';
@@ -513,80 +493,142 @@ const useDashboard = () => {
       }
 
       return {
-          testId: tid,
-          title: t.title || 'Untitled Test',
-          paper: t.paper,
-          unit: t.unit || t.chapter || t.topic || '',
-          avgScore: avgScore,
-          bestScore: bestScore,
-          attempts: perf?.attempts || 0,
-          totalQuestions: t.totalQuestions || 0,
-          category: category,
-          trend: perf?.trend || 'neutral'
+          testId: tid, title: t.title || 'Untitled Test', paper: t.paper, unit: t.unit || t.chapter || t.topic || '',
+          avgScore: avgScore, bestScore: bestScore, attempts: perf?.attempts || 0,
+          totalQuestions: t.totalQuestions || 0, category: category, trend: perf?.trend || 'neutral'
       };
     }).sort((a, b) => {
-        // Push unattempted to bottom
         if (a.attempts === 0 && b.attempts > 0) return 1;
         if (b.attempts === 0 && a.attempts > 0) return -1;
-        // Sort lowest average score first
         if (a.bestScore !== b.bestScore) return a.bestScore - b.bestScore;
-        // Then sort by attempts
         return a.attempts - b.attempts;
     });
   }, [createdTests, testPerfMap]);
 
   // ════════════════════════════════════════════════════════════
-  //  §9 JRF PROBABILITY METER
+  //  §9 ADVANCED JRF PROBABILITY PREDICTOR (AI MODEL V3)
   // ════════════════════════════════════════════════════════════
   const jrfProbability = useMemo(() => {
-    if (allCompletedAttempts.length < 3) return { netProbability: 0, jrfProbability: 0, predictedP1: 0, predictedP2: 0, predictedTotal: 0, netCutoff: NET_CUTOFF, jrfCutoff: JRF_CUTOFF, confidence: 'low', factors: [], suggestions: [], riskLevel: 'unknown', consistencyScore: 0, dataPoints: allCompletedAttempts.length, p1Trend: 'neutral', p2Trend: 'neutral' };
-    const p1S = paper1Attempts.filter(a => a.completedAt).sort((a, b) => new Date(a.completedAt) - new Date(b.completedAt)).slice(-10).map(a => a.totalMarks > 0 ? (a.score / a.totalMarks) * 100 : 0);
-    const p2S = paper2Attempts.filter(a => a.completedAt).sort((a, b) => new Date(a.completedAt) - new Date(b.completedAt)).slice(-10).map(a => a.totalMarks > 0 ? (a.score / a.totalMarks) * 100 : 0);
-    const wAvg = (scores) => { if (!scores.length) return 0; let tw = 0, ws = 0; scores.forEach((s, i) => { const w = 1 + (i / scores.length) * 2; ws += s * w; tw += w; }); return tw > 0 ? ws / tw : 0; };
-    const tAdj = (scores) => { if (scores.length < 3) return 0; const h = Math.floor(scores.length / 2); return (scores.slice(h).reduce((a, b) => a + b, 0) / (scores.length - h) - scores.slice(0, h).reduce((a, b) => a + b, 0) / h) * 0.3; };
-    const p1Adj = Math.min(100, Math.max(0, wAvg(p1S) + tAdj(p1S)));
-    const p2Adj = Math.min(100, Math.max(0, wAvg(p2S) + tAdj(p2S)));
-    const pP1 = Math.round(p1Adj), pP2 = Math.round(p2Adj), pT = Math.round((pP1 + pP2) / 2);
-    const stdDev = (scores) => { if (scores.length < 2) return 50; const m = scores.reduce((a, b) => a + b, 0) / scores.length; return Math.sqrt(scores.reduce((s, v) => s + Math.pow(v - m, 2), 0) / scores.length); };
-    const all = [...p1S, ...p2S]; const sd = stdDev(all);
-    const cs = Math.max(0, Math.min(100, Math.round(100 - sd * 2)));
-    const nG = pT - NET_CUTOFF; let nP; if (nG >= 20) nP = 95; else if (nG >= 10) nP = 75 + (nG - 10) * 2; else if (nG >= 5) nP = 55 + (nG - 5) * 4; else if (nG >= 0) nP = 35 + nG * 4; else if (nG >= -10) nP = 10 + (nG + 10) * 2.5; else nP = Math.max(3, 10 + nG);
-    const jG = pT - JRF_CUTOFF; let jP; if (jG >= 15) jP = 92; else if (jG >= 8) jP = 68 + (jG - 8) * 3.4; else if (jG >= 3) jP = 42 + (jG - 3) * 5.2; else if (jG >= 0) jP = 25 + jG * 5.7; else if (jG >= -8) jP = 8 + (jG + 8) * 2.1; else jP = Math.max(2, 8 + jG);
-    const cM = (cs - 50) / 100; nP = Math.min(99, Math.max(1, Math.round(nP + cM * 10))); jP = Math.min(99, Math.max(1, Math.round(jP + cM * 10)));
+    if (allCompletedAttempts.length < 3) {
+      return { netProbability: 0, jrfProbability: 0, predictedP1: 0, predictedP2: 0, predictedTotal: 0, 
+               netCutoff: NET_CUTOFF, jrfCutoff: JRF_CUTOFF, confidence: 'low', confScore: 0, 
+               factors: [], suggestions: [], riskLevel: 'unknown', consistencyScore: 0, 
+               dataPoints: allCompletedAttempts.length, p1Trend: 'neutral', p2Trend: 'neutral',
+               momentum: 0, volatility: 0 };
+    }
+
+    const p1Atts = paper1Attempts.filter(a => a.completedAt).sort((a,b)=>new Date(a.completedAt)-new Date(b.completedAt)).slice(-15);
+    const p2Atts = paper2Attempts.filter(a => a.completedAt).sort((a,b)=>new Date(a.completedAt)-new Date(b.completedAt)).slice(-15);
+    
+    const getScores = atts => atts.map(a => a.totalMarks > 0 ? (a.score / a.totalMarks) * 100 : 0);
+    const p1S = getScores(p1Atts);
+    const p2S = getScores(p2Atts);
+
+    // Exponential Moving Average (EMA) for smoother, trend-weighted prediction
+    const calcEMA = (arr, period) => {
+      if (!arr.length) return 0;
+      const k = 2 / (period + 1);
+      return arr.reduce((acc, val, i) => i === 0 ? val : (val * k) + (acc * (1 - k)), arr[0]);
+    };
+
+    const p1EMA = calcEMA(p1S, 5);
+    const p2EMA = calcEMA(p2S, 5);
+
+    // Momentum Analysis (Rate of change - Last 3 vs Prev 3)
+    const calcMomentum = (arr) => {
+      if (arr.length < 4) return 0;
+      const recent = arr.slice(-3).reduce((a,b)=>a+b,0) / Math.min(3, arr.length);
+      const older = arr.slice(-6, -3).reduce((a,b)=>a+b,0) / Math.min(3, Math.max(1, arr.length-3));
+      return recent - older;
+    };
+
+    const p1Mom = calcMomentum(p1S);
+    const p2Mom = calcMomentum(p2S);
+    const overallMomentum = (p1Mom + p2Mom) / (p1S.length && p2S.length ? 2 : 1);
+
+    // Projected Scores (EMA + 40% of Momentum correction)
+    const pP1 = Math.max(0, Math.min(100, Math.round(p1EMA + (isNaN(p1Mom) ? 0 : p1Mom * 0.4))));
+    const pP2 = Math.max(0, Math.min(100, Math.round(p2EMA + (isNaN(p2Mom) ? 0 : p2Mom * 0.4))));
+    const pT = Math.round((pP1 + pP2) / 2);
+
+    // Volatility & Consistency (Standard Deviation)
+    const allS = [...p1S, ...p2S];
+    const mean = allS.reduce((a,b)=>a+b,0) / (allS.length || 1);
+    const stdDev = Math.sqrt(allS.reduce((a,b)=>a+Math.pow(b-mean, 2),0) / (allS.length || 1));
+    const consistencyScore = Math.max(0, Math.min(100, Math.round(100 - (stdDev * 1.8))));
+
+    // ── ADVANCED SIGMOID PROBABILITY ENGINE ──
+    // K factor changes the steepness of the curve based on consistency.
+    // Highly consistent student = sharper curve (AI is more confident).
+    const kFactor = 0.12 + (consistencyScore / 100) * 0.18; 
+    
+    let nP = 100 / (1 + Math.exp(-kFactor * (pT - NET_CUTOFF)));
+    let jP = 100 / (1 + Math.exp(-kFactor * (pT - JRF_CUTOFF)));
+
+    // Coverage Penalty/Bonus
     const covP = syllabusCoverage.overallPct || 0;
-    if (covP >= 70) { nP = Math.min(99, nP + 3); jP = Math.min(99, jP + 2); } else if (covP < 30) { nP = Math.max(1, nP - 5); jP = Math.max(1, jP - 5); }
+    if (covP < 40) {
+      nP *= (covP / 40); jP *= (covP / 40);
+    } else if (covP >= 80) {
+      nP = Math.min(99, nP + 5); jP = Math.min(99, jP + 5);
+    }
+
+    nP = Math.max(1, Math.min(99, Math.round(nP)));
+    jP = Math.max(1, Math.min(99, Math.round(jP)));
+
+    // Model Confidence Output
     const dp = p1S.length + p2S.length;
-    const conf = dp >= 15 ? 'high' : dp >= 8 ? 'medium' : 'low';
-    const rl = jP >= 65 ? 'safe' : jP >= 40 ? 'moderate' : jP >= 20 ? 'risky' : 'critical';
+    let confScore = Math.min(99, Math.round((dp / 20) * 40 + (consistencyScore / 100) * 60));
+    const confLevel = confScore >= 80 ? 'high' : confScore >= 50 ? 'medium' : 'low';
+    const riskLvl = jP >= 70 ? 'safe' : jP >= 45 ? 'moderate' : jP >= 20 ? 'risky' : 'critical';
+
+    // Analytics Factors
     const factors = [];
-    if (paper1Accuracy >= 70) factors.push({ type: 'positive', text: `P1 accuracy ${paper1Accuracy}%` }); else factors.push({ type: 'negative', text: `P1 accuracy ${paper1Accuracy}% (need 70%+)` });
-    if (paper2Accuracy >= 70) factors.push({ type: 'positive', text: `P2 accuracy ${paper2Accuracy}%` }); else factors.push({ type: 'negative', text: `P2 accuracy ${paper2Accuracy}% (need 70%+)` });
-    if (pT >= JRF_CUTOFF) factors.push({ type: 'positive', text: `Predicted ${pT}% ≥ JRF ${JRF_CUTOFF}%` }); else if (pT >= NET_CUTOFF) factors.push({ type: 'positive', text: `Predicted ${pT}% ≥ NET ${NET_CUTOFF}%` }); else factors.push({ type: 'negative', text: `Predicted ${pT}% < NET ${NET_CUTOFF}%` });
-    if (streak >= 7) factors.push({ type: 'positive', text: `${streak}d streak` }); else if (streak < 3) factors.push({ type: 'negative', text: 'Low consistency' });
-    if (cs >= 60) factors.push({ type: 'positive', text: `Consistency ${cs}%` }); else factors.push({ type: 'negative', text: `Score variance high (${cs}%)` });
-    if (covP >= 60) factors.push({ type: 'positive', text: `Coverage ${covP}%` }); else factors.push({ type: 'negative', text: `Coverage ${covP}%` });
+    if (pT >= JRF_CUTOFF) factors.push({ type: 'positive', text: `Proj. Score ${pT}% matches JRF range` }); 
+    else if (pT >= NET_CUTOFF) factors.push({ type: 'positive', text: `Proj. Score ${pT}% covers NET base` }); 
+    else factors.push({ type: 'negative', text: `Proj. Score ${pT}% below NET cutoff` });
+    
+    if (overallMomentum >= 3) factors.push({ type: 'positive', text: `Strong upward momentum (+${overallMomentum.toFixed(1)}%)` });
+    else if (overallMomentum <= -3) factors.push({ type: 'negative', text: `Declining momentum (${overallMomentum.toFixed(1)}%)` });
+    
+    if (consistencyScore >= 70) factors.push({ type: 'positive', text: `High consistency profile` });
+    else factors.push({ type: 'negative', text: `High volatility (SD: ${stdDev.toFixed(1)})` });
+    
+    if (covP >= 70) factors.push({ type: 'positive', text: `Syllabus coverage optimal` });
+    else factors.push({ type: 'negative', text: `Low syllabus coverage (${covP}%)` });
+
+    // AI Suggestions
     const suggestions = [];
-    if (pP1 < NET_CUTOFF) suggestions.push(`Paper 1: ${pP1}% → need ${NET_CUTOFF}%+`);
-    if (pP2 < NET_CUTOFF) suggestions.push(`Paper 2: ${pP2}% → need ${NET_CUTOFF}%+`);
-    if (pT < JRF_CUTOFF && pT >= NET_CUTOFF) suggestions.push(`JRF gap: ${JRF_CUTOFF - pT}%`);
-    if (cs < 50) suggestions.push('Be more consistent');
-    if (covP < 50) suggestions.push('Cover more syllabus');
-    if (streak < 5) suggestions.push('Daily practice needed');
-    if (notAttemptedTests.length > 10) suggestions.push(`${notAttemptedTests.length} tests pending`);
-    return { netProbability: nP, jrfProbability: jP, predictedP1: pP1, predictedP2: pP2, predictedTotal: pT, netCutoff: NET_CUTOFF, jrfCutoff: JRF_CUTOFF, confidence: conf, factors, suggestions, riskLevel: rl, consistencyScore: cs, p1Trend: paper1TrendDir, p2Trend: paper2TrendDir, dataPoints: dp };
-  }, [allCompletedAttempts, paper1Attempts, paper2Attempts, paper1Accuracy, paper2Accuracy, streak, paper1TrendDir, paper2TrendDir, notAttemptedTests, syllabusCoverage]);
+    if (pP1 < NET_CUTOFF) suggestions.push(`P1 gap: Projecting ${pP1}%. Need ${NET_CUTOFF}%+`);
+    if (pP2 < NET_CUTOFF) suggestions.push(`P2 gap: Projecting ${pP2}%. Need ${NET_CUTOFF}%+`);
+    if (stdDev > 15) suggestions.push(`Stabilize scores. Variance is too high.`);
+    if (overallMomentum < 0) suggestions.push('Reverse the negative score momentum via revision.');
+
+    return { 
+      netProbability: nP, jrfProbability: jP, 
+      predictedP1: pP1, predictedP2: pP2, predictedTotal: pT, 
+      netCutoff: NET_CUTOFF, jrfCutoff: JRF_CUTOFF, 
+      confidence: confLevel, confScore: confScore,
+      factors, suggestions, riskLevel: riskLvl, 
+      consistencyScore, volatility: stdDev.toFixed(1), momentum: overallMomentum.toFixed(1),
+      p1Trend: paper1TrendDir, p2Trend: paper2TrendDir, dataPoints: dp 
+    };
+  }, [allCompletedAttempts, paper1Attempts, paper2Attempts, paper1TrendDir, paper2TrendDir, syllabusCoverage]);
 
   // ════════════════════════════════════════════════════════════
-  //  §10 GOAL TRACKER
+  //  §10 GOAL TRACKER & EXAM DATE LOCK
   // ════════════════════════════════════════════════════════════
   const setExamDate = useCallback((date) => {
+    if(!date) return;
     setExamDateState(date);
     try { localStorage.setItem('netprep_exam_date', date); } catch {}
   }, []);
+
   const updateCustomTargets = useCallback((targets) => {
     setCustomTargets(targets);
     try { localStorage.setItem('netprep_custom_targets', JSON.stringify(targets)); } catch {}
   }, []);
+
   const daysUntilExam = useMemo(() => {
     if (!examDate) return null;
     return Math.max(0, Math.ceil((new Date(examDate) - new Date()) / 86400000));
@@ -624,13 +666,12 @@ const useDashboard = () => {
     };
   }, [allCompletedAttempts, todayKey, customTargets]);
 
-  const todayActivity = todayDetailed;
   const yesterdayActivity = useMemo(() => {
     const y = new Date(); y.setDate(y.getDate() - 1);
     return activityMap[y.toISOString().split('T')[0]] || { count: 0, avgScore: 0, avgAccuracy: 0 };
   }, [activityMap]);
 
-  const [goalHistory, setGoalHistoryState] = useState(() => {
+  const [goalHistory] = useState(() => {
     try { const s = localStorage.getItem('netprep_goal_history'); return s ? JSON.parse(s) : {}; } catch { return {}; }
   });
   const goalStreak = useMemo(() => {
@@ -659,7 +700,7 @@ const useDashboard = () => {
 
   const autoGeneratedGoals = useMemo(() => {
     const goals = [];
-    const { dailyTests, dailyAccuracy, targetScore } = customTargets;
+    const { dailyTests, dailyAccuracy } = customTargets;
     const td = todayDetailed, dp = dayProgress;
     goals.push({ id: 'daily_tests', title: `Complete ${dailyTests} tests`, titleHi: `${dailyTests} टेस्ट पूरे करें`, icon: 'ClipboardList', target: dailyTests, current: td.count, type: 'count', color: 'blue', priority: 'critical', xp: 10, description: td.count >= dailyTests ? `Done! ${td.count} tests` : `${dailyTests - td.count} more`, descriptionHi: td.count >= dailyTests ? `पूरा! ${td.count} टेस्ट` : `${dailyTests - td.count} और`, urgency: td.count < dailyTests && dp.isPastHalf ? 'high' : 'normal' });
     goals.push({ id: 'daily_accuracy', title: `${dailyAccuracy}%+ accuracy`, titleHi: `${dailyAccuracy}%+ सटीकता`, icon: 'Target', target: dailyAccuracy, current: td.count > 0 ? td.accuracy : 0, type: 'percentage', color: 'emerald', priority: 'high', xp: 15, description: td.count === 0 ? 'Take a test first' : td.accuracy >= dailyAccuracy ? `${td.accuracy}% ✓` : `Need ${dailyAccuracy - td.accuracy}% more`, descriptionHi: td.count === 0 ? 'पहले टेस्ट दें' : td.accuracy >= dailyAccuracy ? `${td.accuracy}% ✓` : `${dailyAccuracy - td.accuracy}% और`, urgency: td.count > 0 && td.accuracy < dailyAccuracy ? 'medium' : 'normal' });
@@ -684,6 +725,7 @@ const useDashboard = () => {
     if (pct === 100 && todayDetailed.count > 0) { try { const e = JSON.parse(localStorage.getItem('netprep_goal_history') || '{}'); if (!e[todayKey]) { e[todayKey] = true; localStorage.setItem('netprep_goal_history', JSON.stringify(e)); } } catch {} }
     return pct;
   }, [autoGeneratedGoals, todayDetailed, todayKey]);
+  
   const goalsCompleted = useMemo(() => autoGeneratedGoals.filter(g => g.current >= g.target).length, [autoGeneratedGoals]);
   const totalGoals = autoGeneratedGoals.length;
 
@@ -813,21 +855,19 @@ const useDashboard = () => {
   }, [totalQuestions, allCompletedAttempts, overallAccuracy, streak]);
 
   // ════════════════════════════════════════════════════════════════════
-  //  §15  🆕 SMART REVISION HUB (Spaced Repetition + Priority)
+  //  §15  SMART REVISION HUB
   // ════════════════════════════════════════════════════════════════════
   const smartRevision = useMemo(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const todayMs = today.getTime();
     const dUntilExam = daysUntilExam || 365;
 
-    // Build revision items from testPerfMap
     const items = Object.values(testPerfMap).map(t => {
       const lastDate = new Date(t.lastDate);
       lastDate.setHours(0, 0, 0, 0);
       const daysSince = Math.max(0, Math.floor((todayMs - lastDate.getTime()) / 86400000));
       const srs = getSRSInterval(t.bestScore);
 
-      // If test was attempted multiple times and improved, extend interval
       let effectiveInterval = srs.interval;
       if (t.allScores.length > 1 && t.improvement > 10) effectiveInterval = Math.round(effectiveInterval * 1.5);
 
@@ -839,17 +879,15 @@ const useDashboard = () => {
       const isDueTomorrow = (() => { const tmrw = new Date(today); tmrw.setDate(tmrw.getDate() + 1); return nextRevisionDate.toISOString().split('T')[0] === tmrw.toISOString().split('T')[0]; })();
       const isDueThisWeek = nextRevisionDate <= new Date(todayMs + 7 * 86400000);
 
-      // Priority score (0-100, higher = more urgent)
       let priority = 0;
-      priority += Math.max(0, 100 - t.bestScore); // Lower score = higher priority
-      if (isOverdue) priority += overdueBy * 5; // Overdue penalty
-      if (t.trend === 'down') priority += 20; // Declining = urgent
-      if (dUntilExam < 30) priority += 15; // Exam near = urgent
-      if (dUntilExam < 7) priority += 25; // Exam very near
-      if (daysSince > 14) priority += 10; // Not practiced in 2 weeks
+      priority += Math.max(0, 100 - t.bestScore); 
+      if (isOverdue) priority += overdueBy * 5; 
+      if (t.trend === 'down') priority += 20; 
+      if (dUntilExam < 30) priority += 15; 
+      if (dUntilExam < 7) priority += 25; 
+      if (daysSince > 14) priority += 10; 
       priority = Math.min(100, priority);
 
-      // Category
       let category = 'mastered';
       if (t.bestScore < 30) category = 'critical';
       else if (t.bestScore < 50) category = 'weak';
@@ -858,22 +896,16 @@ const useDashboard = () => {
       else category = 'learning';
 
       return {
-        testId: t.testId, test: t.test,
-        title: t.test?.title || 'Test',
-        paper: t.test?.paper, unit: t.test?.unit,
-        bestScore: t.bestScore, worstScore: t.worstScore,
-        lastAttemptDate: t.lastDate, daysSinceLastAttempt: daysSince,
-        attempts: t.attempts, allScores: t.allScores,
-        trend: t.trend, improvement: t.improvement,
-        srsInterval: effectiveInterval, srsLabel: srs.label,
+        testId: t.testId, test: t.test, title: t.test?.title || 'Test',
+        paper: t.test?.paper, unit: t.test?.unit, bestScore: t.bestScore, worstScore: t.worstScore,
+        lastAttemptDate: t.lastDate, daysSinceLastAttempt: daysSince, attempts: t.attempts, allScores: t.allScores,
+        trend: t.trend, improvement: t.improvement, srsInterval: effectiveInterval, srsLabel: srs.label,
         nextRevisionDate: nextRevisionDate.toISOString().split('T')[0],
         isOverdue, overdueBy, isDueToday, isDueTomorrow, isDueThisWeek,
-        priorityScore: priority, category,
-        lastAttempt: t.lastAttempt,
+        priorityScore: priority, category, lastAttempt: t.lastAttempt,
       };
     });
 
-    // Sort by priority (highest first)
     items.sort((a, b) => b.priorityScore - a.priorityScore);
 
     const critical = items.filter(i => i.category === 'critical');
@@ -886,29 +918,25 @@ const useDashboard = () => {
     const tomorrowDue = items.filter(i => i.isDueTomorrow);
     const thisWeekDue = items.filter(i => i.isDueThisWeek);
 
-    // Marathon queue: critical first, then weak, then overdue rest
     const marathonQueue = [...critical, ...weak.filter(w => !critical.includes(w)), ...overdue.filter(o => !critical.includes(o) && !weak.includes(o))].slice(0, 20);
 
-    // Stats
     const allImproved = items.filter(i => i.improvement > 0);
     const avgImprovement = allImproved.length > 0 ? Math.round(allImproved.reduce((s, i) => s + i.improvement, 0) / allImproved.length) : 0;
 
     return {
       all: items, critical, weak, improving, learning, mastered,
-      overdue, todayDue, tomorrowDue, thisWeekDue,
-      marathonQueue,
+      overdue, todayDue, tomorrowDue, thisWeekDue, marathonQueue,
       stats: {
         totalTests: items.length, critical: critical.length, weak: weak.length,
-        improving: improving.length, mastered: mastered.length,
-        overdue: overdue.length, dueToday: todayDue.length,
-        dueThisWeek: thisWeekDue.length,
+        improving: improving.length, mastered: mastered.length, overdue: overdue.length, 
+        dueToday: todayDue.length, dueThisWeek: thisWeekDue.length,
         avgImprovement, totalRevisions: items.reduce((s, i) => s + i.attempts, 0),
       },
     };
   }, [testPerfMap, daysUntilExam, todayKey]);
 
   // ════════════════════════════════════════════════════════════════════
-  //  §16  🆕 WEEKLY CHAPTER PERFORMANCE MATRIX
+  //  §16  WEEKLY CHAPTER PERFORMANCE MATRIX
   // ════════════════════════════════════════════════════════════════════
   const weeklyChapterMatrix = useMemo(() => {
     const getWeekStart = (date) => {
@@ -916,49 +944,35 @@ const useDashboard = () => {
       const day = d.getDay(); const diff = d.getDate() - day + (day === 0 ? -6 : 1);
       d.setDate(diff); return d;
     };
-    const getWeekKey = (date) => {
-      const ws = getWeekStart(date);
-      return ws.toISOString().split('T')[0];
-    };
+    const getWeekKey = (date) => { return getWeekStart(date).toISOString().split('T')[0]; };
     const formatDateRange = (start) => {
-      const s = new Date(start);
-      const e = new Date(s); e.setDate(e.getDate() + 6);
+      const s = new Date(start); const e = new Date(s); e.setDate(e.getDate() + 6);
       return `${s.toLocaleDateString('en', { month: 'short', day: 'numeric' })} - ${e.toLocaleDateString('en', { month: 'short', day: 'numeric' })}`;
     };
 
-    // Group attempts by week
     const weekMap = {};
     allCompletedAttempts.forEach(a => {
       const wk = getWeekKey(a.completedAt || a.createdAt);
-      if (!weekMap[wk]) weekMap[wk] = [];
-      weekMap[wk].push(a);
+      if (!weekMap[wk]) weekMap[wk] = []; weekMap[wk].push(a);
     });
 
-    // Get sorted week keys (most recent first)
     const weekKeys = Object.keys(weekMap).sort((a, b) => new Date(b) - new Date(a));
 
-    // Build weekly data
     const buildWeekData = (weekKey, attempts) => {
       const allUnits = [...PAPER1_UNITS.map(u => ({ unit: u, name: PAPER1_UNIT_NAMES[u], paper: 'paper1' })), ...PAPER2_UNITS.map(u => ({ unit: u, name: PAPER2_UNIT_NAMES[u], paper: 'paper2' }))];
-
-      // Per-unit stats for this week
       const unitStats = {};
+      
       attempts.forEach(a => {
         const paper = a.testId?.paper;
         const unitId = normalizeUnitId(a.unit || a.testId?.unit);
-
-        // From topicAnalysis
         (a.topicAnalysis || []).forEach(ta => {
           const taUnitId = normalizeUnitId(ta.unit || unitId);
           const k = `${paper}|${taUnitId || 'Other'}`;
           if (!unitStats[k]) unitStats[k] = { correct: 0, wrong: 0, skipped: 0, total: 0, scores: [], testsCount: 0, paper, unit: taUnitId || unitId };
-          unitStats[k].correct += ta.correct || 0;
-          unitStats[k].wrong += ta.wrong || 0;
-          unitStats[k].skipped += ta.skipped || 0;
-          unitStats[k].total += ta.total || 0;
+          unitStats[k].correct += ta.correct || 0; unitStats[k].wrong += ta.wrong || 0;
+          unitStats[k].skipped += ta.skipped || 0; unitStats[k].total += ta.total || 0;
         });
 
-        // Count tests per unit
         if (unitId) {
           const k = `${paper}|${unitId}`;
           if (!unitStats[k]) unitStats[k] = { correct: 0, wrong: 0, skipped: 0, total: 0, scores: [], testsCount: 0, paper, unit: unitId };
@@ -968,7 +982,6 @@ const useDashboard = () => {
         }
       });
 
-      // Build chapters array
       const chapters = Object.entries(unitStats).map(([k, s]) => {
         const avgScore = s.scores.length > 0 ? Math.round(s.scores.reduce((a, b) => a + b, 0) / s.scores.length) : 0;
         const bestScore = s.scores.length > 0 ? Math.max(...s.scores) : 0;
@@ -977,29 +990,24 @@ const useDashboard = () => {
         return { key: k, unit: s.unit, name: unitName, paper: s.paper, testsCount: s.testsCount, avgScore, bestScore, accuracy, correct: s.correct, wrong: s.wrong, skipped: s.skipped, questionsTotal: s.total, scores: s.scores };
       }).sort((a, b) => b.avgScore - a.avgScore);
 
-      // Find uncovered units
       const coveredUnits = new Set(chapters.map(c => `${c.paper}|${c.unit}`));
       const uncovered = allUnits.filter(u => !coveredUnits.has(`${u.paper}|${u.unit}`)).map(u => {
-        // Find last practice date for this unit
         const lastPractice = allCompletedAttempts.filter(a => a.testId?.paper === u.paper && matchUnit(a.unit || a.testId?.unit, u.unit))
           .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))[0];
         const daysSince = lastPractice ? Math.floor((Date.now() - new Date(lastPractice.completedAt).getTime()) / 86400000) : Infinity;
         return { ...u, lastPracticed: lastPractice?.completedAt || null, daysSince: daysSince === Infinity ? null : daysSince };
       });
 
-      // Day-by-day breakdown
       const dayMap = {};
       attempts.forEach(a => {
         const dayKey = new Date(a.completedAt || a.createdAt).getDay();
-        const unit = a.unit || a.testId?.unit;
-        if (!unit) return;
+        const unit = a.unit || a.testId?.unit; if (!unit) return;
         const k = `${dayKey}|${a.testId?.paper}|${unit}`;
         const pct = a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0;
         if (!dayMap[k]) dayMap[k] = { scores: [] };
         dayMap[k].scores.push(pct);
       });
 
-      // Best day
       const dayStats = {};
       attempts.forEach(a => {
         const d = new Date(a.completedAt || a.createdAt).getDay();
@@ -1009,31 +1017,25 @@ const useDashboard = () => {
       });
       const bestDayEntry = Object.entries(dayStats).sort((a, b) => (b[1].totalScore / b[1].count) - (a[1].totalScore / a[1].count))[0];
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
       const totalScore = attempts.reduce((s, a) => s + (a.totalMarks > 0 ? Math.round((a.score / a.totalMarks) * 100) : 0), 0);
 
       return {
-        weekKey, dateRange: formatDateRange(weekKey),
-        startDate: weekKey,
+        weekKey, dateRange: formatDateRange(weekKey), startDate: weekKey,
         endDate: (() => { const e = new Date(weekKey); e.setDate(e.getDate() + 6); return e.toISOString().split('T')[0]; })(),
         chapters, uncovered, dayMap,
         stats: {
-          totalTests: attempts.length,
-          chaptersCovered: chapters.length,
-          totalChapters: allUnits.length,
+          totalTests: attempts.length, chaptersCovered: chapters.length, totalChapters: allUnits.length,
           avgScore: attempts.length > 0 ? Math.round(totalScore / attempts.length) : 0,
           bestDay: bestDayEntry ? { day: dayNames[bestDayEntry[0]], count: bestDayEntry[1].count, avgScore: Math.round(bestDayEntry[1].totalScore / bestDayEntry[1].count) } : null,
         },
       };
     };
 
-    // Current and previous weeks
     const currentWeekKey = getWeekKey(new Date());
     const weeks = weekKeys.slice(0, 6).map(wk => buildWeekData(wk, weekMap[wk]));
     const currentWeek = weeks.find(w => w.weekKey === currentWeekKey) || (weekMap[currentWeekKey] ? buildWeekData(currentWeekKey, weekMap[currentWeekKey]) : buildWeekData(currentWeekKey, []));
     const previousWeek = weeks.length > 1 ? weeks.find(w => w.weekKey !== currentWeekKey) || weeks[1] : null;
 
-    // Chapter trends across weeks (multi-week)
     const chapterTrends = {};
     weeks.slice(0, 4).reverse().forEach((w, wi) => {
       w.chapters.forEach(c => {
@@ -1042,23 +1044,17 @@ const useDashboard = () => {
       });
     });
 
-    // Comparison
     const comparison = previousWeek ? {
       testsChange: currentWeek.stats.totalTests - previousWeek.stats.totalTests,
       chaptersChange: currentWeek.stats.chaptersCovered - previousWeek.stats.chaptersCovered,
       scoreChange: currentWeek.stats.avgScore - previousWeek.stats.avgScore,
     } : null;
 
-    // Per-chapter comparison with last week
     if (previousWeek) {
-      const prevMap = {};
-      previousWeek.chapters.forEach(c => { prevMap[c.key] = c.avgScore; });
-      currentWeek.chapters.forEach(c => {
-        c.changeVsLastWeek = prevMap[c.key] !== undefined ? c.avgScore - prevMap[c.key] : null;
-      });
+      const prevMap = {}; previousWeek.chapters.forEach(c => { prevMap[c.key] = c.avgScore; });
+      currentWeek.chapters.forEach(c => { c.changeVsLastWeek = prevMap[c.key] !== undefined ? c.avgScore - prevMap[c.key] : null; });
     }
 
-    // Insights
     const insights = [];
     if (currentWeek.uncovered.length > 0) {
       const critical = currentWeek.uncovered.filter(u => u.daysSince !== null && u.daysSince > 14);
@@ -1071,10 +1067,8 @@ const useDashboard = () => {
     improving.forEach(c => { insights.push({ type: 'positive', text: `${c.name} improved +${c.changeVsLastWeek}%`, textHi: `${c.name} +${c.changeVsLastWeek}% बढ़ा`, priority: 'low' }); });
     if (currentWeek.stats.bestDay) insights.push({ type: 'info', text: `Best day: ${currentWeek.stats.bestDay.day} (${currentWeek.stats.bestDay.avgScore}%)`, textHi: `सर्वश्रेष्ठ दिन: ${currentWeek.stats.bestDay.day} (${currentWeek.stats.bestDay.avgScore}%)`, priority: 'low' });
 
-    // Suggested plan for next week
     const suggestedPlan = [];
     const dayFocus = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    // Prioritize: uncovered critical > declining > weak > uncovered > rest
     const planPriority = [
       ...currentWeek.uncovered.filter(u => u.daysSince !== null && u.daysSince > 14).map(u => ({ ...u, planPriority: 0 })),
       ...declining.map(c => ({ unit: c.unit, name: c.name, paper: c.paper, planPriority: 1 })),
@@ -1096,19 +1090,17 @@ const useDashboard = () => {
   }, [allCompletedAttempts]);
 
   // ════════════════════════════════════════════════════════════════════
-  //  §17  🆕 EXAM COMMAND CENTER
+  //  §17  EXAM COMMAND CENTER
   // ════════════════════════════════════════════════════════════════════
   const examCommandCenter = useMemo(() => {
     const isSet = !!examDate;
     const totalDays = isSet ? Math.max(0, Math.ceil((new Date(examDate) - new Date()) / 86400000)) : null;
     const examDateObj = isSet ? new Date(examDate) : null;
 
-    // Calculate hours/minutes
     const now = new Date();
     const hours = isSet ? Math.max(0, Math.floor(((examDateObj - now) % 86400000) / 3600000)) : 0;
     const minutes = isSet ? Math.max(0, Math.floor(((examDateObj - now) % 3600000) / 60000)) : 0;
 
-    // Total days from start (when first test was taken)
     const firstTest = allCompletedAttempts.length > 0
       ? [...allCompletedAttempts].sort((a, b) => new Date(a.completedAt) - new Date(b.completedAt))[0]
       : null;
@@ -1117,7 +1109,6 @@ const useDashboard = () => {
     const elapsedDays = Math.max(0, Math.ceil((now - startDate) / 86400000));
     const journeyProgress = Math.min(100, Math.round((elapsedDays / totalJourneyDays) * 100));
 
-    // Phases
     const allPhases = [
       { name: 'Foundation', nameHi: 'नींव', description: 'Cover all units, build basics', descHi: 'सभी इकाइयां, बुनियाद', pctRange: [0, 25] },
       { name: 'Practice', nameHi: 'अभ्यास', description: 'Intensive practice & DPPs', descHi: 'गहन अभ्यास', pctRange: [25, 50] },
@@ -1134,18 +1125,15 @@ const useDashboard = () => {
       else if (totalDays <= 60) currentPhaseIdx = 1;
       else currentPhaseIdx = 0;
     } else {
-      // Use journey progress
       currentPhaseIdx = allPhases.findIndex(p => journeyProgress >= p.pctRange[0] && journeyProgress < p.pctRange[1]);
       if (currentPhaseIdx === -1) currentPhaseIdx = Math.min(4, Math.floor(journeyProgress / 25));
     }
 
     const phasesWithStatus = allPhases.map((p, i) => ({
-      ...p,
-      status: i < currentPhaseIdx ? 'completed' : i === currentPhaseIdx ? 'current' : 'upcoming',
+      ...p, status: i < currentPhaseIdx ? 'completed' : i === currentPhaseIdx ? 'current' : 'upcoming',
       progress: i < currentPhaseIdx ? 100 : i === currentPhaseIdx ? Math.round(((journeyProgress - p.pctRange[0]) / (p.pctRange[1] - p.pctRange[0])) * 100) : 0,
     }));
 
-    // Milestones
     const milestones = [];
     const addMs = (id, title, titleHi, target, current, icon, color) => {
       milestones.push({ id, title, titleHi, target, current, completed: current >= target, progress: Math.min(100, Math.round((current / Math.max(target, 1)) * 100)), icon, color });
@@ -1164,7 +1152,6 @@ const useDashboard = () => {
     addMs('streak_7', '7-day streak', '7-दिन स्ट्रीक', 7, streak, 'Flame', 'orange');
     addMs('all_attempted', 'All tests done', 'सभी टेस्ट', createdTests.length || 1, allCompletedAttempts.length, 'CheckCircle', 'emerald');
 
-    // Pace calculator
     const recentDays = Math.min(14, elapsedDays || 1);
     const recentStart = new Date(now); recentStart.setDate(recentStart.getDate() - recentDays);
     const recentTests = allCompletedAttempts.filter(a => new Date(a.completedAt) >= recentStart).length;
@@ -1174,7 +1161,6 @@ const useDashboard = () => {
     const paceStatus = currentPace >= requiredPace ? 'on_track' : currentPace >= requiredPace * 0.7 ? 'slightly_behind' : 'behind';
     const paceMessage = { on_track: { en: 'On track! Keep it up!', hi: 'सही रफ्तार! जारी रखो!' }, slightly_behind: { en: `Need ${requiredPace}/day, doing ${currentPace}`, hi: `${requiredPace}/दिन चाहिए, ${currentPace} कर रहे` }, behind: { en: `Behind! Need ${requiredPace}/day, only ${currentPace}`, hi: `पीछे! ${requiredPace}/दिन चाहिए` } };
 
-    // Readiness score
     const covScore = syllabusCoverage.overallPct || 0;
     const avgScoreScore = overallAvgScore;
     const consistScore = jrfProbability.consistencyScore || 50;
@@ -1190,7 +1176,6 @@ const useDashboard = () => {
     ];
     const readinessOverall = Math.round(readinessFactors.reduce((s, f) => s + f.score * f.weight, 0));
 
-    // Today's mission
     const todayMission = [];
     const { dailyTests } = customTargets;
     const td = todayDetailed;
@@ -1200,7 +1185,6 @@ const useDashboard = () => {
     if (weakUnit) todayMission.push({ id: 'weak', task: `Practice ${weakUnit.unit} (${weakUnit.accuracy}%)`, taskHi: `${weakUnit.unit} अभ्यास करें`, reason: 'Weakest area', priority: 'high', icon: 'AlertTriangle' });
     if (td.accuracy > 0 && td.accuracy < customTargets.dailyAccuracy) todayMission.push({ id: 'accuracy', task: `Improve accuracy to ${customTargets.dailyAccuracy}%+`, taskHi: `सटीकता ${customTargets.dailyAccuracy}%+ करें`, reason: `Current: ${td.accuracy}%`, priority: 'medium', icon: 'Target' });
 
-    // Risk alerts
     const riskAlerts = [];
     const uncoveredP1 = syllabusCoverage.paper1.filter(c => c.level === 'not_started').length;
     const uncoveredP2 = syllabusCoverage.paper2.filter(c => c.level === 'not_started').length;
@@ -1221,13 +1205,12 @@ const useDashboard = () => {
   }, [examDate, allCompletedAttempts, notAttemptedTests, syllabusCoverage, overallAvgScore, paper1AvgScore, paper2AvgScore, jrfProbability, speedAnalytics, smartRevision, errorPatterns, streak, customTargets, todayDetailed, createdTests, daysUntilExam]);
 
   // ════════════════════════════════════════════════════════════════════
-  //  §18  🆕 DAILY REPORT CARD
+  //  §18  DAILY REPORT CARD
   // ════════════════════════════════════════════════════════════════════
   const dailyReport = useMemo(() => {
     const td = todayDetailed;
     const ya = yesterdayActivity;
 
-    // Grade calculation
     let rating = 0;
     if (td.count >= customTargets.dailyTests) rating += 2;
     else if (td.count > 0) rating += 1;
@@ -1239,7 +1222,6 @@ const useDashboard = () => {
     const gradeMap = { 5: { g: 'A+', c: 'emerald' }, 4: { g: 'A', c: 'emerald' }, 3: { g: 'B+', c: 'blue' }, 2: { g: 'B', c: 'blue' }, 1: { g: 'C', c: 'amber' }, 0: { g: 'F', c: 'red' } };
     const { g: grade, c: gradeColor } = gradeMap[rating] || gradeMap[0];
 
-    // Comparison with yesterday
     const comparison = {
       testsChange: td.count - (ya.count || 0),
       scoreChange: td.avgScore - (ya.avgScore || 0),
@@ -1247,7 +1229,6 @@ const useDashboard = () => {
       direction: td.count > (ya.count || 0) ? 'up' : td.count < (ya.count || 0) ? 'down' : 'stable',
     };
 
-    // Tomorrow focus
     const weakest = errorPatterns.weakUnits[0];
     const revDue = smartRevision.tomorrowDue[0];
     const tomorrowFocus = weakest
@@ -1256,7 +1237,6 @@ const useDashboard = () => {
       ? { unit: revDue.unit || revDue.title, reason: `SRS revision due`, reasonHi: `SRS दोहराना बाकी` }
       : { unit: 'Mixed Practice', reason: 'Keep practicing!', reasonHi: 'अभ्यास जारी रखें!' };
 
-    // Highlights
     const highlights = [];
     if (td.perfectScores > 0) highlights.push({ type: 'achievement', text: `${td.perfectScores} perfect score(s)!`, textHi: `${td.perfectScores} परफेक्ट स्कोर!` });
     if (td.pendingCleared > 0) highlights.push({ type: 'progress', text: `${td.pendingCleared} pending test(s) cleared`, textHi: `${td.pendingCleared} बाकी टेस्ट पूरे` });
@@ -1272,7 +1252,7 @@ const useDashboard = () => {
   }, [todayDetailed, yesterdayActivity, customTargets, errorPatterns, smartRevision, todayKey]);
 
   // ════════════════════════════════════════════════════════════════════
-  //  §19  🆕 MISTAKE JOURNAL
+  //  §19  MISTAKE JOURNAL
   // ════════════════════════════════════════════════════════════════════
   const mistakeJournal = useMemo(() => {
     const unitMistakes = {};
@@ -1302,7 +1282,6 @@ const useDashboard = () => {
       });
     });
 
-    // Most repeated mistakes (units with most wrongs)
     const byUnit = Object.values(unitMistakes)
       .map(u => ({
         ...u,
@@ -1315,35 +1294,28 @@ const useDashboard = () => {
 
     const mostRepeated = byUnit.filter(u => u.isRepeated || u.timesWrong >= 3).slice(0, 10);
 
-    // Weekly error trend
     const trend = Object.entries(weeklyErrors)
       .sort((a, b) => new Date(a[0]) - new Date(b[0]))
       .slice(-8)
       .map(([wk, d]) => ({
-        week: wk,
-        weekLabel: new Date(wk).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+        week: wk, weekLabel: new Date(wk).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
         errorRate: d.total > 0 ? Math.round((d.wrong / d.total) * 100) : 0,
         correct: d.correct, wrong: d.wrong, total: d.total,
       }));
 
-    // Recent errors (last 5 attempts with errors)
     const recentErrors = [...allCompletedAttempts]
       .filter(a => (a.wrongCount || 0) > 0)
       .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
       .slice(0, 10)
       .map(a => ({
-        date: a.completedAt,
-        title: a.testId?.title || 'Test',
-        paper: a.testId?.paper,
-        wrong: a.wrongCount || 0,
-        total: (a.correctCount || 0) + (a.wrongCount || 0) + (a.skippedCount || 0),
+        date: a.completedAt, title: a.testId?.title || 'Test', paper: a.testId?.paper,
+        wrong: a.wrongCount || 0, total: (a.correctCount || 0) + (a.wrongCount || 0) + (a.skippedCount || 0),
         errorRate: (() => { const t = (a.correctCount || 0) + (a.wrongCount || 0); return t > 0 ? Math.round((a.wrongCount / t) * 100) : 0; })(),
         units: (a.topicAnalysis || []).filter(ta => (ta.wrong || 0) > 0).map(ta => ta.unit).filter(Boolean),
       }));
 
     const overallErrorRate = (totalCorrect + totalWrong) > 0 ? Math.round((totalWrong / (totalCorrect + totalWrong)) * 100) : 0;
 
-    // Suggestions
     const suggestions = [];
     if (mostRepeated.length > 0) suggestions.push({ text: `Focus on ${mostRepeated[0].unit} - ${mostRepeated[0].wrong} mistakes`, textHi: `${mostRepeated[0].unit} पर ध्यान - ${mostRepeated[0].wrong} गलतियां`, priority: 'critical' });
     if (trend.length >= 2) {
@@ -1364,39 +1336,26 @@ const useDashboard = () => {
   //  RETURN
   // ════════════════════════════════════════════════════════════════════
   return {
-    // Core
     questionStats, testStats, attemptStats, recentAttempts, allAttempts,
     allCompletedAttempts, createdTests, loading, refreshing, lastRefresh, refresh,
-    // Basic stats
     paper1Units, paper2Units, paper1Count, paper2Count, totalQuestions,
     overallAccuracy, overallAvgScore,
     paper1Attempts, paper2Attempts, paper1Tests, paper2Tests, combinedTests,
     paper1Accuracy, paper2Accuracy, paper1AvgScore, paper2AvgScore,
-    // Trends
     scoreTrend, paper1Trend, paper2Trend, trendDirection, paper1TrendDir, paper2TrendDir,
     predictedScore, paper1Predicted, paper2Predicted,
-    // Tests
     notAttemptedTests, paper1NotAttempted, paper2NotAttempted,
     needsAttentionTests, testPerfMap,
-    // Charts
     difficultyData, questionTypeData, topicPerformance,
     scoreDistribution, personalRecords, timeOfDayAnalysis,
-    // Activity
     activityMap, streak, longestStreak, weeklyComparison, achievements,
-    // Analytics (ADDED testScoreRanking HERE)
     jrfProbability, syllabusCoverage, unitScoreRanking, testScoreRanking, speedAnalytics, errorPatterns, studyRecommendations,
-    // Goals
     examDate, setExamDate, daysUntilExam,
     customTargets, updateCustomTargets,
     autoGeneratedGoals, goalCompletionPct,
     todayActivity: todayDetailed, todayDetailed, yesterdayActivity,
     dayProgress, goalStreak, goalsCompleted, totalGoals, pressureMessage, todayXP,
-    // 🆕 NEW FEATURES
-    smartRevision,
-    weeklyChapterMatrix,
-    examCommandCenter,
-    dailyReport,
-    mistakeJournal,
+    smartRevision, weeklyChapterMatrix, examCommandCenter, dailyReport, mistakeJournal,
   };
 };
 
