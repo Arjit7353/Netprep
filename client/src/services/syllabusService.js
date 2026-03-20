@@ -1,31 +1,38 @@
+// client/src/services/syllabusService.js
 import { apiHelper } from './api';
+
+// Helper to clear syllabus cache
+const clearSyllabusCache = () => {
+  try {
+    sessionStorage.removeItem('netprep-syllabus');
+    sessionStorage.removeItem('netprep-syllabus-timestamp');
+    console.log('[SyllabusService] Cache cleared');
+  } catch (e) {
+    // Ignore
+  }
+};
 
 const syllabusService = {
   // ═══════════════════════════════════════════════════════════════
   // READ OPERATIONS
   // ═══════════════════════════════════════════════════════════════
 
-  // Get all syllabus data
   getAllSyllabus: async () => {
     return apiHelper.get('/syllabus');
   },
 
-  // Get Paper 1 syllabus
   getPaper1Syllabus: async () => {
     return apiHelper.get('/syllabus/paper1');
   },
 
-  // Get Paper 2 (History) syllabus
   getPaper2Syllabus: async () => {
     return apiHelper.get('/syllabus/paper2');
   },
 
-  // Get syllabus by paper
   getSyllabus: async (paper) => {
     return apiHelper.get(`/syllabus/${paper}`);
   },
 
-  // Get units for a paper
   getUnits: async (paper) => {
     try {
       const response = await apiHelper.get('/syllabus/units', { paper });
@@ -36,7 +43,6 @@ const syllabusService = {
     }
   },
 
-  // Get chapters for a unit
   getChapters: async (paper, unitId) => {
     try {
       const response = await apiHelper.get('/syllabus/chapters', { paper, unit: unitId });
@@ -47,7 +53,6 @@ const syllabusService = {
     }
   },
 
-  // Get topics for a chapter
   getTopics: async (paper, unitId, chapterId) => {
     try {
       const response = await apiHelper.get('/syllabus/topics', { 
@@ -62,106 +67,121 @@ const syllabusService = {
     }
   },
 
-  // Search syllabus
   searchSyllabus: async (query, paper = null) => {
     const params = { query };
     if (paper) params.paper = paper;
     return apiHelper.get('/syllabus/search', params);
   },
 
-  // Get syllabus tree structure
   getSyllabusTree: async (paper) => {
     return apiHelper.get('/syllabus/tree', { paper });
   },
 
-  // Get syllabus statistics
   getSyllabusStats: async (paper) => {
     return apiHelper.get('/syllabus/stats', { paper });
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // WRITE OPERATIONS - SYLLABUS MANAGEMENT
+  // WRITE OPERATIONS - WITH CACHE CLEARING
   // ═══════════════════════════════════════════════════════════════
 
-  // Initialize syllabus from static data
   initializeSyllabus: async (paper) => {
-    return apiHelper.post('/syllabus/initialize', { paper });
+    const result = await apiHelper.post('/syllabus/initialize', { paper });
+    clearSyllabusCache();
+    return result;
   },
 
-  // Manage entire syllabus
   manageSyllabus: async (data) => {
-    return apiHelper.post('/syllabus/manage', data);
+    const result = await apiHelper.post('/syllabus/manage', data);
+    clearSyllabusCache();
+    return result;
   },
 
   // ─── Unit Operations ───────────────────────────────────────────
 
-  // Add a new unit
   addUnit: async (data) => {
-    return apiHelper.post('/syllabus/unit', data);
+    const result = await apiHelper.post('/syllabus/unit', data);
+    clearSyllabusCache();
+    return result;
   },
 
-  // Update a unit
   updateUnit: async (unitId, data) => {
-    return apiHelper.put(`/syllabus/unit/${unitId}`, data);
+    const result = await apiHelper.put(`/syllabus/unit/${unitId}`, data);
+    clearSyllabusCache();
+    return result;
   },
 
-  // Delete a unit
   deleteUnit: async (unitId, paper) => {
-    return apiHelper.delete(`/syllabus/unit/${unitId}?paper=${paper}`);
+    const result = await apiHelper.delete(`/syllabus/unit/${unitId}?paper=${paper}`);
+    clearSyllabusCache();
+    return result;
   },
 
   // ─── Chapter Operations ────────────────────────────────────────
 
-  // Add a new chapter
   addChapter: async (data) => {
-    return apiHelper.post('/syllabus/chapter', data);
+    const result = await apiHelper.post('/syllabus/chapter', data);
+    clearSyllabusCache();
+    return result;
   },
 
-  // Update a chapter
   updateChapter: async (chapterId, data) => {
-    return apiHelper.put(`/syllabus/chapter/${chapterId}`, data);
+    const result = await apiHelper.put(`/syllabus/chapter/${chapterId}`, data);
+    clearSyllabusCache();
+    return result;
   },
 
-  // Delete a chapter
   deleteChapter: async (chapterId, paper, unitId) => {
-    return apiHelper.delete(`/syllabus/chapter/${chapterId}?paper=${paper}&unitId=${unitId}`);
+    const result = await apiHelper.delete(`/syllabus/chapter/${chapterId}?paper=${paper}&unitId=${unitId}`);
+    clearSyllabusCache();
+    return result;
   },
 
   // ─── Topic Operations ──────────────────────────────────────────
 
-  // Add a new topic
   addTopic: async (data) => {
-    return apiHelper.post('/syllabus/topic', data);
+    const result = await apiHelper.post('/syllabus/topic', data);
+    clearSyllabusCache();
+    return result;
   },
 
-  // Update a topic
   updateTopic: async (topicId, data) => {
-    return apiHelper.put(`/syllabus/topic/${topicId}`, data);
+    const result = await apiHelper.put(`/syllabus/topic/${topicId}`, data);
+    clearSyllabusCache();
+    return result;
   },
 
-  // Delete a topic
   deleteTopic: async (topicId, paper, unitId, chapterId) => {
-    return apiHelper.delete(`/syllabus/topic/${topicId}?paper=${paper}&unitId=${unitId}&chapterId=${chapterId}`);
+    const result = await apiHelper.delete(`/syllabus/topic/${topicId}?paper=${paper}&unitId=${unitId}&chapterId=${chapterId}`);
+    clearSyllabusCache();
+    return result;
   },
 
   // ─── Subtopic Operations ───────────────────────────────────────
 
-  // Add a subtopic
   addSubtopic: async (data) => {
-    return apiHelper.post('/syllabus/subtopic', data);
+    const result = await apiHelper.post('/syllabus/subtopic', data);
+    clearSyllabusCache();
+    return result;
   },
 
-  // Delete a subtopic
   deleteSubtopic: async (paper, unitId, chapterId, topicId, subtopicIndex) => {
-    return apiHelper.delete(`/syllabus/subtopic?paper=${paper}&unitId=${unitId}&chapterId=${chapterId}&topicId=${topicId}&subtopicIndex=${subtopicIndex}`);
+    const result = await apiHelper.delete(`/syllabus/subtopic?paper=${paper}&unitId=${unitId}&chapterId=${chapterId}&topicId=${topicId}&subtopicIndex=${subtopicIndex}`);
+    clearSyllabusCache();
+    return result;
   },
 
   // ─── Reorder Operations ────────────────────────────────────────
 
-  // Reorder units
   reorderUnits: async (paper, unitIds) => {
-    return apiHelper.put('/syllabus/reorder/units', { paper, unitIds });
-  }
+    const result = await apiHelper.put('/syllabus/reorder/units', { paper, unitIds });
+    clearSyllabusCache();
+    return result;
+  },
+
+  // ─── Utility ───────────────────────────────────────────────────
+  
+  clearCache: clearSyllabusCache
 };
 
 export default syllabusService;

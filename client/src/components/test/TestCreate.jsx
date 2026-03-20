@@ -90,8 +90,7 @@ import {
 import { useTest } from '../../hooks/useTest';
 import { useQuestions } from '../../hooks/useQuestions';
 import { TEST_TYPE_CONFIG, PAPER_LABELS, QUESTION_TYPE_LABELS, DIFFICULTY_LABELS } from '../../utils/constants';
-import syllabusPaper1 from '../../data/syllabusPaper1';
-import syllabusPaper2History from '../../data/syllabusPaper2History';
+import { useSyllabus } from '../../hooks/useSyllabus'; // NEW: Import Syllabus Hook
 import Loader from '../common/Loader';
 import { useToast } from '../common/Toast';
 import QuestionLibraryModal from './QuestionLibraryModal';
@@ -1268,6 +1267,14 @@ const TestCreate = ({ language = 'hi' }) => {
   const { questions, fetchQuestions, loading: questionsLoading } = useQuestions();
   const toast = useToast();
 
+  // ✅ Syllabus hook - Get all needed functions
+  const { 
+    syllabus: syllabusData, 
+    loading: syllabusLoading,
+    refreshSyllabus,
+    dataSource
+  } = useSyllabus();
+
   // ==========================================
   // WIZARD STEPS CONFIGURATION
   // ==========================================
@@ -1359,109 +1366,73 @@ const TestCreate = ({ language = 'hi' }) => {
   };
 
   // ==========================================
-  // KEYBOARD SHORTCUTS
-  // ==========================================
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Don't trigger shortcuts if typing in input fields
-      const isInputElement = ['INPUT', 'TEXTAREA'].includes(e.target.tagName);
-      
-      // Undo
-      if (e.ctrlKey && e.key === 'z') {
-        e.preventDefault();
-        handleUndo();
-      }
-      // Redo
-      if (e.ctrlKey && e.key === 'y') {
-        e.preventDefault();
-        handleRedo();
-      }
-      // Save (Ctrl+S)
-      if (e.ctrlKey && e.key === 's') {
-        e.preventDefault();
-        if (currentStep === STEPS.length - 1) {
-          document.querySelector('form')?.requestSubmit();
-        }
-      }
-      // Close modal
-      if (e.key === 'Escape') {
-        if (showQuestionModal) setShowQuestionModal(false);
-        if (showKeyboardHelp) setShowKeyboardHelp(false);
-      }
-      // Navigation - Arrow Right
-      if (e.key === 'ArrowRight' && !showQuestionModal && !isInputElement) {
-        e.preventDefault();
-        nextStep();
-      }
-      // Navigation - Arrow Left
-      if (e.key === 'ArrowLeft' && !showQuestionModal && !isInputElement) {
-        e.preventDefault();
-        prevStep();
-      }
-      // Add Questions (A key) - only on Step 2
-      if ((e.key === 'a' || e.key === 'A') && !isInputElement && currentStep === 2) {
-        e.preventDefault();
-        setShowQuestionModal(true);
-      }
-      // Help (? key)
-      if (e.key === '?') {
-        e.preventDefault();
-        setShowKeyboardHelp(true);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep, showQuestionModal, showKeyboardHelp, canUndo, canRedo]);
-
-  // ==========================================
   // HELPER FUNCTIONS
   // ==========================================
   const t = (hi, en) => language === 'hi' ? hi : en;
 
-  const getSyllabus = (paper) => {
-    return paper === 'paper1' ? syllabusPaper1 : syllabusPaper2History;
-  };
+  // ✅ getSyllabus - Using hook data
+  const getSyllabus = useCallback((paper) => {
+    if (!syllabusData) return { units: [] };
+    const paperData = syllabusData[paper];
+    if (paperData && paperData.units && paperData.units.length > 0) {
+      return paperData;
+    }
+    return { units: [] };
+  }, [syllabusData]);
 
-  const getPaperOptions = () => Object.entries(PAPER_LABELS).map(([key, label]) => ({
-    value: key,
-    label: t(label.hi, label.en)
-  }));
+  // ✅ getPaperOptions
+  const getPaperOptions = useCallback(() => {
+    return Object.entries(PAPER_LABELS).map(([key, label]) => ({
+      value: key,
+      label: t(label.hi, label.en)
+    }));
+  }, [language]);
 
+  // ✅ getUnitOptions - With proper dependencies
   const getUnitOptions = useCallback((selectedPapersList) => {
     const options = [];
-    const papers = selectedPapersList.length > 0 ? selectedPapersList : ['paper1', 'paper2'];
+    const papers = selectedPapersList && selectedPapersList.length > 0 
+      ? selectedPapersList 
+      : ['paper1', 'paper2'];
 
     papers.forEach(paper => {
       const syllabus = getSyllabus(paper);
-      syllabus.units?.forEach(unit => {
+      if (!syllabus?.units) return;
+      
+      syllabus.units.forEach(unit => {
         options.push({
           value: `${paper}_${unit.id}`,
           label: `${paper === 'paper1' ? 'P1' : 'P2'}: ${t(unit.nameHi, unit.name)}`,
-          shortName: t(unit.nameHi, unit.name).replace(/^(UNIT|इकाई)\s*[IVX\d]+:\s*/i, '').trim(),
+          shortName: (t(unit.nameHi, unit.name) || '').replace(/^(UNIT|इकाई)\s*[IVX\d]+:\s*/i, '').trim(),
           unitId: unit.id,
           paper
         });
       });
     });
     return options;
-  }, [language]);
+  }, [language, getSyllabus]);
 
+  // ✅ getChapterOptions
   const getChapterOptions = useCallback((selectedUnitsList, selectedPapersList) => {
     const options = [];
-    const papers = selectedPapersList.length > 0 ? selectedPapersList : ['paper1', 'paper2'];
+    const papers = selectedPapersList && selectedPapersList.length > 0 
+      ? selectedPapersList 
+      : ['paper1', 'paper2'];
 
     papers.forEach(paper => {
       const syllabus = getSyllabus(paper);
-      syllabus.units?.forEach(unit => {
+      if (!syllabus?.units) return;
+      
+      syllabus.units.forEach(unit => {
         const unitKey = `${paper}_${unit.id}`;
-        if (selectedUnitsList.length === 0 || selectedUnitsList.includes(unitKey)) {
-          unit.chapters?.forEach(chapter => {
+        if (!selectedUnitsList || selectedUnitsList.length === 0 || selectedUnitsList.includes(unitKey)) {
+          (unit.chapters || []).forEach(chapter => {
             options.push({
               value: `${paper}_${unit.id}_${chapter.id}`,
               label: t(chapter.nameHi, chapter.name),
               shortName: t(chapter.nameHi, chapter.name),
               unitId: unit.id,
+              chapterId: chapter.id,
               paper
             });
           });
@@ -1469,26 +1440,34 @@ const TestCreate = ({ language = 'hi' }) => {
       });
     });
     return options;
-  }, [language]);
+  }, [language, getSyllabus]);
 
+  // ✅ getTopicOptions
   const getTopicOptions = useCallback((selectedChaptersList, selectedUnitsList, selectedPapersList) => {
     const options = [];
-    const papers = selectedPapersList.length > 0 ? selectedPapersList : ['paper1', 'paper2'];
+    const papers = selectedPapersList && selectedPapersList.length > 0 
+      ? selectedPapersList 
+      : ['paper1', 'paper2'];
 
     papers.forEach(paper => {
       const syllabus = getSyllabus(paper);
-      syllabus.units?.forEach(unit => {
+      if (!syllabus?.units) return;
+      
+      syllabus.units.forEach(unit => {
         const unitKey = `${paper}_${unit.id}`;
-        if (selectedUnitsList.length === 0 || selectedUnitsList.includes(unitKey)) {
-          unit.chapters?.forEach(chapter => {
+        if (!selectedUnitsList || selectedUnitsList.length === 0 || selectedUnitsList.includes(unitKey)) {
+          (unit.chapters || []).forEach(chapter => {
             const chapterKey = `${paper}_${unit.id}_${chapter.id}`;
-            if (selectedChaptersList.length === 0 || selectedChaptersList.includes(chapterKey)) {
-              chapter.topics?.forEach(topic => {
-                options.push({
-                  value: topic.name,
-                  label: t(topic.nameHi, topic.name),
-                  shortName: t(topic.nameHi, topic.name)
-                });
+            if (!selectedChaptersList || selectedChaptersList.length === 0 || selectedChaptersList.includes(chapterKey)) {
+              (chapter.topics || []).forEach(topic => {
+                // Avoid duplicates
+                if (!options.find(o => o.value === topic.name)) {
+                  options.push({
+                    value: topic.name,
+                    label: t(topic.nameHi, topic.name),
+                    shortName: t(topic.nameHi, topic.name)
+                  });
+                }
               });
             }
           });
@@ -1496,20 +1475,26 @@ const TestCreate = ({ language = 'hi' }) => {
       });
     });
     return options;
+  }, [language, getSyllabus]);
+
+  // ✅ getTypeOptions - THIS WAS MISSING!
+  const getTypeOptions = useCallback(() => {
+    return Object.entries(QUESTION_TYPE_LABELS).map(([key, label]) => ({
+      value: key,
+      label: t(label.hi, label.en)
+    }));
   }, [language]);
 
-  const getTypeOptions = () => Object.entries(QUESTION_TYPE_LABELS).map(([key, label]) => ({
-    value: key,
-    label: t(label.hi, label.en)
-  }));
-
+  // ✅ getAllUnits
   const getAllUnits = useCallback(() => {
     const allUnits = [];
     const papers = mainFilters.papers.length > 0 ? mainFilters.papers : ['paper1'];
 
     papers.forEach(paper => {
       const syllabus = getSyllabus(paper);
-      syllabus.units?.forEach(unit => {
+      if (!syllabus?.units) return;
+      
+      syllabus.units.forEach(unit => {
         allUnits.push({
           ...unit,
           paper,
@@ -1520,9 +1505,11 @@ const TestCreate = ({ language = 'hi' }) => {
       });
     });
     return allUnits;
-  }, [mainFilters.papers]);
+  }, [mainFilters.papers, getSyllabus]);
 
-  // Title generation functions (same as before - keeping them concise)
+  // ==========================================
+  // TITLE GENERATION
+  // ==========================================
   const truncStr = (str, maxLen = 25) => str && str.length > maxLen ? str.substring(0, maxLen) + '…' : str || '';
 
   const generateAutoTitle = useCallback(() => {
@@ -1558,8 +1545,70 @@ const TestCreate = ({ language = 'hi' }) => {
   };
 
   // ==========================================
+  // KEYBOARD SHORTCUTS
+  // ==========================================
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const isInputElement = ['INPUT', 'TEXTAREA'].includes(e.target.tagName);
+      
+      if (e.ctrlKey && e.key === 'z') {
+        e.preventDefault();
+        handleUndo();
+      }
+      if (e.ctrlKey && e.key === 'y') {
+        e.preventDefault();
+        handleRedo();
+      }
+      if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        if (currentStep === STEPS.length - 2) {
+          document.querySelector('form')?.requestSubmit();
+        }
+      }
+      if (e.key === 'Escape') {
+        if (showQuestionModal) setShowQuestionModal(false);
+        if (showKeyboardHelp) setShowKeyboardHelp(false);
+      }
+      if (e.key === 'ArrowRight' && !showQuestionModal && !isInputElement) {
+        e.preventDefault();
+        nextStep();
+      }
+      if (e.key === 'ArrowLeft' && !showQuestionModal && !isInputElement) {
+        e.preventDefault();
+        prevStep();
+      }
+      if ((e.key === 'a' || e.key === 'A') && !isInputElement && currentStep === 2) {
+        e.preventDefault();
+        setShowQuestionModal(true);
+      }
+      if (e.key === '?') {
+        e.preventDefault();
+        setShowKeyboardHelp(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentStep, showQuestionModal, showKeyboardHelp, canUndo, canRedo]);
+
+  // ==========================================
   // EFFECTS
   // ==========================================
+  
+  // Refresh syllabus on mount
+  useEffect(() => {
+    console.log('[TestCreate] Refreshing syllabus on mount...');
+    refreshSyllabus();
+  }, []);
+
+  // Log syllabus source for debugging
+  useEffect(() => {
+    console.log('[TestCreate] Syllabus data source:', dataSource);
+    console.log('[TestCreate] Paper1 units:', syllabusData?.paper1?.units?.length || 0);
+    console.log('[TestCreate] Paper2 units:', syllabusData?.paper2?.units?.length || 0);
+  }, [syllabusData, dataSource]);
+
+  // Update form when test type changes
   useEffect(() => {
     const config = TEST_TYPE_CONFIG[formData.testType];
     if (config) {
@@ -1587,10 +1636,12 @@ const TestCreate = ({ language = 'hi' }) => {
     }
   }, [formData.testType]);
 
+  // Generate random test number
   useEffect(() => {
     setTestNumber(Math.floor(Math.random() * 100) + 1);
   }, [formData.testType, mainFilters]);
 
+  // Update questions per unit for random mode
   useEffect(() => {
     if (isRandomMode) {
       const distribution = {};
@@ -1605,6 +1656,7 @@ const TestCreate = ({ language = 'hi' }) => {
     }
   }, [isRandomMode, mainFilters.papers, formData.totalQuestions, getAllUnits]);
 
+  // Sync modal filters when opening
   useEffect(() => {
     if (showQuestionModal) {
       setModalFilters({
@@ -1663,8 +1715,8 @@ const TestCreate = ({ language = 'hi' }) => {
   const loadQuestions = async (filters = modalFilters) => {
     try {
       const apiFilters = { limit: 200, sort: '-createdAt' };
-      if (filters.papers.length > 0) apiFilters.paper = filters.papers;
-      if (filters.types.length > 0) apiFilters.questionType = filters.types;
+      if (filters.papers && filters.papers.length > 0) apiFilters.paper = filters.papers;
+      if (filters.types && filters.types.length > 0) apiFilters.questionType = filters.types;
       if (searchQuery.trim()) apiFilters.search = searchQuery.trim();
       await fetchQuestions(apiFilters);
     } catch (err) {
@@ -1689,7 +1741,6 @@ const TestCreate = ({ language = 'hi' }) => {
     pushToHistory(newSelection);
   };
 
-  // Select filtered questions from modal (all filtered, not just visible)
   const selectAllFilteredQuestions = (filteredQuestionsFromModal = []) => {
     const newQuestions = filteredQuestionsFromModal.filter(q => !selectedQuestions.some(sq => sq._id === q._id));
     const newSelection = [...selectedQuestions, ...newQuestions];
@@ -1752,86 +1803,88 @@ const TestCreate = ({ language = 'hi' }) => {
       setCurrentStep(stepIndex);
     }
   };
-// ==========================================
-// FORM VALIDATION
-// ==========================================
-const validateForm = () => {
-  const newErrors = {};
-  
-  if (!isRandomMode && selectedQuestions.length === 0) {
-    newErrors.questions = t('कम से कम एक प्रश्न चुनें', 'Select at least one question');
-  }
-  
-  if (formData.duration < 1) {
-    newErrors.duration = t('अवधि 1 से अधिक होनी चाहिए', 'Duration must be greater than 0');
-  }
-  
-  if (isRandomMode && getTotalDistributed() === 0) {
-    newErrors.distribution = t('कुल प्रश्न 0 नहीं हो सकते', 'Total questions cannot be 0');
-  }
-  
-  setErrors(newErrors);
-  return Object.keys(newErrors).length === 0;
-};
 
-// ==========================================
-// FORM SUBMISSION
-// ==========================================
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  
-  if (!validateForm()) {
-    toast.error(t('कृपया सभी त्रुटियां ठीक करें', 'Please fix all errors'));
-    return;
-  }
-
-  try {
-    const paperValue = mainFilters.papers.length === 2 
-      ? 'combined' 
-      : mainFilters.papers[0] || 'paper1';
+  // ==========================================
+  // FORM VALIDATION
+  // ==========================================
+  const validateForm = () => {
+    const newErrors = {};
     
-    const finalTitle = formData.title.trim() || generateAutoTitle();
-
-    // Convert filter keys to actual names
-    const unitNames = getUnitNamesFromKeys(mainFilters.units, language);
-    const chapterNames = getChapterNamesFromKeys(mainFilters.chapters, language);
-    const topicNames = getTopicNamesFromKeys(mainFilters.topics);
-
-    let response;
+    if (!isRandomMode && selectedQuestions.length === 0) {
+      newErrors.questions = t('कम से कम एक प्रश्न चुनें', 'Select at least one question');
+    }
     
-    if (isRandomMode) {
-      response = await generateRandomTest({
-        ...formData,
-        paper: paperValue,
-        title: finalTitle,
-        unit: unitNames,
-        chapter: chapterNames,
-        topic: topicNames,
-        questionsPerUnit,
-        totalQuestions: getTotalDistributed()
-      });
-    } else {
-      response = await createTest({
-        ...formData,
-        paper: paperValue,
-        title: finalTitle,
-        unit: unitNames,
-        chapter: chapterNames,
-        topic: topicNames,
-        questions: selectedQuestions.map(q => q._id),
-        totalQuestions: selectedQuestions.length
-      });
+    if (formData.duration < 1) {
+      newErrors.duration = t('अवधि 1 से अधिक होनी चाहिए', 'Duration must be greater than 0');
+    }
+    
+    if (isRandomMode && getTotalDistributed() === 0) {
+      newErrors.distribution = t('कुल प्रश्न 0 नहीं हो सकते', 'Total questions cannot be 0');
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // ==========================================
+  // FORM SUBMISSION
+  // ==========================================
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error(t('कृपया सभी त्रुटियां ठीक करें', 'Please fix all errors'));
+      return;
     }
 
-    toast.success(t('परीक्षा सफलतापूर्वक बनाई गई!', 'Test created successfully!'));
-    setCreatedTest(response.data || response);
-    setCurrentStep(STEPS.length - 1);
-    
-  } catch (err) {
-    console.error('Test creation error:', err);
-    toast.error(err.message || t('परीक्षा बनाने में त्रुटि', 'Error creating test'));
-  }
-};
+    try {
+      const paperValue = mainFilters.papers.length === 2 
+        ? 'combined' 
+        : mainFilters.papers[0] || 'paper1';
+      
+      const finalTitle = formData.title.trim() || generateAutoTitle();
+
+      // Convert filter keys to actual names
+      const unitNames = getUnitNamesFromKeys(mainFilters.units, language);
+      const chapterNames = getChapterNamesFromKeys(mainFilters.chapters, language);
+      const topicNames = getTopicNamesFromKeys(mainFilters.topics);
+
+      let response;
+      
+      if (isRandomMode) {
+        response = await generateRandomTest({
+          ...formData,
+          paper: paperValue,
+          title: finalTitle,
+          unit: unitNames,
+          chapter: chapterNames,
+          topic: topicNames,
+          questionsPerUnit,
+          totalQuestions: getTotalDistributed()
+        });
+      } else {
+        response = await createTest({
+          ...formData,
+          paper: paperValue,
+          title: finalTitle,
+          unit: unitNames,
+          chapter: chapterNames,
+          topic: topicNames,
+          questions: selectedQuestions.map(q => q._id),
+          totalQuestions: selectedQuestions.length
+        });
+      }
+
+      toast.success(t('परीक्षा सफलतापूर्वक बनाई गई!', 'Test created successfully!'));
+      setCreatedTest(response.data || response);
+      setCurrentStep(STEPS.length - 1);
+      
+    } catch (err) {
+      console.error('Test creation error:', err);
+      toast.error(err.message || t('परीक्षा बनाने में त्रुटि', 'Error creating test'));
+    }
+  };
+
   // ==========================================
   // QUICK TEMPLATES
   // ==========================================
@@ -1846,6 +1899,11 @@ const handleSubmit = async (e) => {
     setFormData(prev => ({ ...prev, ...template.config }));
     toast.success(t(`${template.nameHi} लागू`, `${template.name} applied`));
   };
+
+  // ==========================================
+  // Continue with renderStepContent()...
+  // (The rest of your existing code)
+  // ==========================================
 
   // ==========================================
   // RENDER STEP CONTENT
