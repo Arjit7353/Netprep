@@ -81,6 +81,7 @@ app.use('/api/tests', require('./routes/testRoutes'));
 app.use('/api/attempts', require('./routes/attemptRoutes'));
 app.use('/api/translate', require('./routes/translateRoutes'));
 app.use('/api/syllabus', require('./routes/syllabusRoutes'));
+app.use('/api/syllabus', require('./routes/syllabusRoutes'));
 
 // 404 handler
 app.use(notFound);
