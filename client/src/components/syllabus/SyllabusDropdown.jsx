@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
-  ChevronRight, ChevronDown, X, Check, Search,
-  CheckSquare, Square, Layers, BookOpen, FileText, Tag
+  ChevronRight, ChevronDown, X, Search,
+  CheckSquare, Square, Layers, BookOpen, FileText, Tag,
+  RefreshCw
 } from 'lucide-react';
-import syllabusPaper1 from '../../data/syllabusPaper1';
-import syllabusPaper2History from '../../data/syllabusPaper2History';
+import { useSyllabus } from '../../hooks/useSyllabus';
 
 // ── Searchable Multi-Checkbox Dropdown ──────────────────────────
 const MultiSelectDropdown = ({
   label, labelHi, language, options, selected, onChange,
   disabled, placeholder, placeholderHi, icon: Icon,
-  color = 'primary'
+  color = 'primary', loading = false
 }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -29,8 +29,8 @@ const MultiSelectDropdown = ({
     const s = search.toLowerCase();
     return options.filter(
       (o) =>
-        o.label.toLowerCase().includes(s) ||
-        o.labelHi.toLowerCase().includes(s)
+        o.label?.toLowerCase().includes(s) ||
+        o.labelHi?.toLowerCase().includes(s)
     );
   }, [options, search]);
 
@@ -87,12 +87,12 @@ const MultiSelectDropdown = ({
 
       <button
         type="button"
-        disabled={disabled}
-        onClick={() => !disabled && setOpen(!open)}
+        disabled={disabled || loading}
+        onClick={() => !disabled && !loading && setOpen(!open)}
         className={`
           w-full px-3 py-2 text-left text-sm border rounded-lg transition-all
           flex items-center justify-between gap-2
-          ${disabled
+          ${disabled || loading
             ? 'bg-gray-100 dark:bg-secondary-800 cursor-not-allowed border-gray-200 dark:border-secondary-700'
             : open
               ? `border-2 ${c.border} ring-1 ${c.ring} bg-white dark:bg-secondary-800`
@@ -101,10 +101,10 @@ const MultiSelectDropdown = ({
         `}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          {Icon && <Icon className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+          {Icon && <Icon className={`w-4 h-4 text-gray-400 flex-shrink-0 ${loading ? 'animate-spin' : ''}`} />}
           {selected.length === 0 ? (
             <span className="text-gray-400 dark:text-secondary-500 truncate">
-              {language === 'hi' ? placeholderHi : placeholder}
+              {loading ? (language === 'hi' ? 'लोड हो रहा है...' : 'Loading...') : (language === 'hi' ? placeholderHi : placeholder)}
             </span>
           ) : (
             <span className="text-gray-700 dark:text-secondary-200 truncate">
@@ -118,7 +118,7 @@ const MultiSelectDropdown = ({
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {open && !disabled && (
+      {open && !disabled && !loading && (
         <div className="absolute z-50 mt-1 w-full bg-white dark:bg-secondary-800 border border-gray-200 dark:border-secondary-700 rounded-lg shadow-dropdown overflow-hidden animate-scale-in">
           {/* Search */}
           <div className="p-2 border-b border-gray-100 dark:border-secondary-700">
@@ -248,6 +248,16 @@ const SyllabusDropdown = ({
   disabled = false,
   multiSelect = false,
 }) => {
+  // Use the syllabus hook to get dynamic data
+  const { 
+    syllabus, 
+    loading: syllabusLoading, 
+    getUnits, 
+    getChapters, 
+    getTopics,
+    fetchSyllabus 
+  } = useSyllabus();
+
   // ── Single-select state ──
   const [selectedPaper, setSelectedPaper] = useState(value.paper || '');
   const [selectedUnit, setSelectedUnit] = useState(value.unit || '');
@@ -273,64 +283,78 @@ const SyllabusDropdown = ({
     }
   }, [value.paper, value.unit, value.chapter, value.topic, value.units, value.chapters, value.topics, multiSelect]);
 
+  // Get current syllabus based on selected paper
   const currentSyllabus = useMemo(() => {
-    if (selectedPaper === 'paper1') return syllabusPaper1;
-    if (selectedPaper === 'paper2') return syllabusPaper2History;
+    if (selectedPaper === 'paper1') return syllabus.paper1;
+    if (selectedPaper === 'paper2') return syllabus.paper2;
     return null;
-  }, [selectedPaper]);
+  }, [selectedPaper, syllabus]);
 
   const paperOptions = [
     { value: 'paper1', label: 'Paper 1 - General', labelHi: 'पेपर 1 - सामान्य' },
     { value: 'paper2', label: 'Paper 2 - History', labelHi: 'पेपर 2 - इतिहास' },
   ];
 
+  // Generate unit options from dynamic syllabus data
   const unitOptions = useMemo(() => {
-    if (!currentSyllabus?.units) return [];
-    return currentSyllabus.units.map((u) => ({
-      value: u.name, label: u.name, labelHi: u.nameHi,
+    if (!selectedPaper) return [];
+    const units = getUnits(selectedPaper);
+    return units.map((u) => ({
+      value: u.name,
+      label: u.name,
+      labelHi: u.nameHi || u.name,
+      id: u.id
     }));
-  }, [currentSyllabus]);
+  }, [selectedPaper, getUnits]);
 
+  // Generate chapter options
   const chapterOptions = useMemo(() => {
-    if (!currentSyllabus?.units) return [];
+    if (!selectedPaper) return [];
     const activeUnits = multiSelect ? selectedUnits : (selectedUnit ? [selectedUnit] : []);
     if (activeUnits.length === 0) return [];
+    
     const chapters = [];
     activeUnits.forEach((uName) => {
-      const unit = currentSyllabus.units.find((u) => u.name === uName);
-      if (unit?.chapters) {
-        unit.chapters.forEach((ch) => {
-          if (!chapters.find((c) => c.value === ch.name)) {
-            chapters.push({ value: ch.name, label: ch.name, labelHi: ch.nameHi });
-          }
-        });
-      }
-    });
-    return chapters;
-  }, [currentSyllabus, multiSelect, selectedUnit, selectedUnits]);
-
-  const topicOptions = useMemo(() => {
-    if (!currentSyllabus?.units) return [];
-    const activeUnits = multiSelect ? selectedUnits : (selectedUnit ? [selectedUnit] : []);
-    const activeChapters = multiSelect ? selectedChapters : (selectedChapter ? [selectedChapter] : []);
-    if (activeUnits.length === 0 || activeChapters.length === 0) return [];
-    const topics = [];
-    activeUnits.forEach((uName) => {
-      const unit = currentSyllabus.units.find((u) => u.name === uName);
-      if (!unit?.chapters) return;
-      activeChapters.forEach((cName) => {
-        const chapter = unit.chapters.find((c) => c.name === cName);
-        if (chapter?.topics) {
-          chapter.topics.forEach((t) => {
-            if (!topics.find((x) => x.value === t.name)) {
-              topics.push({ value: t.name, label: t.name, labelHi: t.nameHi });
-            }
+      const unitChapters = getChapters(selectedPaper, uName);
+      unitChapters.forEach((ch) => {
+        if (!chapters.find((c) => c.value === ch.name)) {
+          chapters.push({ 
+            value: ch.name, 
+            label: ch.name, 
+            labelHi: ch.nameHi || ch.name,
+            id: ch.id
           });
         }
       });
     });
+    return chapters;
+  }, [selectedPaper, multiSelect, selectedUnit, selectedUnits, getChapters]);
+
+  // Generate topic options
+  const topicOptions = useMemo(() => {
+    if (!selectedPaper) return [];
+    const activeUnits = multiSelect ? selectedUnits : (selectedUnit ? [selectedUnit] : []);
+    const activeChapters = multiSelect ? selectedChapters : (selectedChapter ? [selectedChapter] : []);
+    if (activeUnits.length === 0 || activeChapters.length === 0) return [];
+    
+    const topics = [];
+    activeUnits.forEach((uName) => {
+      activeChapters.forEach((cName) => {
+        const chapterTopics = getTopics(selectedPaper, uName, cName);
+        chapterTopics.forEach((t) => {
+          if (!topics.find((x) => x.value === t.name)) {
+            topics.push({ 
+              value: t.name, 
+              label: t.name, 
+              labelHi: t.nameHi || t.name,
+              id: t.id
+            });
+          }
+        });
+      });
+    });
     return topics;
-  }, [currentSyllabus, multiSelect, selectedUnit, selectedUnits, selectedChapter, selectedChapters]);
+  }, [selectedPaper, multiSelect, selectedUnit, selectedUnits, selectedChapter, selectedChapters, getTopics]);
 
   // ── EMIT helpers ──
   const emitSingle = useCallback((paper, unit, chapter, topic) => {
@@ -341,7 +365,6 @@ const SyllabusDropdown = ({
     onChange({
       paper,
       units, chapters, topics,
-      // Also provide first item as "primary" for backward compat
       unit: units[0] || '',
       chapter: chapters[0] || '',
       topic: topics[0] || '',
@@ -361,29 +384,40 @@ const SyllabusDropdown = ({
   };
 
   // ── Handlers: single select ──
-  const handleUnitChange = (unit) => { setSelectedUnit(unit); setSelectedChapter(''); setSelectedTopic(''); emitSingle(selectedPaper, unit, '', ''); };
-  const handleChapterChange = (ch) => { setSelectedChapter(ch); setSelectedTopic(''); emitSingle(selectedPaper, selectedUnit, ch, ''); };
-  const handleTopicChange = (t) => { setSelectedTopic(t); emitSingle(selectedPaper, selectedUnit, selectedChapter, t); };
+  const handleUnitChange = (unit) => { 
+    setSelectedUnit(unit); 
+    setSelectedChapter(''); 
+    setSelectedTopic(''); 
+    emitSingle(selectedPaper, unit, '', ''); 
+  };
+  
+  const handleChapterChange = (ch) => { 
+    setSelectedChapter(ch); 
+    setSelectedTopic(''); 
+    emitSingle(selectedPaper, selectedUnit, ch, ''); 
+  };
+  
+  const handleTopicChange = (t) => { 
+    setSelectedTopic(t); 
+    emitSingle(selectedPaper, selectedUnit, selectedChapter, t); 
+  };
 
   // ── Handlers: multi select ──
   const handleUnitsChange = (units) => {
     setSelectedUnits(units);
-    // Remove chapters/topics that no longer belong to selected units
     const validChapterNames = [];
     units.forEach((uName) => {
-      const unit = currentSyllabus?.units?.find((u) => u.name === uName);
-      unit?.chapters?.forEach((ch) => validChapterNames.push(ch.name));
+      const unitChapters = getChapters(selectedPaper, uName);
+      unitChapters.forEach((ch) => validChapterNames.push(ch.name));
     });
     const newChapters = selectedChapters.filter((c) => validChapterNames.includes(c));
     setSelectedChapters(newChapters);
-    // Similarly filter topics
+    
     const validTopicNames = [];
     units.forEach((uName) => {
-      const unit = currentSyllabus?.units?.find((u) => u.name === uName);
-      unit?.chapters?.forEach((ch) => {
-        if (newChapters.length === 0 || newChapters.includes(ch.name)) {
-          ch.topics?.forEach((t) => validTopicNames.push(t.name));
-        }
+      newChapters.forEach((cName) => {
+        const chapterTopics = getTopics(selectedPaper, uName, cName);
+        chapterTopics.forEach((t) => validTopicNames.push(t.name));
       });
     });
     const newTopics = selectedTopics.filter((t) => validTopicNames.includes(t));
@@ -395,11 +429,9 @@ const SyllabusDropdown = ({
     setSelectedChapters(chapters);
     const validTopicNames = [];
     selectedUnits.forEach((uName) => {
-      const unit = currentSyllabus?.units?.find((u) => u.name === uName);
-      unit?.chapters?.forEach((ch) => {
-        if (chapters.includes(ch.name)) {
-          ch.topics?.forEach((t) => validTopicNames.push(t.name));
-        }
+      chapters.forEach((cName) => {
+        const chapterTopics = getTopics(selectedPaper, uName, cName);
+        chapterTopics.forEach((t) => validTopicNames.push(t.name));
       });
     });
     const newTopics = selectedTopics.filter((t) => validTopicNames.includes(t));
@@ -427,16 +459,16 @@ const SyllabusDropdown = ({
       <select
         value={val}
         onChange={(e) => oc(e.target.value)}
-        disabled={disabled || sd}
+        disabled={disabled || sd || syllabusLoading}
         className="w-full px-3 py-2 border border-gray-300 dark:border-secondary-600 rounded-lg
           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
           disabled:bg-gray-100 dark:disabled:bg-secondary-800 disabled:cursor-not-allowed
           text-sm bg-white dark:bg-secondary-800 dark:text-secondary-200"
       >
-        <option value="">{language === 'hi' ? phHi : ph}</option>
+        <option value="">{syllabusLoading ? (language === 'hi' ? 'लोड हो रहा है...' : 'Loading...') : (language === 'hi' ? phHi : ph)}</option>
         {opts.map((o) => (
           <option key={o.value} value={o.value}>
-            {language === 'hi' ? o.labelHi : o.label}
+            {language === 'hi' ? (o.labelHi || o.label) : o.label}
           </option>
         ))}
       </select>
@@ -494,6 +526,14 @@ const SyllabusDropdown = ({
   // ──────────────────────────────────────────────────────────────
   return (
     <div className="space-y-3">
+      {/* Refresh Button */}
+      {syllabusLoading && (
+        <div className="flex items-center gap-2 text-sm text-primary-600 dark:text-primary-400">
+          <RefreshCw className="w-4 h-4 animate-spin" />
+          <span>{language === 'hi' ? 'पाठ्यक्रम लोड हो रहा है...' : 'Loading syllabus...'}</span>
+        </div>
+      )}
+
       {/* Breadcrumb (single mode only) */}
       {renderBreadcrumb()}
 
@@ -538,7 +578,7 @@ const SyllabusDropdown = ({
               options={unitOptions} selected={selectedUnits}
               onChange={handleUnitsChange} disabled={!selectedPaper}
               placeholder="Select Units" placeholderHi="इकाइयां चुनें"
-              icon={Layers} color="primary"
+              icon={Layers} color="primary" loading={syllabusLoading}
             />
           ) : renderSingleSelect({
             label: 'Unit', labelHi: 'इकाई',
@@ -557,7 +597,7 @@ const SyllabusDropdown = ({
               onChange={handleChaptersChange}
               disabled={multiSelect ? selectedUnits.length === 0 : !selectedUnit}
               placeholder="Select Chapters" placeholderHi="अध्याय चुनें"
-              icon={BookOpen} color="emerald"
+              icon={BookOpen} color="emerald" loading={syllabusLoading}
             />
           ) : renderSingleSelect({
             label: 'Chapter', labelHi: 'अध्याय',
@@ -576,7 +616,7 @@ const SyllabusDropdown = ({
               onChange={handleTopicsChange}
               disabled={multiSelect ? selectedChapters.length === 0 : !selectedChapter}
               placeholder="Select Topics" placeholderHi="विषय चुनें"
-              icon={Tag} color="violet"
+              icon={Tag} color="violet" loading={syllabusLoading}
             />
           ) : renderSingleSelect({
             label: 'Topic', labelHi: 'विषय',

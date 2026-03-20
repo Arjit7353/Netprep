@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, memo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -11,10 +11,12 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  GraduationCap
+  GraduationCap,
+  BookOpen,
+  Database
 } from 'lucide-react';
 
-const Sidebar = ({ isOpen, onToggle, onClose, language = 'en', isMobile = false }) => {
+const Sidebar = memo(({ isOpen, onToggle, onClose, language = 'en', isMobile = false }) => {
   const location = useLocation();
 
   const menuItems = [
@@ -63,6 +65,12 @@ const Sidebar = ({ isOpen, onToggle, onClose, language = 'en', isMobile = false 
       type: 'divider'
     },
     {
+      id: 'syllabus',
+      label: { en: 'Manage Syllabus', hi: 'पाठ्यक्रम प्रबंधन' },
+      icon: Database,
+      path: '/syllabus'
+    },
+    {
       id: 'settings',
       label: { en: 'Settings', hi: 'सेटिंग्स' },
       icon: Settings,
@@ -70,19 +78,43 @@ const Sidebar = ({ isOpen, onToggle, onClose, language = 'en', isMobile = false 
     }
   ];
 
-  const isActiveRoute = (path) => {
+  // Memoized active route checker
+  const isActiveRoute = useCallback((path) => {
     if (path === '/') {
       return location.pathname === '/';
     }
-    return location.pathname.startsWith(path);
-  };
-
-  // Handle nav click on mobile
-  const handleNavClick = () => {
-    if (isMobile && onClose) {
-      onClose();
+    // Exact match for specific routes to avoid false positives
+    if (path === '/tests') {
+      return location.pathname === '/tests';
     }
-  };
+    if (path === '/tests/create') {
+      return location.pathname === '/tests/create' || location.pathname.startsWith('/tests/edit');
+    }
+    if (path === '/results') {
+      return location.pathname === '/results' || location.pathname.startsWith('/results/');
+    }
+    return location.pathname.startsWith(path);
+  }, [location.pathname]);
+
+  // Handle nav click on mobile - only close sidebar, don't affect language
+  const handleNavClick = useCallback((e) => {
+    // Prevent any default behavior that might cause issues
+    // Don't stop propagation as it might affect NavLink
+    
+    // Only close sidebar on mobile
+    if (isMobile && onClose) {
+      // Use setTimeout to ensure navigation happens first
+      setTimeout(() => {
+        onClose();
+      }, 50);
+    }
+  }, [isMobile, onClose]);
+
+  // Get label based on current language - memoize to prevent unnecessary re-renders
+  const getLabel = useCallback((item) => {
+    if (!item.label) return '';
+    return language === 'hi' ? item.label.hi : item.label.en;
+  }, [language]);
 
   return (
     <aside 
@@ -98,8 +130,12 @@ const Sidebar = ({ isOpen, onToggle, onClose, language = 'en', isMobile = false 
     >
       {/* Logo Section */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-secondary-700">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center flex-shrink-0">
+        <NavLink 
+          to="/" 
+          className="flex items-center gap-3"
+          onClick={handleNavClick}
+        >
+          <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
           {(isOpen || isMobile) && (
@@ -108,13 +144,14 @@ const Sidebar = ({ isOpen, onToggle, onClose, language = 'en', isMobile = false 
               <span className="text-xs text-gray-500 dark:text-secondary-400">UGC NET Mock Test</span>
             </div>
           )}
-        </div>
+        </NavLink>
         
         {/* Close Button for Mobile */}
         {isMobile && isOpen && (
           <button
             onClick={onClose}
             className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-secondary-700 transition-colors lg:hidden"
+            aria-label="Close sidebar"
           >
             <X className="w-5 h-5 text-gray-500 dark:text-secondary-400" />
           </button>
@@ -125,6 +162,7 @@ const Sidebar = ({ isOpen, onToggle, onClose, language = 'en', isMobile = false 
           <button
             onClick={onToggle}
             className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-secondary-700 transition-colors"
+            aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
           >
             {isOpen ? (
               <ChevronLeft className="w-5 h-5 text-gray-500 dark:text-secondary-400" />
@@ -136,7 +174,7 @@ const Sidebar = ({ isOpen, onToggle, onClose, language = 'en', isMobile = false 
       </div>
 
       {/* Navigation */}
-      <nav className="p-3 space-y-1 overflow-y-auto h-[calc(100vh-8rem)]">
+      <nav className="p-3 space-y-1 overflow-y-auto h-[calc(100vh-8rem)] scrollbar-thin">
         {menuItems.map((item) => {
           if (item.type === 'divider') {
             return (
@@ -149,7 +187,7 @@ const Sidebar = ({ isOpen, onToggle, onClose, language = 'en', isMobile = false 
 
           const Icon = item.icon;
           const isActive = isActiveRoute(item.path);
-          const label = language === 'hi' ? item.label.hi : item.label.en;
+          const label = getLabel(item);
 
           return (
             <NavLink
@@ -169,8 +207,11 @@ const Sidebar = ({ isOpen, onToggle, onClose, language = 'en', isMobile = false 
             >
               <Icon 
                 className={`
-                  w-5 h-5 flex-shrink-0
-                  ${isActive ? 'text-primary-600 dark:text-primary-400' : 'text-gray-500 dark:text-secondary-500 group-hover:text-gray-700 dark:group-hover:text-secondary-200'}
+                  w-5 h-5 flex-shrink-0 transition-colors duration-200
+                  ${isActive 
+                    ? 'text-primary-600 dark:text-primary-400' 
+                    : 'text-gray-500 dark:text-secondary-500 group-hover:text-gray-700 dark:group-hover:text-secondary-200'
+                  }
                 `} 
               />
               {(isOpen || isMobile) && (
@@ -190,9 +231,9 @@ const Sidebar = ({ isOpen, onToggle, onClose, language = 'en', isMobile = false 
 
       {/* Bottom Section */}
       {(isOpen || isMobile) && (
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-secondary-700 bg-gray-50 dark:bg-secondary-700">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-secondary-700 bg-gray-50 dark:bg-secondary-900/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900 dark:to-primary-800 flex items-center justify-center flex-shrink-0">
               <span className="text-primary-700 dark:text-primary-300 font-bold text-sm">NP</span>
             </div>
             <div className="flex-1 min-w-0">
@@ -208,6 +249,9 @@ const Sidebar = ({ isOpen, onToggle, onClose, language = 'en', isMobile = false 
       )}
     </aside>
   );
-};
+});
+
+// Display name for debugging
+Sidebar.displayName = 'Sidebar';
 
 export default Sidebar;

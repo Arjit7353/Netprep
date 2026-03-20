@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-// Subtopic Schema
+// Subtopic Schema - Allow both string and object
 const subtopicSchema = new mongoose.Schema({
   name: { type: String, required: true },
   nameHi: { type: String, default: '' }
@@ -11,7 +11,7 @@ const topicSchema = new mongoose.Schema({
   id: { type: String, required: true },
   name: { type: String, required: true },
   nameHi: { type: String, default: '' },
-  subtopics: [subtopicSchema],
+  subtopics: { type: mongoose.Schema.Types.Mixed, default: [] }, // Changed to Mixed to handle both strings and objects
   order: { type: Number, default: 0 }
 }, { _id: false });
 
@@ -54,15 +54,28 @@ const syllabusSchema = new mongoose.Schema({
 
 // Indexes for faster queries
 syllabusSchema.index({ paper: 1 });
-syllabusSchema.index({ 'units.id': 1 });
-syllabusSchema.index({ 'units.chapters.id': 1 });
-syllabusSchema.index({ 'units.chapters.topics.id': 1 });
 syllabusSchema.index({ isActive: 1 });
 
-// Pre-save hook to update version
+// Pre-save hook to normalize subtopics and update version
 syllabusSchema.pre('save', function(next) {
   if (this.isModified('units')) {
     this.version += 1;
+    
+    // Normalize subtopics - convert strings to objects
+    this.units.forEach(unit => {
+      (unit.chapters || []).forEach(chapter => {
+        (chapter.topics || []).forEach(topic => {
+          if (Array.isArray(topic.subtopics)) {
+            topic.subtopics = topic.subtopics.map(st => {
+              if (typeof st === 'string') {
+                return { name: st, nameHi: '' };
+              }
+              return st;
+            });
+          }
+        });
+      });
+    });
   }
   next();
 });
@@ -71,43 +84,31 @@ syllabusSchema.pre('save', function(next) {
 syllabusSchema.statics.getWithFallback = async function(paper, fallbackData) {
   let syllabus = await this.findOne({ paper, isActive: true });
   if (!syllabus && fallbackData) {
-    // Return fallback data structure
     return fallbackData;
   }
   return syllabus;
 };
 
-// Instance method to add unit
-syllabusSchema.methods.addUnit = function(unitData) {
-  const maxOrder = this.units.length > 0 
-    ? Math.max(...this.units.map(u => u.order || 0)) 
-    : 0;
+// Static method to normalize subtopics in data
+syllabusSchema.statics.normalizeSubtopics = function(data) {
+  if (!data || !data.units) return data;
   
-  this.units.push({
-    ...unitData,
-    order: unitData.order || maxOrder + 1,
-    chapters: unitData.chapters || []
+  data.units.forEach(unit => {
+    (unit.chapters || []).forEach(chapter => {
+      (chapter.topics || []).forEach(topic => {
+        if (Array.isArray(topic.subtopics)) {
+          topic.subtopics = topic.subtopics.map(st => {
+            if (typeof st === 'string') {
+              return { name: st, nameHi: '' };
+            }
+            return st;
+          });
+        }
+      });
+    });
   });
-  return this;
-};
-
-// Instance method to find unit
-syllabusSchema.methods.findUnit = function(unitId) {
-  return this.units.find(u => u.id === unitId);
-};
-
-// Instance method to find chapter
-syllabusSchema.methods.findChapter = function(unitId, chapterId) {
-  const unit = this.findUnit(unitId);
-  if (!unit) return null;
-  return unit.chapters.find(c => c.id === chapterId);
-};
-
-// Instance method to find topic
-syllabusSchema.methods.findTopic = function(unitId, chapterId, topicId) {
-  const chapter = this.findChapter(unitId, chapterId);
-  if (!chapter) return null;
-  return chapter.topics.find(t => t.id === topicId);
+  
+  return data;
 };
 
 module.exports = mongoose.model('Syllabus', syllabusSchema);

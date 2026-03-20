@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { ToastProvider } from './components/common/Toast';
 import { ThemeProvider } from './context/ThemeContext';
@@ -17,6 +17,7 @@ import TakeTest from './pages/TakeTest';
 import Results from './pages/Results';
 import ResultDetail from './pages/ResultDetail';
 import SolutionPage from './pages/SolutionPage';
+import ManageSyllabus from './pages/ManageSyllabus';
 
 // ─────────────────────────────────────────────
 //  ADVANCED FULL-SCREEN LOADER
@@ -53,7 +54,6 @@ const AdvancedLoader = ({ serverReady }) => {
     if (serverReady) return;
     const iv = setInterval(() => {
       const t = (Date.now() - startRef.current) / 1000;
-      // Logarithmic curve: fast start, slow end, max 95%
       const p = Math.min(95, Math.round(95 * (1 - Math.exp(-t / 3))));
       let s;
       if (p < 25) s = 0;
@@ -77,7 +77,7 @@ const AdvancedLoader = ({ serverReady }) => {
 
   if (!visible) return null;
 
-  const C = 2 * Math.PI * 42; // SVG circle circumference
+  const C = 2 * Math.PI * 42;
   const offset = C * (1 - progress / 100);
 
   return (
@@ -96,7 +96,6 @@ const AdvancedLoader = ({ serverReady }) => {
           ${serverReady ? 'opacity-0 scale-[1.03] pointer-events-none' : 'opacity-100 scale-100'}`}
         style={{ background: 'linear-gradient(135deg, #020617 0%, #0f172a 45%, #1e1b4b 100%)' }}
       >
-        {/* Animated grid background */}
         <div
           className="absolute inset-0 opacity-[0.025]"
           style={{
@@ -107,7 +106,6 @@ const AdvancedLoader = ({ serverReady }) => {
           }}
         />
 
-        {/* Floating particles */}
         {[0, 1, 2, 3, 4].map(i => (
           <div
             key={i}
@@ -122,8 +120,6 @@ const AdvancedLoader = ({ serverReady }) => {
         ))}
 
         <div className="relative text-center px-5 max-w-sm w-full">
-
-          {/* ── Circular SVG Progress ── */}
           <div
             className="relative inline-block mb-7"
             style={{ animation: 'ldr-glow 2.5s ease-in-out infinite' }}
@@ -159,12 +155,10 @@ const AdvancedLoader = ({ serverReady }) => {
             </div>
           </div>
 
-          {/* ── Status Text ── */}
           <p className="text-slate-300 text-sm font-medium mb-5 h-5">
             {serverReady ? 'Ready!' : `${messages[activeStep]}${dots}`}
           </p>
 
-          {/* ── Progress Bar ── */}
           <div className="flex items-center gap-3 mb-7">
             <div className="flex-1 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
               <div
@@ -194,7 +188,6 @@ const AdvancedLoader = ({ serverReady }) => {
             </span>
           </div>
 
-          {/* ── Step Indicators ── */}
           <div className="flex justify-center gap-3 mb-7">
             {steps.map(({ Icon, label }, i) => {
               const done = progress >= 100 || i < activeStep;
@@ -230,7 +223,6 @@ const AdvancedLoader = ({ serverReady }) => {
             })}
           </div>
 
-          {/* ── Info Text ── */}
           {!serverReady && (
             <p className="text-slate-500 text-[11px] leading-relaxed px-3 py-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
               First visit may take a few seconds while the server starts up
@@ -258,12 +250,23 @@ const NotFound = () => (
 );
 
 // ─────────────────────────────────────────────
+//  LANGUAGE STORAGE KEY
+// ─────────────────────────────────────────────
+const LANGUAGE_STORAGE_KEY = 'netprep-language';
+
+// ─────────────────────────────────────────────
 //  MAIN APP
 // ─────────────────────────────────────────────
 function App() {
-  const [language, setLanguage] = useState(() => {
+  // Initialize language from localStorage with proper error handling
+  const [language, setLanguageState] = useState(() => {
     try {
-      return localStorage.getItem('netprep-language') || 'en';
+      const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+      // Validate stored value
+      if (stored === 'hi' || stored === 'en') {
+        return stored;
+      }
+      return 'en'; // Default to English
     } catch {
       return 'en';
     }
@@ -273,6 +276,24 @@ function App() {
   const [showLoader, setShowLoader] = useState(true);
   const [minTimePassed, setMinTimePassed] = useState(false);
   const checkDone = useRef(false);
+
+  // Memoized setLanguage to prevent unnecessary re-renders
+  const setLanguage = useCallback((newLang) => {
+    // Validate input
+    if (newLang !== 'hi' && newLang !== 'en') {
+      console.warn('Invalid language:', newLang);
+      return;
+    }
+    
+    setLanguageState(newLang);
+    
+    // Save to localStorage
+    try {
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, newLang);
+    } catch (e) {
+      console.warn('Failed to save language to localStorage:', e);
+    }
+  }, []);
 
   // ── Minimum 2 sec loader display ──
   useEffect(() => {
@@ -324,11 +345,28 @@ function App() {
     }
   }, [serverReady, minTimePassed]);
 
+  // ── Sync language to localStorage whenever it changes ──
   useEffect(() => {
     try {
-      localStorage.setItem('netprep-language', language);
-    } catch {}
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    } catch (e) {
+      // Ignore storage errors
+    }
   }, [language]);
+
+  // ── Listen for storage changes from other tabs ──
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === LANGUAGE_STORAGE_KEY && e.newValue) {
+        if (e.newValue === 'hi' || e.newValue === 'en') {
+          setLanguageState(e.newValue);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   return (
     <ThemeProvider>
@@ -338,14 +376,15 @@ function App() {
             <AdvancedLoader serverReady={serverReady && minTimePassed} />
           )}
           <Routes>
-            <Route path="/results/:attemptId" element={<Results />} />
-            <Route path="/results" element={<Results />} />
+            {/* Dashboard */}
             <Route
               path="/"
               element={
                 <Dashboard language={language} setLanguage={setLanguage} />
               }
             />
+            
+            {/* Question Bank */}
             <Route
               path="/questions"
               element={
@@ -355,6 +394,8 @@ function App() {
                 />
               }
             />
+            
+            {/* Import Questions */}
             <Route
               path="/import"
               element={
@@ -364,6 +405,8 @@ function App() {
                 />
               }
             />
+            
+            {/* Tests */}
             <Route
               path="/tests"
               element={
@@ -373,6 +416,8 @@ function App() {
                 />
               }
             />
+            
+            {/* Create Test */}
             <Route
               path="/tests/create"
               element={
@@ -382,6 +427,8 @@ function App() {
                 />
               }
             />
+            
+            {/* Edit Test */}
             <Route
               path="/tests/edit/:id"
               element={
@@ -391,13 +438,22 @@ function App() {
                 />
               }
             />
-            <Route path="/test/:id" element={<TakeTest />} />
+            
+            {/* Take Test */}
+            <Route 
+              path="/test/:id" 
+              element={<TakeTest language={language} setLanguage={setLanguage} />} 
+            />
+            
+            {/* Results List */}
             <Route
               path="/results"
               element={
                 <Results language={language} setLanguage={setLanguage} />
               }
             />
+            
+            {/* Result Detail */}
             <Route
               path="/results/:id"
               element={
@@ -407,6 +463,8 @@ function App() {
                 />
               }
             />
+            
+            {/* Solutions */}
             <Route
               path="/results/:id/solutions"
               element={
@@ -416,12 +474,27 @@ function App() {
                 />
               }
             />
+            
+            {/* Syllabus Management - NEW */}
+            <Route
+              path="/syllabus"
+              element={
+                <ManageSyllabus
+                  language={language}
+                  setLanguage={setLanguage}
+                />
+              }
+            />
+            
+            {/* Settings */}
             <Route
               path="/settings"
               element={
                 <Settings language={language} setLanguage={setLanguage} />
               }
             />
+            
+            {/* 404 Not Found */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
