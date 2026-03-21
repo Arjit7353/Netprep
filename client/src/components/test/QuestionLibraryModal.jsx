@@ -3,1679 +3,763 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  X,
-  Search,
-  Check,
-  CheckCircle2,
-  XCircle,
-  Filter,
-  SortDesc,
-  SortAsc,
-  ChevronDown,
-  ChevronUp,
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  Eye,
-  EyeOff,
-  Calendar,
-  Clock,
-  RefreshCw,
-  Trash2,
-  LayoutGrid,
-  List,
-  Globe,
-  Languages,
-  Sliders,
-  Hash,
-  BookOpen,
-  Target,
-  Layers,
-  Zap,
-  Star,
-  AlertCircle,
-  CheckCheck,
-  ArrowUpDown,
-  RotateCcw,
-  Sparkles,
-  Tag,
-  Flame,
-  TrendingUp,
-  Gauge,
-  ChevronsUpDown,
-  CircleDot,
-  Package,
-  Grid3x3
+  X, Search, Check, CheckCircle2, XCircle, ChevronLeft, ChevronRight,
+  FileText, Eye, Calendar, RefreshCw, Trash2, LayoutGrid, List, Globe,
+  Languages, Sliders, BookOpen, Target, Layers, Star,
+  CheckCheck, ArrowUpDown, RotateCcw, Sparkles, Tag,
+  Flame, Gauge, CircleDot, BarChart3, Bookmark,
+  Maximize2, Minimize2, PanelLeftClose, PanelLeft,
+  ChevronFirst, ChevronLast, Plus, Minus,
+  Zap, ChevronDown, ChevronUp, SlidersHorizontal,
+  Info, Hash, Clock, Award, MousePointerClick,
+  ArrowDown, ArrowUp, Filter, Expand, Shrink
 } from 'lucide-react';
 import { QUESTION_TYPE_LABELS, DIFFICULTY_LABELS, PAPER_LABELS } from '../../utils/constants';
+import { FilterChip, DateRangePicker, MiniMultiSelect, QuestionPreviewModal } from './library';
 
-// ============================================
-// FILTER CHIP COMPONENT
-// ============================================
-const FilterChip = ({ label, onRemove, color = 'gray' }) => {
-  const colorClasses = {
-    gray: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
-    blue: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
-    green: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
-    purple: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
-    orange: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
-    red: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-    amber: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
-  };
-
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${colorClasses[color]} animate-in fade-in zoom-in-95 duration-150`}>
-      <span className="truncate max-w-[150px]">{label}</span>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-0.5 transition-colors"
-      >
-        <X className="w-3 h-3" />
-      </button>
-    </span>
-  );
+// ════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════
+const getQText = (q, lang) => {
+  if (!q?.question) return '';
+  if (typeof q.question === 'string') return q.question;
+  return q.question[lang] || q.question.hi || q.question.en || '';
 };
 
-// ============================================
-// DATE RANGE PICKER COMPONENT
-// ============================================
-const DateRangePicker = ({ startDate, endDate, onStartChange, onEndChange, language }) => {
-  const t = (hi, en) => language === 'hi' ? hi : en;
-  
-  const quickRanges = [
-    { label: t('आज', 'Today'), days: 0 },
-    { label: t('कल', 'Yesterday'), days: 1 },
-    { label: t('7 दिन', '7 Days'), days: 7 },
-    { label: t('30 दिन', '30 Days'), days: 30 },
-    { label: t('90 दिन', '90 Days'), days: 90 }
-  ];
-
-  const applyQuickRange = (days) => {
-    const end = new Date();
-    const start = new Date();
-    if (days === 0) {
-      start.setHours(0, 0, 0, 0);
-    } else if (days === 1) {
-      start.setDate(start.getDate() - 1);
-      start.setHours(0, 0, 0, 0);
-      end.setDate(end.getDate() - 1);
-      end.setHours(23, 59, 59, 999);
-    } else {
-      start.setDate(start.getDate() - days);
-    }
-    onStartChange(start.toISOString().split('T')[0]);
-    onEndChange(end.toISOString().split('T')[0]);
-  };
-
-  const clearDates = () => {
-    onStartChange('');
-    onEndChange('');
-  };
-
-  return (
-    <div className="space-y-3">
-      {/* Quick Range Buttons */}
-      <div className="flex flex-wrap gap-2">
-        {quickRanges.map((range) => (
-          <button
-            key={range.days}
-            type="button"
-            onClick={() => applyQuickRange(range.days)}
-            className="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-          >
-            {range.label}
-          </button>
-        ))}
-        {(startDate || endDate) && (
-          <button
-            type="button"
-            onClick={clearDates}
-            className="px-3 py-1.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors flex items-center gap-1"
-          >
-            <X className="w-3 h-3" />
-            {t('साफ़', 'Clear')}
-          </button>
-        )}
-      </div>
-      
-      {/* Date Inputs */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1 block">
-            {t('से', 'From')}
-          </label>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="date"
-              value={startDate || ''}
-              onChange={(e) => onStartChange(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 text-sm border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1 block">
-            {t('तक', 'To')}
-          </label>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="date"
-              value={endDate || ''}
-              onChange={(e) => onEndChange(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 text-sm border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+const stripHtml = (html) => {
+  if (!html) return '';
+  return html.replace(/<[^>]*>/g, '').trim();
 };
 
-// ============================================
-// MINI MULTI-SELECT FOR FILTERS (ENHANCED)
-// ============================================
-const MiniMultiSelect = ({
-  options,
-  selected,
-  onChange,
-  placeholder,
-  language,
-  icon: Icon
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const ref = useRef(null);
-  const t = (hi, en) => language === 'hi' ? hi : en;
+const DIFF = {
+  easy: {
+    label: { hi: 'आसान', en: 'Easy' },
+    bg: 'bg-emerald-100 dark:bg-emerald-900/30',
+    text: 'text-emerald-700 dark:text-emerald-300',
+    dot: 'bg-emerald-500',
+    pill: 'bg-emerald-600 text-white border-emerald-600',
+    pillOff: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 hover:bg-emerald-100'
+  },
+  medium: {
+    label: { hi: 'मध्यम', en: 'Medium' },
+    bg: 'bg-amber-100 dark:bg-amber-900/30',
+    text: 'text-amber-700 dark:text-amber-300',
+    dot: 'bg-amber-500',
+    pill: 'bg-amber-600 text-white border-amber-600',
+    pillOff: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 hover:bg-amber-100'
+  },
+  hard: {
+    label: { hi: 'कठिन', en: 'Hard' },
+    bg: 'bg-red-100 dark:bg-red-900/30',
+    text: 'text-red-700 dark:text-red-300',
+    dot: 'bg-red-500',
+    pill: 'bg-red-600 text-white border-red-600',
+    pillOff: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 hover:bg-red-100'
+  }
+};
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setIsOpen(false);
-        setSearchTerm('');
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+// ════════════════════════════════════════
+// QUESTION CARD
+// ════════════════════════════════════════
+const QuestionCard = React.memo(({ q, idx, globalIdx, isSelected, displayLang, language, onToggle, onPreview, viewMode }) => {
+  const [expanded, setExpanded] = useState(false);
+  const t = (h, e) => language === 'hi' ? h : e;
+  const text = getQText(q, displayLang);
+  const plain = stripHtml(text);
+  const isLong = plain.length > 220;
+  const isHtml = text !== plain && text.includes('<');
+  const dc = DIFF[q.difficulty] || DIFF.medium;
 
-  const toggleOption = (value) => {
-    const newSelected = selected.includes(value)
-      ? selected.filter(v => v !== value)
-      : [...selected, value];
-    onChange(newSelected);
-  };
-
-  const filteredOptions = useMemo(() => {
-    if (!searchTerm.trim()) return options;
-    const search = searchTerm.toLowerCase();
-    return options.filter(opt => 
-      opt.label?.toLowerCase().includes(search) || 
-      opt.value?.toLowerCase().includes(search)
+  if (viewMode === 'grid') {
+    return (
+      <div onClick={e => { e.stopPropagation(); onToggle(q); }}
+        className={`relative p-3 rounded-2xl border-2 cursor-pointer group transition-all duration-200
+          ${isSelected
+            ? 'border-primary-500 bg-gradient-to-br from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/10 shadow-lg shadow-primary-500/10'
+            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary-300 hover:shadow-lg'}`}>
+        <div className={`absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center transition-all
+          ${isSelected ? 'bg-primary-600 shadow-lg ring-2 ring-primary-300/50' : 'bg-gray-100 dark:bg-gray-700 group-hover:bg-primary-100'}`}>
+          {isSelected ? <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /> : <span className="text-[9px] font-bold text-gray-400">{globalIdx}</span>}
+        </div>
+        <div className="flex flex-wrap gap-1 mb-2 pr-8">
+          <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-md font-bold">{q.paper === 'paper1' ? 'P1' : 'P2'}</span>
+          <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${dc.bg} ${dc.text}`}>{(q.difficulty || 'M')[0].toUpperCase()}</span>
+          {q.isPYQ && <span className="text-[9px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-md font-bold">PYQ</span>}
+        </div>
+        <p className="text-[12px] text-gray-700 dark:text-gray-300 leading-relaxed break-words whitespace-pre-wrap mb-2 min-h-[48px]">
+          {plain.substring(0, 160)}{plain.length > 160 ? '…' : ''}
+        </p>
+        <div className="flex items-center justify-between pt-1.5 border-t border-gray-100 dark:border-gray-700/50">
+          <span className="text-[9px] text-gray-400 tabular-nums">{q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : ''}</span>
+          <button type="button" onClick={e => { e.stopPropagation(); onPreview(q); }} className="p-1 hover:bg-primary-50 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+            <Eye className="w-3.5 h-3.5 text-gray-400 group-hover:text-primary-600" />
+          </button>
+        </div>
+      </div>
     );
-  }, [options, searchTerm]);
+  }
 
+  // LIST
   return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`
-          w-full flex items-center justify-between px-3 py-2.5 text-sm
-          border-2 rounded-xl transition-all
-          ${selected.length > 0 
-            ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-primary-900/20 ring-2 ring-primary-500/10' 
-            : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500'
-          }
-          ${isOpen ? 'ring-4 ring-primary-500/20' : ''}
-          text-gray-700 dark:text-gray-200
-        `}
-      >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {Icon && <Icon className="w-4 h-4 text-gray-400 flex-shrink-0" />}
-          <span className="truncate">
-            {selected.length === 0 
-              ? placeholder 
-              : selected.length === 1
-                ? (options.find(o => o.value === selected[0])?.shortName || options.find(o => o.value === selected[0])?.label || selected[0])
-                : `${selected.length} ${t('चुने', 'selected')}`
-            }
-          </span>
+    <div onClick={e => { e.stopPropagation(); onToggle(q); }}
+      className={`p-3 rounded-2xl border-2 cursor-pointer group relative transition-all duration-200
+        ${isSelected
+          ? 'border-primary-500 dark:border-primary-400 bg-gradient-to-r from-primary-50/80 to-blue-50/40 dark:from-primary-900/20 dark:to-blue-900/10 shadow-lg shadow-primary-500/10 ring-1 ring-primary-500/20'
+          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary-300 hover:shadow-lg'}`}>
+      <div className="flex gap-3">
+        {/* Checkbox */}
+        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-1 transition-all
+          ${isSelected
+            ? 'bg-primary-600 border-primary-600 shadow-md ring-2 ring-primary-300/50'
+            : 'border-gray-300 dark:border-gray-600 group-hover:border-primary-400 group-hover:bg-primary-50'}`}>
+          {isSelected && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
         </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {selected.length > 0 && (
-            <span className="bg-primary-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">
-              {selected.length}
+
+        <div className="flex-1 min-w-0">
+          {/* Tags */}
+          <div className="flex flex-wrap gap-1 mb-1.5">
+            <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-md font-bold tabular-nums">#{q.questionNumber || globalIdx}</span>
+            <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-md font-bold">{q.paper === 'paper1' ? 'P1' : 'P2'}</span>
+            {q.unit && <span className="text-[9px] px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md font-semibold truncate max-w-[160px]" title={q.unit}>{q.unit}</span>}
+            {q.chapter && <span className="text-[9px] px-1.5 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md font-semibold truncate max-w-[140px]" title={q.chapter}>{q.chapter}</span>}
+            {q.topic && <span className="text-[9px] px-1.5 py-0.5 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-md font-semibold truncate max-w-[120px]" title={q.topic}>{q.topic}</span>}
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${dc.bg} ${dc.text}`}>{dc.label[displayLang] || q.difficulty}</span>
+            <span className="text-[9px] px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded-md font-semibold">
+              {QUESTION_TYPE_LABELS[q.questionType]?.[displayLang] || q.questionType}
             </span>
-          )}
-          <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-        </div>
-      </button>
+            {q.isPYQ && <span className="text-[9px] px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded-md font-bold flex items-center gap-0.5"><Star className="w-2.5 h-2.5 fill-current" />PYQ</span>}
+          </div>
 
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-full min-w-[280px] bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl dark:shadow-black/50 z-50 overflow-hidden animate-in slide-in-from-top-2 duration-150">
-          {/* Search */}
-          {options.length > 5 && (
-            <div className="p-2 border-b border-gray-100 dark:border-gray-700">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder={t('खोजें...', 'Search...')}
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Options List */}
-          <div className="max-h-60 overflow-y-auto overscroll-contain p-1.5">
-            {filteredOptions.length === 0 ? (
-              <div className="text-center py-8 px-4">
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                  <Search className="w-6 h-6 text-gray-400" />
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('कोई परिणाम नहीं', 'No results found')}
-                </p>
-              </div>
+          {/* Text */}
+          <div className="mb-1.5">
+            {isHtml ? (
+              <div className="text-[13px] text-gray-800 dark:text-gray-200 leading-relaxed break-words question-html-content"
+                dangerouslySetInnerHTML={{ __html: expanded || !isLong ? text : text.substring(0, 280) + '…' }} />
             ) : (
-              filteredOptions.map((option) => {
-                const isSelected = selected.includes(option.value);
-                return (
-                  <div
-                    key={option.value}
-                    onClick={() => toggleOption(option.value)}
-                    className={`
-                      flex items-center gap-2.5 px-3 py-2.5 rounded-lg cursor-pointer text-sm transition-all
-                      ${isSelected 
-                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium' 
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-700 dark:text-gray-300'
-                      }
-                    `}
-                  >
-                    <div className={`
-                      w-5 h-5 border-2 rounded flex items-center justify-center flex-shrink-0
-                      ${isSelected 
-                        ? 'bg-primary-600 border-primary-600' 
-                        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'
-                      }
-                    `}>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
-                    </div>
-                    <span className="flex-1 truncate" title={option.label}>
-                      {option.label}
-                    </span>
-                    {isSelected && (
-                      <CheckCircle2 className="w-4 h-4 text-primary-600 dark:text-primary-400 flex-shrink-0" />
-                    )}
-                  </div>
-                );
-              })
+              <p className="text-[13px] text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap break-words">
+                {expanded || !isLong ? plain : plain.substring(0, 220) + '…'}
+              </p>
+            )}
+            {isLong && (
+              <button type="button" onClick={e => { e.stopPropagation(); setExpanded(!expanded); }}
+                className="mt-0.5 text-[11px] font-bold text-primary-600 hover:text-primary-700 flex items-center gap-0.5">
+                {expanded ? <><ChevronUp className="w-3 h-3" />{t('कम', 'Less')}</> : <><ChevronDown className="w-3 h-3" />{t('और पढ़ें', 'More')}</>}
+              </button>
             )}
           </div>
 
-          {/* Footer Actions */}
-          {filteredOptions.length > 0 && (
-            <div className="p-2 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-750">
-              <button
-                type="button"
-                onClick={() => onChange(filteredOptions.map(o => o.value))}
-                className="text-xs text-primary-600 dark:text-primary-400 font-bold hover:underline"
-              >
-                {t('सभी चुनें', 'Select All')}
-              </button>
-              {selected.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => onChange([])}
-                  className="text-xs text-red-600 dark:text-red-400 font-bold hover:underline"
-                >
-                  {t('साफ़ करें', 'Clear All')}
-                </button>
-              )}
+          {/* Options preview */}
+          {q.questionType === 'mcq' && q.options && (
+            <div className="mt-1.5 grid grid-cols-2 gap-1">
+              {(Array.isArray(q.options) ? q.options : Object.values(q.options)).slice(0, 4).map((opt, oi) => {
+                const oText = stripHtml(typeof opt === 'string' ? opt : (opt?.[displayLang] || opt?.hi || opt?.en || ''));
+                const correct = q.correctAnswer === oi || q.correctAnswer === String(oi) || q.correctAnswer === String.fromCharCode(65 + oi);
+                return (
+                  <div key={oi} className={`text-[10px] px-1.5 py-1 rounded-lg border flex items-start gap-1
+                    ${correct ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                    <span className={`font-black w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] flex-shrink-0 mt-0.5
+                      ${correct ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                      {String.fromCharCode(65 + oi)}
+                    </span>
+                    <span className="truncate">{oText.substring(0, 50)}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
+
+          {/* Footer */}
+          <div className="flex items-center justify-between mt-1.5">
+            <span className="text-[9px] text-gray-400 flex items-center gap-1 tabular-nums">
+              <Calendar className="w-2.5 h-2.5" />{q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : ''}
+            </span>
+            <button type="button" onClick={e => { e.stopPropagation(); onPreview(q); }}
+              className="opacity-0 group-hover:opacity-100 px-2 py-0.5 text-[10px] font-bold text-primary-600 hover:bg-primary-50 rounded flex items-center gap-0.5 transition-all">
+              <Eye className="w-3 h-3" />{t('देखें', 'View')}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {isSelected && (
+        <div className="absolute top-2.5 right-2.5">
+          <div className="w-5 h-5 bg-primary-600 rounded-full flex items-center justify-center shadow-md ring-2 ring-primary-300/50">
+            <Check className="w-3 h-3 text-white" strokeWidth={3} />
+          </div>
         </div>
       )}
     </div>
   );
-};
+});
 
-// ============================================
-// QUESTION PREVIEW MODAL
-// ============================================
-const QuestionPreviewModal = ({ question, isOpen, onClose, language }) => {
-  const t = (hi, en) => language === 'hi' ? hi : en;
-  const [previewLang, setPreviewLang] = useState(language);
+// ════════════════════════════════════════
+// SIDEBAR
+// ════════════════════════════════════════
+const Sidebar = React.memo(({ selectedQuestions, language, marksPerQuestion, onClear, onClose }) => {
+  const t = (h, e) => language === 'hi' ? h : e;
+  const total = selectedQuestions.length;
+  const summary = useMemo(() => {
+    const d = { easy: 0, medium: 0, hard: 0 }, ty = {}, un = {};
+    let pyq = 0;
+    selectedQuestions.forEach(q => {
+      d[q.difficulty || 'medium']++;
+      ty[q.questionType || 'mcq'] = (ty[q.questionType || 'mcq'] || 0) + 1;
+      if (q.unit) un[q.unit] = (un[q.unit] || 0) + 1;
+      if (q.isPYQ) pyq++;
+    });
+    return { d, ty, un, pyq };
+  }, [selectedQuestions]);
 
-  if (!isOpen || !question) return null;
-
-  const getQuestionText = () => {
-    if (typeof question.question === 'string') return question.question;
-    return question.question?.[previewLang] || question.question?.hi || question.question?.en || '';
-  };
-
-  const getOptions = () => {
-    if (!question.options) return [];
-    if (Array.isArray(question.options)) return question.options;
-    return question.options?.[previewLang] || question.options?.hi || question.options?.en || [];
-  };
-
-  return createPortal(
-    <div 
-      className="fixed inset-0 bg-black/70 dark:bg-black/85 backdrop-blur-md z-[99999] flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <div 
-        className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 border-2 border-gray-200 dark:border-gray-700"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="p-5 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary-50 via-white to-blue-50 dark:from-gray-800 dark:via-gray-850 dark:to-gray-800">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30">
-                <Eye className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="font-black text-lg text-gray-900 dark:text-white">
-                  {t('प्रश्न पूर्वावलोकन', 'Question Preview')}
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                  Q#{question.questionNumber || 'N/A'} • {question.paper === 'paper1' ? 'Paper 1' : 'Paper 2'}
-                </p>
-              </div>
-            </div>
-            
-            {/* Language Toggle */}
-            <div className="flex items-center gap-2">
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
-                <button
-                  type="button"
-                  onClick={() => setPreviewLang('hi')}
-                  className={`px-3 py-2 text-xs font-bold rounded-lg transition-all ${
-                    previewLang === 'hi'
-                      ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400'
-                  }`}
-                >
-                  हिंदी
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewLang('en')}
-                  className={`px-3 py-2 text-xs font-bold rounded-lg transition-all ${
-                    previewLang === 'en'
-                      ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400'
-                  }`}
-                >
-                  English
-                </button>
-              </div>
-              
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-          </div>
+  return (
+    <div className="w-72 border-l border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 flex flex-col h-full backdrop-blur-sm">
+      <div className="p-3.5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md"><BarChart3 className="w-4 h-4 text-white" /></div>
+          <div><h4 className="text-sm font-bold text-gray-900 dark:text-white">{t('विश्लेषण', 'Analysis')}</h4><p className="text-[10px] text-gray-500">{total} {t('चुने', 'sel')}</p></div>
         </div>
-
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)] overscroll-contain">
-          {/* Meta Tags */}
-          <div className="flex flex-wrap gap-2 mb-5">
-            {question.unit && (
-              <span className="px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-lg font-bold flex items-center gap-1">
-                <Target className="w-3.5 h-3.5" />
-                {question.unit}
-              </span>
-            )}
-            {question.chapter && (
-              <span className="px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs rounded-lg font-bold flex items-center gap-1">
-                <BookOpen className="w-3.5 h-3.5" />
-                {question.chapter}
-              </span>
-            )}
-            {question.topic && (
-              <span className="px-3 py-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs rounded-lg font-bold flex items-center gap-1">
-                <Tag className="w-3.5 h-3.5" />
-                {question.topic}
-              </span>
-            )}
-            <span className={`px-3 py-1.5 text-xs rounded-lg font-bold flex items-center gap-1 ${
-              question.difficulty === 'easy' 
-                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                : question.difficulty === 'hard'
-                  ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                  : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
-            }`}>
-              {question.difficulty === 'easy' && <Sparkles className="w-3.5 h-3.5" />}
-              {question.difficulty === 'hard' && <Flame className="w-3.5 h-3.5" />}
-              {question.difficulty === 'medium' && <Gauge className="w-3.5 h-3.5" />}
-              {DIFFICULTY_LABELS[question.difficulty]?.[previewLang] || question.difficulty}
-            </span>
-            <span className="px-3 py-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs rounded-lg font-bold flex items-center gap-1">
-              <Layers className="w-3.5 h-3.5" />
-              {QUESTION_TYPE_LABELS[question.questionType]?.[previewLang] || question.questionType}
-            </span>
-            {question.isPYQ && (
-              <span className="px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs rounded-lg font-bold flex items-center gap-1">
-                <Star className="w-3.5 h-3.5" />
-                PYQ
-              </span>
-            )}
-          </div>
-
-          {/* Question Text */}
-          <div className="mb-6 p-5 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700">
-            <p className="text-gray-900 dark:text-white text-base leading-relaxed font-medium">
-              {getQuestionText()}
-            </p>
-          </div>
-
-          {/* Options */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2 mb-3">
-              <CircleDot className="w-4 h-4 text-primary-600" />
-              {t('विकल्प:', 'Options:')}
-            </h4>
-            {getOptions().map((option, index) => {
-              const isCorrect = index === question.correctAnswer;
-              return (
-                <div
-                  key={index}
-                  className={`
-                    relative flex items-start gap-3 p-4 rounded-xl border-2 transition-all
-                    ${isCorrect 
-                      ? 'border-green-500 bg-green-50 dark:bg-green-900/20 shadow-md shadow-green-500/20' 
-                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
-                    }
-                  `}
-                >
-                  <span className={`
-                    w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0
-                    ${isCorrect 
-                      ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30' 
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    }
-                  `}>
-                    {String.fromCharCode(65 + index)}
-                  </span>
-                  <span className={`text-sm pt-1.5 flex-1 ${isCorrect ? 'text-green-900 dark:text-green-100 font-semibold' : 'text-gray-700 dark:text-gray-300'}`}>
-                    {option}
-                  </span>
-                  {isCorrect && (
-                    <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Explanation */}
-          {question.explanation && (question.explanation.hi || question.explanation.en || typeof question.explanation === 'string') && (
-            <div className="mt-6 p-5 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl border-2 border-blue-200 dark:border-blue-800">
-              <h4 className="text-sm font-black text-blue-800 dark:text-blue-300 mb-3 flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
-                {t('व्याख्या:', 'Explanation:')}
-              </h4>
-              <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed">
-                {typeof question.explanation === 'string' 
-                  ? question.explanation 
-                  : question.explanation?.[previewLang] || question.explanation?.hi || question.explanation?.en
-                }
-              </p>
-            </div>
-          )}
-
-          {/* Created Date */}
-          <div className="mt-6 flex items-center gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-              <Calendar className="w-4 h-4" />
-              {t('बनाया गया:', 'Created:')} <strong>{new Date(question.createdAt).toLocaleDateString('en-IN', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric'
-              })}</strong>
-            </span>
-            {question.updatedAt && question.updatedAt !== question.createdAt && (
-              <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-                <Clock className="w-4 h-4" />
-                {t('अपडेट:', 'Updated:')} <strong>{new Date(question.updatedAt).toLocaleDateString('en-IN', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric'
-                })}</strong>
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-          <button
-            onClick={onClose}
-            className="w-full py-3 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
-          >
-            <X className="w-4 h-4" />
-            {t('बंद करें', 'Close')}
-          </button>
-        </div>
+        <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><X className="w-4 h-4 text-gray-400" /></button>
       </div>
-    </div>,
-    document.body
+      <div className="flex-1 overflow-y-auto p-3.5 space-y-4 scrollbar-thin">
+        {total === 0 ? (
+          <div className="text-center py-12"><CheckCircle2 className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-sm text-gray-500">{t('कोई प्रश्न नहीं', 'No questions')}</p></div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-3 bg-gradient-to-br from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 rounded-xl border border-primary-200 dark:border-primary-800 text-center">
+                <p className="text-2xl font-black text-primary-600 tabular-nums">{total}</p><p className="text-[9px] text-gray-500 uppercase font-bold">{t('प्रश्न', 'Q')}</p>
+              </div>
+              <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200 dark:border-green-800 text-center">
+                <p className="text-2xl font-black text-green-600 tabular-nums">{total * marksPerQuestion}</p><p className="text-[9px] text-gray-500 uppercase font-bold">{t('अंक', 'Marks')}</p>
+              </div>
+            </div>
+            <div>
+              <h5 className="text-[10px] font-bold text-gray-500 uppercase mb-2">{t('कठिनाई', 'Difficulty')}</h5>
+              {Object.entries(DIFF).map(([key, cfg]) => (
+                <div key={key} className={`flex items-center justify-between p-2 rounded-lg ${cfg.bg} mb-1`}>
+                  <div className="flex items-center gap-1.5"><div className={`w-2 h-2 rounded-full ${cfg.dot}`} /><span className={`text-xs font-semibold ${cfg.text}`}>{cfg.label[language]}</span></div>
+                  <span className="text-xs font-black tabular-nums">{summary.d[key]} <span className="text-gray-400 font-normal text-[10px]">({total ? Math.round((summary.d[key] / total) * 100) : 0}%)</span></span>
+                </div>
+              ))}
+              <div className="mt-1.5 h-1.5 rounded-full bg-gray-200 overflow-hidden flex">
+                {Object.entries(DIFF).map(([k, c]) => { const p = total ? (summary.d[k] / total) * 100 : 0; return p > 0 ? <div key={k} className={c.dot} style={{ width: `${p}%` }} /> : null; })}
+              </div>
+            </div>
+            {Object.keys(summary.ty).length > 0 && (
+              <div>
+                <h5 className="text-[10px] font-bold text-gray-500 uppercase mb-1.5">{t('प्रकार', 'Types')}</h5>
+                {Object.entries(summary.ty).sort((a, b) => b[1] - a[1]).map(([ty, cnt]) => (
+                  <div key={ty} className="flex justify-between py-1 text-xs"><span className="text-gray-600 truncate max-w-[140px]">{QUESTION_TYPE_LABELS[ty]?.[language] || ty}</span><span className="font-bold tabular-nums">{cnt}</span></div>
+                ))}
+              </div>
+            )}
+            {summary.pyq > 0 && (
+              <div className="p-2.5 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200 flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-700 flex items-center gap-1"><Star className="w-3 h-3 fill-current" />PYQ</span>
+                <span className="text-sm font-black text-amber-600 tabular-nums">{summary.pyq}</span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      {total > 0 && (
+        <div className="p-3 border-t bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+          <div className="text-center text-[10px] text-gray-500 mb-2">{t('अंक:', 'Marks:')} <b className="text-green-600">{total * marksPerQuestion}</b> • {t('समय:', 'Time:')} <b className="text-blue-600">~{Math.round(total * 1.2)}m</b></div>
+          <button onClick={onClear} className="w-full py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl border border-red-200 flex items-center justify-center gap-1.5"><Trash2 className="w-3 h-3" />{t('सभी हटाएं', 'Clear All')}</button>
+        </div>
+      )}
+    </div>
   );
-};
+});
 
-// ============================================
-// MAIN QUESTION LIBRARY MODAL
-// ============================================
+// ══════════════════════════════════════════
+// ★ MAIN MODAL ★
+// ══════════════════════════════════════════
 const QuestionLibraryModal = ({
-  isOpen,
-  onClose,
-  questions = [],
-  questionsLoading,
-  selectedQuestions,
-  onToggleQuestion,
-  onSelectAll,
-  onSelectAllFiltered,
-  onClearAll,
-  onApplyFilters,
-  language = 'hi',
-  marksPerQuestion = 2,
-  // Syllabus helpers
-  getUnitOptions,
-  getChapterOptions,
-  getTopicOptions,
-  getTypeOptions,
-  mainFilters
+  isOpen, onClose, questions = [], questionsLoading,
+  selectedQuestions, onToggleQuestion, onSelectAll, onSelectAllFiltered,
+  onClearAll, onApplyFilters, language = 'hi', marksPerQuestion = 2,
+  getUnitOptions, getChapterOptions, getTopicOptions, getTypeOptions, mainFilters
 }) => {
-  const t = (hi, en) => language === 'hi' ? hi : en;
+  const t = useCallback((h, e) => language === 'hi' ? h : e, [language]);
 
-  // Local state for filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [displayLanguage, setDisplayLanguage] = useState(language);
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [displayLang, setDisplayLang] = useState(language);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [viewMode, setViewMode] = useState('list');
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
   const [sortBy, setSortBy] = useState('newest');
-  const [previewQuestion, setPreviewQuestion] = useState(null);
-  const [activeTab, setActiveTab] = useState('all'); // 'all' or 'selected'
+  const [preview, setPreview] = useState(null);
+  const [tab, setTab] = useState('all');
+  const [fullscreen, setFullscreen] = useState(false);
+  const [batchMsg, setBatchMsg] = useState(null);
+  const searchRef = useRef(null);
+  const listRef = useRef(null);
 
-  // Filter states
   const [filters, setFilters] = useState({
-    papers: [...(mainFilters?.papers || [])],
-    units: [...(mainFilters?.units || [])],
-    chapters: [...(mainFilters?.chapters || [])],
-    topics: [...(mainFilters?.topics || [])],
-    types: [...(mainFilters?.types || [])],
-    difficulties: [],
-    startDate: '',
-    endDate: '',
-    isPYQ: null
+    papers: [], units: [], chapters: [], topics: [],
+    types: [], difficulties: [], startDate: '', endDate: '', isPYQ: null
   });
 
-  // Reset filters when modal opens
+  const selectedIds = useMemo(() => new Set(selectedQuestions.map(q => q._id)), [selectedQuestions]);
+
   useEffect(() => {
     if (isOpen) {
       setFilters({
-        papers: [...(mainFilters?.papers || [])],
-        units: [...(mainFilters?.units || [])],
-        chapters: [...(mainFilters?.chapters || [])],
-        topics: [...(mainFilters?.topics || [])],
-        types: [...(mainFilters?.types || [])],
-        difficulties: [],
-        startDate: '',
-        endDate: '',
-        isPYQ: null
+        papers: [...(mainFilters?.papers || [])], units: [...(mainFilters?.units || [])],
+        chapters: [...(mainFilters?.chapters || [])], topics: [...(mainFilters?.topics || [])],
+        types: [...(mainFilters?.types || [])], difficulties: [], startDate: '', endDate: '', isPYQ: null
       });
-      setCurrentPage(1);
-      setSearchQuery('');
+      setPage(1); setSearchQuery(''); setTab('all'); setBatchMsg(null); setShowFilters(false);
+      setTimeout(() => searchRef.current?.focus(), 300);
     }
   }, [isOpen, mainFilters]);
 
-  // Filter and sort questions
-  const filteredQuestions = useMemo(() => {
-    let result = [...questions];
+  useEffect(() => { setDisplayLang(language); }, [language]);
 
-    // Apply local filters
-    if (filters.difficulties.length > 0) {
-      result = result.filter(q => filters.difficulties.includes(q.difficulty));
+  // ═══ FILTERED ═══
+  const filtered = useMemo(() => {
+    let r = [...questions];
+    if (filters.papers.length) r = r.filter(q => filters.papers.includes(q.paper));
+    if (filters.units.length && getUnitOptions) {
+      const opts = getUnitOptions(filters.papers.length ? filters.papers : mainFilters?.papers) || [];
+      const names = filters.units.map(k => (opts.find(x => x.value === k)?.label || k));
+      r = r.filter(q => q.unit && names.some(n => { const c = n.replace(/^P[12]:\s*/i, '').trim(); return q.unit.toLowerCase().includes(c.toLowerCase()) || c.toLowerCase().includes(q.unit.toLowerCase()); }));
     }
-
-    if (filters.isPYQ === true) {
-      result = result.filter(q => q.isPYQ === true);
-    } else if (filters.isPYQ === false) {
-      result = result.filter(q => !q.isPYQ);
+    if (filters.chapters.length && getChapterOptions) {
+      const opts = getChapterOptions(filters.units.length ? filters.units : mainFilters?.units || [], filters.papers.length ? filters.papers : mainFilters?.papers || []) || [];
+      const names = filters.chapters.map(k => { const o = opts.find(x => x.value === k); return o ? (o.shortName || o.label) : k; });
+      r = r.filter(q => q.chapter && names.some(n => q.chapter.toLowerCase().includes(n.toLowerCase()) || n.toLowerCase().includes(q.chapter.toLowerCase())));
     }
-
-    if (filters.startDate) {
-      result = result.filter(q => new Date(q.createdAt) >= new Date(filters.startDate));
-    }
-
-    if (filters.endDate) {
-      const endDate = new Date(filters.endDate);
-      endDate.setHours(23, 59, 59, 999);
-      result = result.filter(q => new Date(q.createdAt) <= endDate);
-    }
-
-    // Local search
+    if (filters.topics.length) r = r.filter(q => q.topic && filters.topics.some(v => q.topic.toLowerCase().includes(v.toLowerCase())));
+    if (filters.types.length) r = r.filter(q => filters.types.includes(q.questionType));
+    if (filters.difficulties.length) r = r.filter(q => filters.difficulties.includes(q.difficulty));
+    if (filters.isPYQ === true) r = r.filter(q => q.isPYQ);
+    else if (filters.isPYQ === false) r = r.filter(q => !q.isPYQ);
+    if (filters.startDate) { const sd = new Date(filters.startDate); sd.setHours(0, 0, 0, 0); r = r.filter(q => q.createdAt && new Date(q.createdAt) >= sd); }
+    if (filters.endDate) { const ed = new Date(filters.endDate); ed.setHours(23, 59, 59, 999); r = r.filter(q => q.createdAt && new Date(q.createdAt) <= ed); }
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(q => {
-        const questionText = (q.question?.hi || q.question?.en || '').toLowerCase();
-        const unit = (q.unit || '').toLowerCase();
-        const chapter = (q.chapter || '').toLowerCase();
-        const topic = (q.topic || '').toLowerCase();
-        return questionText.includes(query) || unit.includes(query) || chapter.includes(query) || topic.includes(query);
-      });
+      const sq = searchQuery.toLowerCase();
+      r = r.filter(q => (getQText(q, 'hi') + ' ' + getQText(q, 'en')).toLowerCase().includes(sq) || (q.unit || '').toLowerCase().includes(sq) || (q.chapter || '').toLowerCase().includes(sq) || (q.topic || '').toLowerCase().includes(sq) || String(q.questionNumber || '').includes(sq));
     }
-
-    // Sort
+    const ord = { easy: 1, medium: 2, hard: 3 };
     switch (sortBy) {
-      case 'newest':
-        result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        break;
-      case 'oldest':
-        result.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-        break;
-      case 'difficulty_asc':
-        const diffOrder = { easy: 1, medium: 2, hard: 3 };
-        result.sort((a, b) => (diffOrder[a.difficulty] || 2) - (diffOrder[b.difficulty] || 2));
-        break;
-      case 'difficulty_desc':
-        const diffOrderDesc = { easy: 1, medium: 2, hard: 3 };
-        result.sort((a, b) => (diffOrderDesc[b.difficulty] || 2) - (diffOrderDesc[a.difficulty] || 2));
-        break;
-      default:
-        break;
+      case 'newest': r.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)); break;
+      case 'oldest': r.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)); break;
+      case 'difficulty_asc': r.sort((a, b) => (ord[a.difficulty] || 2) - (ord[b.difficulty] || 2)); break;
+      case 'difficulty_desc': r.sort((a, b) => (ord[b.difficulty] || 2) - (ord[a.difficulty] || 2)); break;
+      case 'type': r.sort((a, b) => (a.questionType || '').localeCompare(b.questionType || '')); break;
+      case 'number': r.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)); break;
+      default: break;
     }
+    return r;
+  }, [questions, filters, searchQuery, sortBy, getUnitOptions, getChapterOptions, mainFilters]);
 
-    return result;
-  }, [questions, filters, searchQuery, sortBy]);
+  const display = useMemo(() => tab === 'selected' ? selectedQuestions : filtered, [tab, selectedQuestions, filtered]);
+  const totalPages = Math.max(1, Math.ceil(display.length / perPage));
+  useEffect(() => { if (page > totalPages) setPage(Math.max(1, totalPages)); }, [totalPages, page]);
+  const paginated = useMemo(() => display.slice((page - 1) * perPage, page * perPage), [display, page, perPage]);
 
-  // Display questions based on active tab
-  const displayQuestions = useMemo(() => {
-    return activeTab === 'selected' ? selectedQuestions : filteredQuestions;
-  }, [activeTab, selectedQuestions, filteredQuestions]);
-
-  // Pagination
-  const totalPages = Math.ceil(displayQuestions.length / itemsPerPage);
-  const paginatedQuestions = displayQuestions.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  // Active filters count
-  const activeFiltersCount = useMemo(() => {
-    let count = 0;
-    if (filters.papers.length) count++;
-    if (filters.units.length) count++;
-    if (filters.chapters.length) count++;
-    if (filters.topics.length) count++;
-    if (filters.types.length) count++;
-    if (filters.difficulties.length) count++;
-    if (filters.startDate || filters.endDate) count++;
-    if (filters.isPYQ !== null) count++;
-    return count;
+  const filterCount = useMemo(() => {
+    let c = 0;
+    ['papers', 'units', 'chapters', 'topics', 'types', 'difficulties'].forEach(k => { if (filters[k].length) c++; });
+    if (filters.startDate || filters.endDate) c++;
+    if (filters.isPYQ !== null) c++;
+    return c;
   }, [filters]);
 
-  // Update filter helper
-  const updateFilter = (key, value) => {
-    setFilters(prev => {
-      const newFilters = { ...prev, [key]: value };
-      
-      // Cascade reset
-      if (key === 'papers') {
-        newFilters.units = [];
-        newFilters.chapters = [];
-        newFilters.topics = [];
-      } else if (key === 'units') {
-        newFilters.chapters = [];
-        newFilters.topics = [];
-      } else if (key === 'chapters') {
-        newFilters.topics = [];
-      }
-      
-      return newFilters;
-    });
-    setCurrentPage(1);
-  };
+  const quickCounts = useMemo(() => {
+    const c = { easy: 0, medium: 0, hard: 0, pyq: 0 }, tc = {};
+    questions.forEach(q => { if (q.difficulty) c[q.difficulty]++; if (q.isPYQ) c.pyq++; if (q.questionType) tc[q.questionType] = (tc[q.questionType] || 0) + 1; });
+    return { ...c, types: tc };
+  }, [questions]);
 
-  // Clear all filters
-  const clearAllFilters = () => {
-    setFilters({
-      papers: [],
-      units: [],
-      chapters: [],
-      topics: [],
-      types: [],
-      difficulties: [],
-      startDate: '',
-      endDate: '',
-      isPYQ: null
-    });
-    setSearchQuery('');
-    setCurrentPage(1);
-  };
+  const selOnPage = useMemo(() => paginated.filter(q => selectedIds.has(q._id)).length, [paginated, selectedIds]);
+  const allPageSel = paginated.length > 0 && selOnPage === paginated.length;
+  const unselCount = useMemo(() => filtered.filter(q => !selectedIds.has(q._id)).length, [filtered, selectedIds]);
 
-  // Apply filters to parent
-  const handleApplyFilters = () => {
-    const apiFilters = {
-      paper: filters.papers,
-      unit: filters.units,
-      chapter: filters.chapters,
-      topic: filters.topics,
-      questionType: filters.types,
-      difficulty: filters.difficulties,
-      startDate: filters.startDate,
-      endDate: filters.endDate,
-      isPYQ: filters.isPYQ,
-      search: searchQuery
+  // ═══ KEYBOARD ═══
+  useEffect(() => {
+    if (!isOpen) return;
+    const h = (e) => {
+      if (e.key === 'Escape') { preview ? setPreview(null) : onClose(); return; }
+      if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) { e.preventDefault(); searchRef.current?.focus(); }
+      if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); setPage(p => Math.max(1, p - 1)); }
+      if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); setPage(p => Math.min(totalPages, p + 1)); }
     };
-    onApplyFilters(apiFilters);
-    setCurrentPage(1);
-  };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [isOpen, preview, totalPages]);
 
-  // Get question display text
-  const getQuestionText = (question) => {
-    if (typeof question.question === 'string') return question.question;
-    return question.question?.[displayLanguage] || question.question?.hi || question.question?.en || '';
-  };
+  // ═══ SELECTION — Compatible with parent's API ═══
+  const flash = useCallback(msg => { setBatchMsg(msg); setTimeout(() => setBatchMsg(null), 2500); }, []);
 
-  // Difficulty options
-  const difficultyOptions = [
-    { value: 'easy', label: t('आसान', 'Easy') },
-    { value: 'medium', label: t('मध्यम', 'Medium') },
-    { value: 'hard', label: t('कठिन', 'Hard') }
-  ];
+  /*
+   * Parent's selectAllFilteredQuestions does:
+   *   const newQ = filtered.filter(q => !selectedQuestions.includes(q._id));
+   *   pushSelection([...selectedQuestions, ...newQ]);
+   *
+   * So onSelectAllFiltered(questionsToAdd) = ADDS new ones to existing
+   * We must pass ONLY the new ones to add, not the merged array
+   */
+  const handleBatchSelect = useCallback((count) => {
+    const unsel = filtered.filter(q => !selectedIds.has(q._id));
+    const toAdd = unsel.slice(0, Math.min(count, unsel.length));
+    if (toAdd.length === 0) { flash(t('सभी चुने हुए', 'All selected')); return; }
+    // Pass ONLY new questions — parent will merge
+    onSelectAllFiltered(toAdd);
+    flash(`✓ +${toAdd.length} ${t('चुने', 'selected')}!`);
+  }, [filtered, selectedIds, onSelectAllFiltered, flash, t]);
 
-  // Sort options
-  const sortOptions = [
-    { value: 'newest', label: t('नवीनतम', 'Newest First'), icon: TrendingUp },
-    { value: 'oldest', label: t('पुराने', 'Oldest First'), icon: Clock },
-    { value: 'difficulty_asc', label: t('कठिनाई ↑', 'Difficulty ↑'), icon: SortAsc },
-    { value: 'difficulty_desc', label: t('कठिनाई ↓', 'Difficulty ↓'), icon: SortDesc }
-  ];
+  const handleSelectPage = useCallback(() => {
+    const toAdd = paginated.filter(q => !selectedIds.has(q._id));
+    if (toAdd.length === 0) return;
+    onSelectAllFiltered(toAdd);
+  }, [paginated, selectedIds, onSelectAllFiltered]);
 
-  // Items per page options
-  const perPageOptions = [10, 15, 20, 30, 50, 100];
+  const handleDeselectPage = useCallback(() => {
+    paginated.forEach(q => { if (selectedIds.has(q._id)) onToggleQuestion(q); });
+  }, [paginated, selectedIds, onToggleQuestion]);
+
+  const handleSelectAllFiltered = useCallback(() => {
+    const toAdd = filtered.filter(q => !selectedIds.has(q._id));
+    if (toAdd.length === 0) return;
+    onSelectAllFiltered(toAdd);
+  }, [filtered, selectedIds, onSelectAllFiltered]);
+
+  const handleInvert = useCallback(() => {
+    filtered.forEach(q => onToggleQuestion(q));
+  }, [filtered, onToggleQuestion]);
+
+  const handleToggle = useCallback((q) => {
+    onToggleQuestion(q);
+  }, [onToggleQuestion]);
+
+  // ═══ FILTER HANDLERS ═══
+  const updateFilter = useCallback((key, value) => {
+    setFilters(prev => {
+      const n = { ...prev, [key]: value };
+      if (key === 'papers') { n.units = []; n.chapters = []; n.topics = []; }
+      else if (key === 'units') { n.chapters = []; n.topics = []; }
+      else if (key === 'chapters') { n.topics = []; }
+      return n;
+    });
+    setPage(1);
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setFilters({ papers: [], units: [], chapters: [], topics: [], types: [], difficulties: [], startDate: '', endDate: '', isPYQ: null });
+    setSearchQuery(''); setPage(1);
+  }, []);
+
+  const applyFilters = useCallback(() => {
+    const f = {};
+    if (filters.papers.length) f.paper = filters.papers;
+    if (filters.types.length) f.questionType = filters.types;
+    if (filters.difficulties.length) f.difficulty = filters.difficulties;
+    if (searchQuery.trim()) f.search = searchQuery.trim();
+    if (filters.startDate) f.startDate = filters.startDate;
+    if (filters.endDate) f.endDate = filters.endDate;
+    onApplyFilters(f); setPage(1);
+  }, [filters, searchQuery, onApplyFilters]);
+
+  const toggleDiff = useCallback(d => { setFilters(p => ({ ...p, difficulties: p.difficulties.includes(d) ? p.difficulties.filter(x => x !== d) : [...p.difficulties, d] })); setPage(1); }, []);
+  const togglePYQ = useCallback(() => { setFilters(p => ({ ...p, isPYQ: p.isPYQ === true ? null : true })); setPage(1); }, []);
+  const toggleType = useCallback(ty => { setFilters(p => ({ ...p, types: p.types.includes(ty) ? p.types.filter(x => x !== ty) : [...p.types, ty] })); setPage(1); }, []);
 
   if (!isOpen) return null;
 
-    // ... continuing from Part 1
-
-  if (!isOpen) return null;
-
+  // ═══ RENDER ═══
   return createPortal(
-    <div className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-7xl h-[95vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-gray-200 dark:border-gray-700">
-        
-        {/* ========== HEADER ========== */}
-        <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary-50 via-white to-blue-50 dark:from-gray-800 dark:via-gray-850 dark:to-gray-800 flex-shrink-0">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30 flex-shrink-0">
-                <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-black text-base sm:text-xl text-gray-900 dark:text-white truncate">
-                  {t('प्रश्न लाइब्रेरी', 'Question Library')}
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
-                  {displayQuestions.length} {t('प्रश्न', 'questions')}
-                  {selectedQuestions.length > 0 && (
-                    <span className="ml-2 text-primary-600 dark:text-primary-400 font-bold">
-                      • {selectedQuestions.length} {t('चुने', 'selected')}
-                    </span>
-                  )}
-                </p>
-              </div>
-            </div>
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-1.5 sm:p-3">
+      <div className={`bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl shadow-2xl w-full flex overflow-hidden border border-gray-200/80 dark:border-gray-700 transition-all
+        ${fullscreen ? 'max-w-full h-full rounded-none' : 'max-w-7xl h-[97vh]'}`}>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {/* Language Toggle - Hidden on mobile */}
-              <div className="hidden sm:flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
-                <button
-                  type="button"
-                  onClick={() => setDisplayLanguage('hi')}
-                  className={`px-2.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 ${
-                    displayLanguage === 'hi'
-                      ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400'
-                  }`}
-                >
-                  <Globe className="w-3 h-3" />
-                  हि
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDisplayLanguage('en')}
-                  className={`px-2.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 ${
-                    displayLanguage === 'en'
-                      ? 'bg-white dark:bg-gray-600 text-primary-600 dark:text-primary-400 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400'
-                  }`}
-                >
-                  <Languages className="w-3 h-3" />
-                  En
-                </button>
-              </div>
+        <div className="flex-1 flex flex-col min-w-0">
 
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* ========== SEARCH BAR ========== */}
-        <div className="p-3 sm:p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <div className="flex gap-2 sm:gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                placeholder={t('प्रश्न, इकाई, अध्याय खोजें...', 'Search questions, units, chapters...')}
-                className="w-full pl-10 sm:pl-12 pr-10 py-2.5 sm:py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-4 focus:ring-primary-500/20 focus:border-primary-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                >
-                  <X className="w-4 h-4 text-gray-400" />
-                </button>
-              )}
-            </div>
-            
-            <button
-              type="button"
-              onClick={handleApplyFilters}
-              disabled={questionsLoading}
-              className="px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-primary-500/30 flex-shrink-0"
-            >
-              <RefreshCw className={`w-4 h-4 ${questionsLoading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{t('खोजें', 'Search')}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* ========== FILTERS BAR ========== */}
-        <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 space-y-3">
-          {/* Quick Filters Row */}
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {/* Paper Filter */}
-            <div className="w-full sm:w-auto sm:min-w-[140px]">
-              <MiniMultiSelect
-                options={Object.entries(PAPER_LABELS).map(([key, val]) => ({
-                  value: key,
-                  label: t(val.hi, val.en),
-                  shortName: key === 'paper1' ? 'P1' : 'P2'
-                }))}
-                selected={filters.papers}
-                onChange={(val) => updateFilter('papers', val)}
-                placeholder={t('पेपर', 'Paper')}
-                language={language}
-                icon={BookOpen}
-              />
-            </div>
-
-            {/* Unit Filter */}
-            <div className="w-full sm:w-auto sm:min-w-[180px]">
-              <MiniMultiSelect
-                options={getUnitOptions ? getUnitOptions(filters.papers).map(u => ({
-                  ...u,
-                  shortName: (u.shortName || u.label || '').substring(0, 20)
-                })) : []}
-                selected={filters.units}
-                onChange={(val) => updateFilter('units', val)}
-                placeholder={t('इकाई', 'Unit')}
-                language={language}
-                icon={Target}
-              />
-            </div>
-
-            {/* Difficulty Filter */}
-            <div className="w-[calc(50%-4px)] sm:w-auto sm:min-w-[130px]">
-              <MiniMultiSelect
-                options={difficultyOptions}
-                selected={filters.difficulties}
-                onChange={(val) => updateFilter('difficulties', val)}
-                placeholder={t('कठिनाई', 'Difficulty')}
-                language={language}
-                icon={Gauge}
-              />
-            </div>
-
-            {/* Question Type Filter */}
-            <div className="w-[calc(50%-4px)] sm:w-auto sm:min-w-[130px]">
-              <MiniMultiSelect
-                options={getTypeOptions ? getTypeOptions() : []}
-                selected={filters.types}
-                onChange={(val) => updateFilter('types', val)}
-                placeholder={t('प्रकार', 'Type')}
-                language={language}
-                icon={Layers}
-              />
-            </div>
-
-            {/* Advanced Filters Toggle */}
-            <button
-              type="button"
-              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className={`px-3 sm:px-4 py-2.5 rounded-xl border-2 text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap ${
-                showAdvancedFilters || activeFiltersCount > 4
-                  ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500 text-primary-700 dark:text-primary-300'
-                  : 'border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-300 bg-white dark:bg-gray-700'
-              }`}
-            >
-              <Sliders className="w-4 h-4" />
-              <span className="hidden sm:inline">{t('अधिक', 'More')}</span>
-              {activeFiltersCount > 0 && (
-                <span className="bg-primary-600 text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
-                  {activeFiltersCount}
-                </span>
-              )}
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`} />
-            </button>
-
-            {/* Clear Filters */}
-            {activeFiltersCount > 0 && (
-              <button
-                type="button"
-                onClick={clearAllFilters}
-                className="px-3 py-2 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center gap-1.5 transition-colors"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                {t('रीसेट', 'Reset')}
-              </button>
-            )}
-
-            {/* Spacer - Hidden on mobile */}
-            <div className="hidden sm:block flex-1" />
-
-            {/* Sort Dropdown */}
-            <div className="hidden sm:block">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2.5 border-2 border-gray-200 dark:border-gray-600 rounded-xl text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:border-gray-300 transition-colors"
-              >
-                {sortOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* View Mode Toggle */}
-            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
-              <button
-                type="button"
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
-                title={t('सूची दृश्य', 'List View')}
-              >
-                <List className={`w-4 h-4 ${viewMode === 'list' ? 'text-primary-600' : 'text-gray-400'}`} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
-                title={t('ग्रिड दृश्य', 'Grid View')}
-              >
-                <LayoutGrid className={`w-4 h-4 ${viewMode === 'grid' ? 'text-primary-600' : 'text-gray-400'}`} />
-              </button>
-            </div>
-          </div>
-
-          {/* Advanced Filters Panel */}
-          {showAdvancedFilters && (
-            <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 animate-in slide-in-from-top-2 duration-200 shadow-lg">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Chapter Filter */}
-                <div>
-                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 block flex items-center gap-1.5">
-                    <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
-                    {t('अध्याय', 'Chapter')}
-                  </label>
-                  <MiniMultiSelect
-                    options={getChapterOptions ? getChapterOptions(filters.units, filters.papers).map(c => ({
-                      ...c,
-                      shortName: (c.shortName || c.label || '').substring(0, 25)
-                    })) : []}
-                    selected={filters.chapters}
-                    onChange={(val) => updateFilter('chapters', val)}
-                    placeholder={t('अध्याय चुनें', 'Select Chapter')}
-                    language={language}
-                  />
+          {/* ═══ HEADER ═══ */}
+          <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-slate-50 via-white to-blue-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 flex-shrink-0">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/25 flex-shrink-0">
+                  <BookOpen className="w-5 h-5 text-white" />
                 </div>
-
-                {/* Topic Filter */}
-                <div>
-                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 block flex items-center gap-1.5">
-                    <Tag className="w-3.5 h-3.5 text-purple-600" />
-                    {t('विषय', 'Topic')}
-                  </label>
-                  <MiniMultiSelect
-                    options={getTopicOptions ? getTopicOptions(filters.chapters, filters.units, filters.papers).map(to => ({
-                      ...to,
-                      shortName: (to.shortName || to.label || '').substring(0, 25)
-                    })) : []}
-                    selected={filters.topics}
-                    onChange={(val) => updateFilter('topics', val)}
-                    placeholder={t('विषय चुनें', 'Select Topic')}
-                    language={language}
-                  />
-                </div>
-
-                {/* PYQ Filter */}
-                <div>
-                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 block flex items-center gap-1.5">
-                    <Star className="w-3.5 h-3.5 text-amber-600" />
-                    {t('PYQ स्थिति', 'PYQ Status')}
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => updateFilter('isPYQ', filters.isPYQ === true ? null : true)}
-                      className={`flex-1 px-3 py-2.5 text-xs font-bold rounded-xl border-2 transition-all flex items-center justify-center gap-1.5 ${
-                        filters.isPYQ === true
-                          ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 text-amber-700 dark:text-amber-300'
-                          : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300 bg-white dark:bg-gray-700'
-                      }`}
-                    >
-                      <Star className="w-3.5 h-3.5" />
-                      PYQ
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateFilter('isPYQ', filters.isPYQ === false ? null : false)}
-                      className={`flex-1 px-3 py-2.5 text-xs font-bold rounded-xl border-2 transition-all ${
-                        filters.isPYQ === false
-                          ? 'bg-gray-100 dark:bg-gray-700 border-gray-400 text-gray-700 dark:text-gray-300'
-                          : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300 bg-white dark:bg-gray-700'
-                      }`}
-                    >
-                      Non-PYQ
-                    </button>
-                  </div>
-                </div>
-
-                {/* Mobile Sort */}
-                <div className="sm:hidden">
-                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 block flex items-center gap-1.5">
-                    <ArrowUpDown className="w-3.5 h-3.5 text-blue-600" />
-                    {t('क्रम', 'Sort')}
-                  </label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="w-full px-3 py-2.5 border-2 border-gray-200 dark:border-gray-600 rounded-xl text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200"
-                  >
-                    {sortOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Date Range - Full width */}
-                <div className="sm:col-span-2 lg:col-span-4">
-                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2 block flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                    {t('निर्माण तिथि', 'Created Date')}
-                  </label>
-                  <DateRangePicker
-                    startDate={filters.startDate}
-                    endDate={filters.endDate}
-                    onStartChange={(val) => updateFilter('startDate', val)}
-                    onEndChange={(val) => updateFilter('endDate', val)}
-                    language={language}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Active Filter Chips */}
-          {activeFiltersCount > 0 && (
-            <div className="flex flex-wrap gap-2 pt-2">
-              {filters.papers.map(p => (
-                <FilterChip
-                  key={`paper-${p}`}
-                  label={`${t('पेपर', 'Paper')}: ${p === 'paper1' ? 'P1' : 'P2'}`}
-                  onRemove={() => updateFilter('papers', filters.papers.filter(x => x !== p))}
-                  color="gray"
-                />
-              ))}
-              {filters.units.slice(0, 2).map(u => {
-                const unitLabel = getUnitOptions?.(filters.papers)?.find(o => o.value === u)?.shortName || u;
-                return (
-                  <FilterChip
-                    key={`unit-${u}`}
-                    label={unitLabel}
-                    onRemove={() => updateFilter('units', filters.units.filter(x => x !== u))}
-                    color="blue"
-                  />
-                );
-              })}
-              {filters.units.length > 2 && (
-                <span className="px-2 py-1 text-xs text-blue-600 dark:text-blue-400 font-bold">
-                  +{filters.units.length - 2} {t('और', 'more')}
-                </span>
-              )}
-              {filters.difficulties.map(d => (
-                <FilterChip
-                  key={`diff-${d}`}
-                  label={DIFFICULTY_LABELS[d]?.[language] || d}
-                  onRemove={() => updateFilter('difficulties', filters.difficulties.filter(x => x !== d))}
-                  color={d === 'easy' ? 'green' : d === 'hard' ? 'red' : 'amber'}
-                />
-              ))}
-              {filters.types.slice(0, 2).map(ty => (
-                <FilterChip
-                  key={`type-${ty}`}
-                  label={QUESTION_TYPE_LABELS[ty]?.[language] || ty}
-                  onRemove={() => updateFilter('types', filters.types.filter(x => x !== ty))}
-                  color="purple"
-                />
-              ))}
-              {(filters.startDate || filters.endDate) && (
-                <FilterChip
-                  label={`${filters.startDate || '...'} → ${filters.endDate || '...'}`}
-                  onRemove={() => { updateFilter('startDate', ''); updateFilter('endDate', ''); }}
-                  color="blue"
-                />
-              )}
-              {filters.isPYQ === true && (
-                <FilterChip
-                  label="PYQ Only"
-                  onRemove={() => updateFilter('isPYQ', null)}
-                  color="orange"
-                />
-              )}
-              {filters.isPYQ === false && (
-                <FilterChip
-                  label="Non-PYQ"
-                  onRemove={() => updateFilter('isPYQ', null)}
-                  color="gray"
-                />
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* ========== TABS ========== */}
-        <div className="flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => { setActiveTab('all'); setCurrentPage(1); }}
-            className={`flex-1 px-3 sm:px-4 py-3 text-xs sm:text-sm font-bold transition-colors flex items-center justify-center gap-2 ${
-              activeTab === 'all' 
-                ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 bg-primary-50 dark:bg-primary-900/20' 
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">{t('सभी प्रश्न', 'All Questions')}</span>
-            <span className="sm:hidden">{t('सभी', 'All')}</span>
-            <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-full text-xs font-bold">
-              {filteredQuestions.length}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => { setActiveTab('selected'); setCurrentPage(1); }}
-            className={`flex-1 px-3 sm:px-4 py-3 text-xs sm:text-sm font-bold transition-colors flex items-center justify-center gap-2 ${
-              activeTab === 'selected' 
-                ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 bg-primary-50 dark:bg-primary-900/20' 
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-            }`}
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            <span className="hidden sm:inline">{t('चुने हुए', 'Selected')}</span>
-            <span className="sm:hidden">{t('चुने', 'Sel')}</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-              selectedQuestions.length > 0 
-                ? 'bg-primary-600 text-white' 
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-            }`}>
-              {selectedQuestions.length}
-            </span>
-          </button>
-        </div>
-
-        {/* ========== QUESTIONS LIST ========== */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gray-50 dark:bg-gray-800/30 overscroll-contain">
-          {questionsLoading ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <div className="w-14 h-14 border-4 border-primary-200 dark:border-primary-800 border-t-primary-600 dark:border-t-primary-400 rounded-full animate-spin" />
-              <p className="mt-4 text-gray-500 dark:text-gray-400 font-medium">
-                {t('लोड हो रहा है...', 'Loading questions...')}
-              </p>
-            </div>
-          ) : paginatedQuestions.length === 0 ? (
-            <div className="text-center py-16 sm:py-20">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center shadow-lg">
-                {activeTab === 'selected' ? (
-                  <CheckCircle2 className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 dark:text-gray-600" />
-                ) : (
-                  <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 dark:text-gray-600" />
-                )}
-              </div>
-              <h3 className="font-bold text-lg text-gray-700 dark:text-gray-300">
-                {activeTab === 'selected' 
-                  ? t('कोई प्रश्न नहीं चुना', 'No questions selected')
-                  : t('कोई प्रश्न नहीं मिला', 'No questions found')
-                }
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-sm mx-auto">
-                {activeTab === 'selected'
-                  ? t('"सभी प्रश्न" टैब से प्रश्न चुनें', 'Select questions from "All Questions" tab')
-                  : t('फ़िल्टर बदलकर या खोज करके देखें', 'Try changing filters or search query')
-                }
-              </p>
-              {activeTab === 'all' && activeFiltersCount > 0 && (
-                <button
-                  type="button"
-                  onClick={clearAllFilters}
-                  className="mt-4 px-4 py-2 text-sm font-bold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors"
-                >
-                  {t('फ़िल्टर साफ़ करें', 'Clear All Filters')}
-                </button>
-              )}
-            </div>
-          ) : viewMode === 'list' ? (
-            // List View
-            <div className="space-y-2">
-              {paginatedQuestions.map((q, idx) => {
-                const isSelected = selectedQuestions.some(sq => sq._id === q._id);
-                const globalIndex = (currentPage - 1) * itemsPerPage + idx + 1;
-                
-                return (
-                  <div
-                    key={q._id}
-                    className={`
-                      p-3 sm:p-4 rounded-xl border-2 transition-all cursor-pointer group relative
-                      ${isSelected
-                        ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-primary-900/20 shadow-lg shadow-primary-500/10'
-                        : 'border-transparent bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md'
-                      }
-                    `}
-                    onClick={() => onToggleQuestion(q)}
-                  >
-                    <div className="flex gap-3 sm:gap-4">
-                      {/* Checkbox */}
-                      <div className={`
-                        w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all
-                        ${isSelected 
-                          ? 'bg-primary-600 border-primary-600 shadow-lg shadow-primary-500/30' 
-                          : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 group-hover:border-primary-400'
-                        }
-                      `}>
-                        {isSelected && <Check className="w-4 h-4 text-white" />}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        {/* Tags */}
-                        <div className="flex flex-wrap gap-1 sm:gap-1.5 mb-2">
-                          <span className="text-[10px] px-1.5 sm:px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded font-bold">
-                            #{globalIndex}
-                          </span>
-                          <span className="text-[10px] px-1.5 sm:px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded font-bold">
-                            {q.paper === 'paper1' ? 'P1' : 'P2'}
-                          </span>
-                          {q.unit && (
-                            <span className="text-[10px] px-1.5 sm:px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded font-semibold truncate max-w-[80px] sm:max-w-[120px]" title={q.unit}>
-                              {q.unit}
-                            </span>
-                          )}
-                          <span className={`text-[10px] px-1.5 sm:px-2 py-0.5 rounded font-bold ${
-                            q.difficulty === 'easy'
-                              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                              : q.difficulty === 'hard'
-                                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                                : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
-                          }`}>
-                            {DIFFICULTY_LABELS[q.difficulty]?.[displayLanguage] || q.difficulty}
-                          </span>
-                          <span className="text-[10px] px-1.5 sm:px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded font-semibold">
-                            {QUESTION_TYPE_LABELS[q.questionType]?.[displayLanguage] || q.questionType}
-                          </span>
-                          {q.isPYQ && (
-                            <span className="text-[10px] px-1.5 sm:px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded font-bold flex items-center gap-0.5">
-                              <Star className="w-3 h-3" /> PYQ
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Question Text */}
-                        <p className="text-gray-800 dark:text-gray-200 text-sm font-medium line-clamp-2 leading-relaxed">
-                          {getQuestionText(q)}
-                        </p>
-
-                        {/* Footer */}
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(q.createdAt).toLocaleDateString('en-IN', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: '2-digit'
-                            })}
-                          </span>
-                          
-                          {/* Preview Button */}
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); setPreviewQuestion(q); }}
-                            className="opacity-0 group-hover:opacity-100 px-2 sm:px-3 py-1 text-xs font-bold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-all flex items-center gap-1"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">{t('देखें', 'Preview')}</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Selected Indicator */}
-                    {isSelected && (
-                      <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
-                        <div className="w-6 h-6 bg-primary-600 rounded-full flex items-center justify-center shadow-lg shadow-primary-500/40">
-                          <Check className="w-4 h-4 text-white" />
-                        </div>
-                      </div>
+                <div className="min-w-0">
+                  <h3 className="font-black text-lg text-gray-900 dark:text-white leading-tight">{t('प्रश्न लाइब्रेरी', 'Question Library')}</h3>
+                  <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                    <span className="tabular-nums font-medium">{filtered.length}/{questions.length} {t('प्रश्न', 'Q')}</span>
+                    {selectedQuestions.length > 0 && (
+                      <span className="text-primary-600 font-bold flex items-center gap-0.5">
+                        <CheckCircle2 className="w-3 h-3" />{selectedQuestions.length} {t('चुने', 'sel')}
+                        <span className="text-green-600 ml-0.5">({selectedQuestions.length * marksPerQuestion}M)</span>
+                      </span>
                     )}
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            // Grid View
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {paginatedQuestions.map((q, idx) => {
-                const isSelected = selectedQuestions.some(sq => sq._id === q._id);
-                const globalIndex = (currentPage - 1) * itemsPerPage + idx + 1;
-                
-                return (
-                  <div
-                    key={q._id}
-                    className={`
-                      relative p-4 rounded-xl border-2 transition-all cursor-pointer group
-                      ${isSelected
-                        ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-primary-900/20 shadow-lg'
-                        : 'border-transparent bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md'
-                      }
-                    `}
-                    onClick={() => onToggleQuestion(q)}
-                  >
-                    {/* Selection Indicator */}
-                    <div className={`
-                      absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center transition-all
-                      ${isSelected 
-                        ? 'bg-primary-600 shadow-lg shadow-primary-500/30' 
-                        : 'bg-gray-200 dark:bg-gray-700 group-hover:bg-primary-100 dark:group-hover:bg-primary-900/30'
-                      }
-                    `}>
-                      {isSelected ? (
-                        <Check className="w-4 h-4 text-white" />
-                      ) : (
-                        <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">{globalIndex}</span>
-                      )}
-                    </div>
-
-                    {/* Tags */}
-                    <div className="flex flex-wrap gap-1 mb-2 pr-8">
-                      <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded font-bold">
-                        {q.paper === 'paper1' ? 'P1' : 'P2'}
-                      </span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                        q.difficulty === 'easy' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
-                        q.difficulty === 'hard' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
-                        'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
-                      }`}>
-                        {(q.difficulty || 'medium')[0].toUpperCase()}
-                      </span>
-                      {q.isPYQ && (
-                        <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded font-bold">
-                          <Star className="w-2.5 h-2.5 inline" />
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Question */}
-                    <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 line-clamp-3 mb-3 leading-relaxed">
-                      {getQuestionText(q)}
-                    </p>
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                        {new Date(q.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); setPreviewQuestion(q); }}
-                        className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                        title={t('देखें', 'Preview')}
-                      >
-                        <Eye className="w-4 h-4 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400" />
-                      </button>
-                    </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="hidden sm:flex bg-gray-100 dark:bg-gray-700 rounded-xl p-0.5">
+                  {[{ k: 'hi', l: 'हि' }, { k: 'en', l: 'En' }].map(l => (
+                    <button key={l.k} type="button" onClick={() => setDisplayLang(l.k)}
+                      className={`px-2.5 py-1.5 text-xs font-bold rounded-lg transition-all ${displayLang === l.k ? 'bg-white dark:bg-gray-600 text-primary-600 shadow-sm' : 'text-gray-500'}`}>{l.l}</button>
+                  ))}
+                </div>
+                {selectedQuestions.length > 0 && (
+                  <div className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800 rounded-xl">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-primary-600" />
+                    <span className="text-xs font-black text-primary-700 tabular-nums">{selectedQuestions.length}</span>
                   </div>
-                );
-              })}
+                )}
+                <button type="button" onClick={() => setShowSidebar(!showSidebar)} className={`hidden lg:flex p-2 rounded-xl border transition-all ${showSidebar ? 'bg-primary-50 border-primary-300 text-primary-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                  {showSidebar ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
+                </button>
+                <button type="button" onClick={() => setFullscreen(!fullscreen)} className="hidden sm:flex p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl">
+                  {fullscreen ? <Minimize2 className="w-4 h-4 text-gray-500" /> : <Maximize2 className="w-4 h-4 text-gray-500" />}
+                </button>
+                <button onClick={onClose} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl"><X className="w-5 h-5 text-gray-500" /></button>
+              </div>
+            </div>
+          </div>
+
+          {/* ═══ SEARCH + CONTROLS ═══ */}
+          <div className="px-4 py-2.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="flex gap-2 items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input ref={searchRef} type="text" value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
+                  placeholder={t('खोजें… ( / )', 'Search… ( / )')}
+                  className="w-full pl-9 pr-9 py-2.5 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-4 focus:ring-primary-500/20 focus:border-primary-500 bg-white dark:bg-gray-800 text-sm transition-all text-gray-900 dark:text-white" />
+                {searchQuery && <button type="button" onClick={() => { setSearchQuery(''); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2"><X className="w-3.5 h-3.5 text-gray-400" /></button>}
+              </div>
+              <button type="button" onClick={() => setShowFilters(!showFilters)}
+                className={`px-3 py-2.5 rounded-xl border-2 text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap
+                  ${showFilters ? 'bg-primary-50 border-primary-500 text-primary-700 shadow-md' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                <SlidersHorizontal className="w-4 h-4" /><span className="hidden sm:inline">{t('फ़िल्टर', 'Filters')}</span>
+                {filterCount > 0 && <span className="bg-primary-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-black">{filterCount}</span>}
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+              </button>
+              <div className="hidden md:flex items-center gap-1 bg-gray-50 dark:bg-gray-800 rounded-xl p-1 border border-gray-200 dark:border-gray-700">
+                {[5, 10, 25].map(n => (
+                  <button key={n} type="button" onClick={() => handleBatchSelect(Math.min(n, unselCount))} disabled={unselCount === 0}
+                    className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all ${unselCount > 0 ? 'text-primary-700 hover:bg-primary-100 active:scale-95' : 'text-gray-400 cursor-not-allowed'}`}>
+                    <Plus className="w-3 h-3 inline" />{n}
+                  </button>
+                ))}
+              </div>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="hidden sm:block px-2 py-2.5 border-2 border-gray-200 rounded-xl text-xs bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer">
+                {[{ v: 'newest', l: t('नवीनतम', 'New') }, { v: 'oldest', l: t('पुराने', 'Old') }, { v: 'difficulty_asc', l: 'Diff↑' }, { v: 'difficulty_desc', l: 'Diff↓' }, { v: 'number', l: '#' }].map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+              </select>
+              <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }} className="hidden sm:block px-2 py-2.5 border-2 border-gray-200 rounded-xl text-xs bg-white dark:bg-gray-700 w-14 cursor-pointer">
+                {[5, 10, 15, 20, 30].map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-0.5">
+                {[{ k: 'list', i: List }, { k: 'grid', i: LayoutGrid }].map(v => (
+                  <button key={v.k} type="button" onClick={() => setViewMode(v.k)} className={`p-2 rounded-lg ${viewMode === v.k ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}>
+                    <v.i className={`w-4 h-4 ${viewMode === v.k ? 'text-primary-600' : 'text-gray-400'}`} />
+                  </button>
+                ))}
+              </div>
+              <button type="button" onClick={applyFilters} disabled={questionsLoading}
+                className="px-4 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-lg shadow-primary-500/25 text-sm flex-shrink-0">
+                <RefreshCw className={`w-4 h-4 ${questionsLoading ? 'animate-spin' : ''}`} /><span className="hidden sm:inline">{t('लोड', 'Load')}</span>
+              </button>
+            </div>
+            {batchMsg && <div className="mt-2 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200"><CheckCircle2 className="w-4 h-4" />{batchMsg}</div>}
+          </div>
+
+          {/* ═══ FILTERS PANEL ═══ */}
+          {showFilters && (
+            <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 flex-shrink-0 space-y-2 max-h-[35vh] overflow-y-auto">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-bold text-gray-400 uppercase">{t('त्वरित:', 'Quick:')}</span>
+                {Object.entries(DIFF).map(([k, c]) => {
+                  const on = filters.difficulties.includes(k);
+                  return (
+                    <button key={k} type="button" onClick={() => toggleDiff(k)}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all ${on ? `${c.pill} shadow-md scale-[1.03]` : c.pillOff}`}>
+                      {k === 'easy' ? <Sparkles className="w-3 h-3" /> : k === 'hard' ? <Flame className="w-3 h-3" /> : <Gauge className="w-3 h-3" />}
+                      {c.label[language]}
+                      {quickCounts[k] > 0 && <span className={`px-1.5 rounded-full text-[9px] font-black ${on ? 'bg-white/25' : 'bg-black/5'}`}>{quickCounts[k]}</span>}
+                    </button>
+                  );
+                })}
+                <div className="w-px h-5 bg-gray-300" />
+                <button type="button" onClick={togglePYQ}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all ${filters.isPYQ === true ? 'bg-amber-600 text-white border-amber-600 shadow-md' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'}`}>
+                  <Star className="w-3 h-3" />PYQ{quickCounts.pyq > 0 && <span className={`px-1.5 rounded-full text-[9px] font-black ${filters.isPYQ ? 'bg-white/25' : 'bg-black/5'}`}>{quickCounts.pyq}</span>}
+                </button>
+                {Object.entries(quickCounts.types || {}).filter(([, c]) => c > 0).slice(0, 3).map(([ty, cnt]) => (
+                  <button key={ty} type="button" onClick={() => toggleType(ty)}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all ${filters.types.includes(ty) ? 'bg-purple-600 text-white border-purple-600 shadow-md' : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'}`}>
+                    <CircleDot className="w-3 h-3" />{QUESTION_TYPE_LABELS[ty]?.[language]?.substring(0, 10) || ty.substring(0, 8)}<span className={`px-1.5 rounded-full text-[9px] font-black ${filters.types.includes(ty) ? 'bg-white/25' : 'bg-black/5'}`}>{cnt}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap md:hidden">
+                <span className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-0.5"><Zap className="w-3 h-3 text-amber-500" />{t('चयन:', 'Sel:')}</span>
+                {[5, 10, 15, 20, 25, 50].map(n => (
+                  <button key={n} type="button" onClick={() => handleBatchSelect(Math.min(n, unselCount))} disabled={unselCount === 0}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-bold border ${unselCount > 0 ? 'bg-primary-50 text-primary-700 border-primary-200 hover:bg-primary-100' : 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'}`}>+{n}</button>
+                ))}
+                <span className="text-[9px] text-gray-400 ml-1">({unselCount} {t('शेष', 'left')})</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="w-full sm:w-auto sm:min-w-[130px]"><MiniMultiSelect options={Object.entries(PAPER_LABELS).map(([k, v]) => ({ value: k, label: t(v.hi, v.en), shortName: k === 'paper1' ? 'P1' : 'P2' }))} selected={filters.papers} onChange={v => updateFilter('papers', v)} placeholder={t('पेपर', 'Paper')} language={language} icon={BookOpen} /></div>
+                <div className="w-full sm:w-auto sm:min-w-[160px]"><MiniMultiSelect options={getUnitOptions ? getUnitOptions(filters.papers.length ? filters.papers : mainFilters?.papers).map(u => ({ ...u, shortName: (u.shortName || '').substring(0, 18) })) : []} selected={filters.units} onChange={v => updateFilter('units', v)} placeholder={t('इकाई', 'Unit')} language={language} icon={Target} /></div>
+                <div className="w-[calc(50%-4px)] sm:w-auto sm:min-w-[120px]"><MiniMultiSelect options={getTypeOptions ? getTypeOptions() : []} selected={filters.types} onChange={v => updateFilter('types', v)} placeholder={t('प्रकार', 'Type')} language={language} icon={Layers} /></div>
+                <button type="button" onClick={() => setShowAdvanced(!showAdvanced)} className={`px-2.5 py-2.5 rounded-xl border-2 text-xs font-bold flex items-center gap-1 ${showAdvanced ? 'bg-primary-50 border-primary-500 text-primary-700' : 'border-gray-200 text-gray-600'}`}><Sliders className="w-3.5 h-3.5" />{t('अधिक', 'More')}</button>
+                {filterCount > 0 && <button type="button" onClick={clearFilters} className="px-2.5 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-1"><RotateCcw className="w-3.5 h-3.5" />{t('रीसेट', 'Reset')}</button>}
+              </div>
+              {showAdvanced && (
+                <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div><label className="text-[10px] font-bold text-gray-600 mb-1 block">{t('अध्याय', 'Chapter')}</label><MiniMultiSelect options={getChapterOptions ? getChapterOptions(filters.units.length ? filters.units : mainFilters?.units || [], filters.papers.length ? filters.papers : mainFilters?.papers || []) : []} selected={filters.chapters} onChange={v => updateFilter('chapters', v)} placeholder={t('अध्याय', 'Chapter')} language={language} /></div>
+                    <div><label className="text-[10px] font-bold text-gray-600 mb-1 block">{t('विषय', 'Topic')}</label><MiniMultiSelect options={getTopicOptions ? getTopicOptions(filters.chapters.length ? filters.chapters : mainFilters?.chapters || [], filters.units.length ? filters.units : mainFilters?.units || [], filters.papers.length ? filters.papers : mainFilters?.papers || []) : []} selected={filters.topics} onChange={v => updateFilter('topics', v)} placeholder={t('विषय', 'Topic')} language={language} /></div>
+                    <div><label className="text-[10px] font-bold text-gray-600 mb-1 block">PYQ</label><div className="flex gap-1.5">{[{ v: true, l: 'PYQ' }, { v: false, l: 'Non-PYQ' }].map(o => (<button key={String(o.v)} type="button" onClick={() => updateFilter('isPYQ', filters.isPYQ === o.v ? null : o.v)} className={`flex-1 px-2 py-2 text-[10px] font-bold rounded-lg border-2 ${filters.isPYQ === o.v ? 'bg-amber-50 border-amber-500 text-amber-700' : 'border-gray-200 text-gray-600 bg-white'}`}>{o.l}</button>))}</div></div>
+                  </div>
+                  <div className="mt-2"><label className="text-[10px] font-bold text-gray-600 mb-1 block">{t('तिथि', 'Date')}</label><DateRangePicker startDate={filters.startDate} endDate={filters.endDate} onStartChange={v => updateFilter('startDate', v)} onEndChange={v => updateFilter('endDate', v)} language={language} /></div>
+                </div>
+              )}
+              {filterCount > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {filters.papers.map(p => <FilterChip key={`p-${p}`} label={p === 'paper1' ? 'P1' : 'P2'} onRemove={() => updateFilter('papers', filters.papers.filter(x => x !== p))} color="gray" />)}
+                  {filters.difficulties.map(d => <FilterChip key={`d-${d}`} label={DIFFICULTY_LABELS[d]?.[language] || d} onRemove={() => updateFilter('difficulties', filters.difficulties.filter(x => x !== d))} color={d === 'easy' ? 'green' : d === 'hard' ? 'red' : 'amber'} />)}
+                  {filters.types.slice(0, 2).map(ty => <FilterChip key={`t-${ty}`} label={QUESTION_TYPE_LABELS[ty]?.[language] || ty} onRemove={() => updateFilter('types', filters.types.filter(x => x !== ty))} color="purple" />)}
+                  {filters.isPYQ === true && <FilterChip label="PYQ" onRemove={() => updateFilter('isPYQ', null)} color="amber" />}
+                </div>
+              )}
             </div>
           )}
-        </div>
 
-        {/* ========== PAGINATION ========== */}
-        {displayQuestions.length > 0 && (
-          <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              {/* Items per page - Hidden on mobile */}
-              <div className="hidden sm:flex items-center gap-2">
-                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                  {t('प्रति पृष्ठ:', 'Per page:')}
-                </span>
-                <select
-                  value={itemsPerPage}
-                  onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                  className="px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium cursor-pointer"
-                >
-                  {perPageOptions.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
+          {/* ═══ TABS + PAGE SELECT ═══ */}
+          <div className="flex items-center border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0 px-1">
+            {[
+              { key: 'all', label: t('सभी', 'All'), icon: FileText, count: filtered.length },
+              { key: 'selected', label: t('चुने', 'Sel'), icon: CheckCircle2, count: selectedQuestions.length, hl: selectedQuestions.length > 0 }
+            ].map(tb => (
+              <button key={tb.key} type="button" onClick={() => { setTab(tb.key); setPage(1); }}
+                className={`flex-1 px-3 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-all border-b-[3px]
+                  ${tab === tb.key ? 'text-primary-600 border-primary-600 bg-primary-50/50' : 'text-gray-500 hover:bg-gray-50 border-transparent'}`}>
+                <tb.icon className="w-4 h-4" />{tb.label}
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black tabular-nums ${tb.hl ? 'bg-primary-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>{tb.count}</span>
+              </button>
+            ))}
+            <div className="w-px h-7 bg-gray-200 dark:bg-gray-700 mx-1" />
+            {tab === 'all' && paginated.length > 0 && (
+              <div className="flex items-center gap-1.5 px-2">
+                <button type="button" onClick={allPageSel ? handleDeselectPage : handleSelectPage}
+                  className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${allPageSel ? 'bg-primary-600 border-primary-600' : selOnPage > 0 ? 'bg-primary-100 border-primary-400' : 'border-gray-300 hover:border-primary-400'}`}>
+                  {allPageSel && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                  {selOnPage > 0 && !allPageSel && <Minus className="w-3 h-3 text-primary-600" />}
+                </button>
+                <span className="text-[10px] text-gray-500 font-medium hidden sm:inline">{t('पेज', 'Page')}</span>
               </div>
-
-              {/* Page Info */}
-              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
-                {t('पृष्ठ', 'Page')} <strong>{currentPage}</strong> / {totalPages || 1}
-                <span className="hidden sm:inline ml-2 text-gray-400">
-                  ({(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, displayQuestions.length)} of {displayQuestions.length})
-                </span>
-              </span>
-
-              {/* Page Navigation */}
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  className="hidden sm:flex p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  title={t('पहला', 'First')}
-                >
-                  <ChevronsUpDown className="w-4 h-4 rotate-90 text-gray-600 dark:text-gray-400" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  title={t('पिछला', 'Previous')}
-                >
-                  <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                </button>
-                
-                {/* Page Numbers */}
-                <div className="flex items-center gap-1 mx-1 sm:mx-2">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      pageNum = currentPage - 2 + i;
-                    }
-                    
-                    return (
-                      <button
-                        key={pageNum}
-                        type="button"
-                        onClick={() => setCurrentPage(pageNum)}
-                        className={`w-8 h-8 rounded-lg text-xs sm:text-sm font-bold transition-all ${
-                          currentPage === pageNum
-                            ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages || totalPages === 0}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  title={t('अगला', 'Next')}
-                >
-                  <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages || totalPages === 0}
-                  className="hidden sm:flex p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  title={t('अंतिम', 'Last')}
-                >
-                  <ChevronsUpDown className="w-4 h-4 -rotate-90 text-gray-600 dark:text-gray-400" />
-                </button>
+            )}
+            {selectedQuestions.length > 0 && (
+              <div className="flex items-center gap-0.5 px-1">
+                <button type="button" onClick={handleSelectAllFiltered} title={`Select all ${filtered.length}`} className="p-1.5 hover:bg-primary-50 rounded-lg text-primary-600"><CheckCheck className="w-4 h-4" /></button>
+                <button type="button" onClick={handleInvert} title="Invert" className="p-1.5 hover:bg-primary-50 rounded-lg text-primary-600"><ArrowUpDown className="w-3.5 h-3.5" /></button>
+                <button type="button" onClick={onClearAll} title="Clear" className="p-1.5 hover:bg-red-50 rounded-lg text-red-500"><XCircle className="w-4 h-4" /></button>
               </div>
-            </div>
+            )}
           </div>
-        )}
 
-        {/* ========== FOOTER ========== */}
-        <div className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 via-white to-gray-50 dark:from-gray-800 dark:via-gray-850 dark:to-gray-800 flex-shrink-0">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            {/* Selection Info */}
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30">
-                  <CheckCircle2 className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 block">
-                    {t('चुने गए', 'Selected')}
-                  </span>
-                  <span className="text-lg font-black text-primary-600 dark:text-primary-400">
-                    {selectedQuestions.length}
-                  </span>
-                </div>
+          {/* ═══ QUESTIONS ═══ */}
+          <div ref={listRef} className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gray-50/80 dark:bg-gray-800/30 overscroll-contain scroll-smooth">
+            {questionsLoading ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-12 h-12 border-[3px] border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+                <p className="mt-4 text-gray-500 text-sm">{t('लोड हो रहा है…', 'Loading…')}</p>
               </div>
-              {selectedQuestions.length > 0 && (
-                <>
-                  <div className="w-px h-8 bg-gray-200 dark:bg-gray-700 hidden sm:block" />
-                  <div className="hidden sm:block">
-                    <span className="text-xs text-gray-500 dark:text-gray-400 block">
-                      {t('कुल अंक', 'Total Marks')}
-                    </span>
-                    <span className="text-lg font-black text-green-600 dark:text-green-400">
-                      {selectedQuestions.length * marksPerQuestion}
-                    </span>
+            ) : paginated.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center shadow-inner">
+                  {tab === 'selected' ? <CheckCircle2 className="w-10 h-10 text-gray-300" /> : <FileText className="w-10 h-10 text-gray-300" />}
+                </div>
+                <h3 className="font-bold text-lg text-gray-700">{tab === 'selected' ? t('कोई प्रश्न नहीं चुना', 'No questions selected') : t('कोई प्रश्न नहीं', 'No questions found')}</h3>
+                <p className="text-sm text-gray-500 mt-2">{tab === 'all' ? t('फ़िल्टर बदलें या लोड करें', 'Change filters or Load') : t('"सभी" से चुनें', 'Select from All')}</p>
+                {tab === 'all' && (
+                  <div className="mt-4 flex justify-center gap-3">
+                    {filterCount > 0 && <button type="button" onClick={clearFilters} className="px-4 py-2 text-sm font-bold text-primary-600 hover:bg-primary-50 rounded-xl">{t('रीसेट', 'Reset')}</button>}
+                    <button type="button" onClick={applyFilters} className="px-4 py-2 text-sm font-bold text-white bg-primary-600 rounded-xl">{t('लोड', 'Load')}</button>
                   </div>
-                </>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={() => onSelectAllFiltered ? onSelectAllFiltered(filteredQuestions) : onSelectAll()}
-                className="hidden sm:flex px-3 py-2 text-xs sm:text-sm font-bold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl transition-colors items-center gap-1.5"
-              >
-                <CheckCheck className="w-4 h-4" />
-                {t('सभी चुनें', 'Select All')}
-              </button>
-              {selectedQuestions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={onClearAll}
-                  className="px-3 py-2 text-xs sm:text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors flex items-center gap-1.5"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">{t('चयन साफ़', 'Clear Selection')}</span>
-                  <span className="sm:hidden">{t('साफ़', 'Clear')}</span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                {t('रद्द', 'Cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 sm:flex-none px-5 sm:px-6 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-xl font-bold shadow-lg shadow-primary-500/30 hover:shadow-xl transition-all flex items-center justify-center gap-2"
-              >
-                <CheckCheck className="w-5 h-5" />
-                {t('पूर्ण', 'Done')}
-                {selectedQuestions.length > 0 && (
-                  <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold">
-                    {selectedQuestions.length}
-                  </span>
                 )}
-              </button>
+              </div>
+            ) : viewMode === 'list' ? (
+              <div className="space-y-2.5">
+                {paginated.map((q, idx) => (
+                  <QuestionCard key={q._id} q={q} idx={idx} globalIdx={(page - 1) * perPage + idx + 1}
+                    isSelected={selectedIds.has(q._id)} displayLang={displayLang} language={language}
+                    onToggle={handleToggle} onPreview={setPreview} viewMode="list" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {paginated.map((q, idx) => (
+                  <QuestionCard key={q._id} q={q} idx={idx} globalIdx={(page - 1) * perPage + idx + 1}
+                    isSelected={selectedIds.has(q._id)} displayLang={displayLang} language={language}
+                    onToggle={handleToggle} onPreview={setPreview} viewMode="grid" />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ═══ FOOTER ═══ */}
+          <div className="px-4 py-2.5 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md"><CheckCircle2 className="w-4 h-4 text-white" /></div>
+                  <div className="leading-tight">
+                    <span className="text-lg font-black text-primary-600 tabular-nums">{selectedQuestions.length}</span>
+                    {selectedQuestions.length > 0 && <span className="text-[10px] text-green-600 font-bold ml-1">({selectedQuestions.length * marksPerQuestion}M)</span>}
+                  </div>
+                </div>
+                {selectedQuestions.length > 0 && <button type="button" onClick={onClearAll} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>}
+              </div>
+              {display.length > 0 && (
+                <div className="flex items-center gap-0.5">
+                  <span className="text-[10px] text-gray-500 mr-1.5 tabular-nums hidden sm:inline">{(page - 1) * perPage + 1}-{Math.min(page * perPage, display.length)}/{display.length}</span>
+                  <button type="button" onClick={() => setPage(1)} disabled={page === 1} className="p-1.5 hover:bg-gray-100 rounded-lg disabled:opacity-30"><ChevronFirst className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-1.5 hover:bg-gray-100 rounded-lg disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
+                  {(() => {
+                    let s = Math.max(1, Math.min(page - 2, totalPages - 4));
+                    let e = Math.min(s + 4, totalPages); s = Math.max(1, e - 4);
+                    const pages = [];
+                    for (let p = s; p <= e; p++) pages.push(
+                      <button key={p} type="button" onClick={() => setPage(p)}
+                        className={`w-8 h-8 rounded-lg text-xs font-bold tabular-nums ${page === p ? 'bg-primary-600 text-white shadow-lg' : 'hover:bg-gray-100 text-gray-600'}`}>{p}</button>
+                    );
+                    return pages;
+                  })()}
+                  <button type="button" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="p-1.5 hover:bg-gray-100 rounded-lg disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => setPage(totalPages)} disabled={page >= totalPages} className="p-1.5 hover:bg-gray-100 rounded-lg disabled:opacity-30"><ChevronLast className="w-4 h-4" /></button>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={onClose} className="px-4 py-2.5 border-2 border-gray-300 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-100">{t('रद्द', 'Cancel')}</button>
+                <button type="button" onClick={onClose}
+                  className="px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-primary-500/25 flex items-center gap-2">
+                  <CheckCheck className="w-5 h-5" />{t('पूर्ण', 'Done')}
+                  {selectedQuestions.length > 0 && <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold tabular-nums">{selectedQuestions.length}</span>}
+                </button>
+              </div>
             </div>
           </div>
         </div>
+
+        {showSidebar && <Sidebar selectedQuestions={selectedQuestions} language={language} marksPerQuestion={marksPerQuestion} onClear={onClearAll} onClose={() => setShowSidebar(false)} />}
+        {preview && <QuestionPreviewModal question={preview} isOpen={!!preview} onClose={() => setPreview(null)} language={displayLang} />}
       </div>
 
-      {/* Question Preview Modal */}
-      <QuestionPreviewModal
-        question={previewQuestion}
-        isOpen={!!previewQuestion}
-        onClose={() => setPreviewQuestion(null)}
-        language={language}
-      />
+      <style>{`
+        .question-html-content img { max-width: 100%; height: auto; border-radius: 8px; margin: 6px 0; }
+        .question-html-content p { margin-bottom: 4px; }
+        .question-html-content table { border-collapse: collapse; width: 100%; font-size: 12px; }
+        .question-html-content td, .question-html-content th { border: 1px solid #e5e7eb; padding: 4px 8px; }
+      `}</style>
     </div>,
     document.body
   );
