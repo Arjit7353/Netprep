@@ -1,114 +1,133 @@
 // server/controllers/translateController.js
-
 const translateHelper = require('../utils/translateHelper');
+const Question = require('../models/Question');
 
-// @desc    Translate text
-// @route   POST /api/translate
 const translateText = async (req, res, next) => {
   try {
     const { text, from, to } = req.body;
-
-    if (!text) {
-      return res.status(400).json({
-        success: false,
-        message: 'Text is required'
-      });
-    }
-
+    if (!text) return res.status(400).json({ success: false, message: 'Text is required' });
     const fromLang = from || 'hi';
     const toLang = to || (fromLang === 'hi' ? 'en' : 'hi');
-
     const translated = await translateHelper.translate(text, fromLang, toLang);
-
-    res.json({
-      success: true,
-      data: {
-        original: text,
-        translated,
-        from: fromLang,
-        to: toLang
-      }
-    });
-  } catch (error) {
-    console.error('[Translate] Error:', error.message);
-    next(error);
-  }
+    res.json({ success: true, data: { original: text, translated, from: fromLang, to: toLang } });
+  } catch (error) { next(error); }
 };
 
-// @desc    Batch translate texts
-// @route   POST /api/translate/batch
 const translateBatch = async (req, res, next) => {
   try {
     const { texts, from, to } = req.body;
-
     if (!texts || !Array.isArray(texts) || texts.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'texts array is required'
-      });
+      return res.status(400).json({ success: false, message: 'texts array is required' });
     }
-
-    // Limit batch size
     if (texts.length > 200) {
-      return res.status(400).json({
-        success: false,
-        message: 'Maximum 200 texts per batch'
-      });
+      return res.status(400).json({ success: false, message: 'Max 200 texts per batch' });
     }
-
     const fromLang = from || 'hi';
     const toLang = to || (fromLang === 'hi' ? 'en' : 'hi');
-
     const translated = await translateHelper.translateBatch(texts, fromLang, toLang);
+    res.json({ success: true, data: { original: texts, translated, from: fromLang, to: toLang, count: translated.length } });
+  } catch (error) { next(error); }
+};
+
+const testConnection = async (req, res, next) => {
+  try {
+    const result = await translateHelper.testConnection();
+    res.json({ success: result.success, data: result });
+  } catch (error) { next(error); }
+};
+
+const getStatus = async (req, res) => {
+  res.json({ success: true, data: translateHelper.getStatus() });
+};
+
+const clearCache = async (req, res) => {
+  translateHelper.clearCache();
+  res.json({ success: true, message: 'Translation cache cleared' });
+};
+
+// ═══════════════════════════════════════════════════
+//        REPAIR CORRUPTED TRANSLATIONS
+// ═══════════════════════════════════════════════════
+
+const repairPreview = async (req, res, next) => {
+  try {
+    const { questionType, limit = 200 } = req.query;
+    const filter = { isActive: { $ne: false } };
+    if (questionType) filter.questionType = questionType;
+
+    const questions = await Question.find(filter).limit(parseInt(limit)).lean();
+
+    const needRepair = [];
+    for (const q of questions) {
+      const result = translateHelper.repairQuestion(q);
+      if (result.repairCount > 0) {
+        needRepair.push({
+          _id: q._id,
+          questionNumber: q.questionNumber,
+          questionType: q.questionType,
+          repairCount: result.repairCount,
+          repairs: result.repairs
+        });
+      }
+    }
 
     res.json({
       success: true,
       data: {
-        original: texts,
-        translated,
-        from: fromLang,
-        to: toLang,
-        count: translated.length
+        totalChecked: questions.length,
+        totalNeedRepair: needRepair.length,
+        items: needRepair.slice(0, 50)
       }
     });
-  } catch (error) {
-    console.error('[TranslateBatch] Error:', error.message);
-    next(error);
-  }
+  } catch (error) { next(error); }
 };
 
-// @desc    Test translation API connection
-// @route   GET /api/translate/test
-const testConnection = async (req, res, next) => {
+const repairExecute = async (req, res, next) => {
   try {
-    const result = await translateHelper.testConnection();
+    const { questionType, questionIds, limit = 200 } = req.body;
+    const filter = { isActive: { $ne: false } };
+    if (questionType) filter.questionType = questionType;
+    if (questionIds && Array.isArray(questionIds)) filter._id = { $in: questionIds };
+
+    const questions = await Question.find(filter).limit(parseInt(limit));
+
+    let repairedCount = 0;
+    const repairLog = [];
+
+    for (const q of questions) {
+      const result = translateHelper.repairQuestion(q.toObject());
+      if (result.repairCount > 0) {
+        // Build update object
+        const update = {};
+        if (result.question.options) update.options = result.question.options;
+        if (result.question.question) update.question = result.question.question;
+        if (result.question.assertionReasonData) update.assertionReasonData = result.question.assertionReasonData;
+
+        if (Object.keys(update).length > 0) {
+          update.updatedAt = new Date();
+          await Question.findByIdAndUpdate(q._id, update);
+          repairedCount++;
+          repairLog.push({
+            questionNumber: q.questionNumber,
+            repairCount: result.repairCount,
+            repairs: result.repairs
+          });
+        }
+      }
+    }
+
+    console.log(`[Repair] Fixed ${repairedCount} questions`);
+
     res.json({
-      success: result.success,
-      data: result
+      success: true,
+      message: `Repaired ${repairedCount} questions`,
+      data: {
+        totalChecked: questions.length,
+        totalRepaired: repairedCount,
+        log: repairLog.slice(0, 50)
+      }
     });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get translation API status
-// @route   GET /api/translate/status
-const getStatus = async (req, res) => {
-  const status = translateHelper.getStatus();
-  res.json({
-    success: true,
-    data: status
-  });
-};
-
-// @desc    Clear translation cache
-// @route   POST /api/translate/clear-cache
-const clearCache = async (req, res) => {
-  translateHelper.clearCache();
-  res.json({
-    success: true,
-    message: 'Translation cache cleared'
-  });
+  } catch (error) { next(error); }
 };
 
 module.exports = {
@@ -116,5 +135,7 @@ module.exports = {
   translateBatch,
   testConnection,
   getStatus,
-  clearCache
+  clearCache,
+  repairPreview,
+  repairExecute
 };
