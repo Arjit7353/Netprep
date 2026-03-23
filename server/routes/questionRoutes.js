@@ -14,7 +14,13 @@ router.get('/stats', questionController.getQuestionStats);
 router.post('/import', questionController.importQuestions);
 router.post('/import/validate', questionController.validateImport);
 
-// ✅ NEW: Bulk fetch questions by IDs
+// ═══ NEW: PYQ Question Bank routes (MUST be before /:id) ═══
+router.get('/pyq-bank', questionController.getPYQQuestionBank);
+router.get('/pyq-question/:pyqId', questionController.getPYQQuestionById);
+router.put('/pyq-question/:pyqId', questionController.updatePYQQuestion);
+router.put('/pyq-bank/bulk-update', questionController.bulkUpdatePYQQuestions);
+
+// Bulk fetch questions by IDs
 router.post('/bulk', async (req, res) => {
   try {
     const { ids } = req.body;
@@ -26,7 +32,6 @@ router.post('/bulk', async (req, res) => {
       });
     }
 
-    // Limit to 100 questions per request
     const limitedIds = ids.slice(0, 100);
     
     const questions = await Question.find({ 
@@ -63,8 +68,7 @@ router.get('/di/:diDataId', questionController.getQuestionsByDI);
 
 // Bulk delete
 router.delete('/bulk', questionController.bulkDeleteQuestions);
-router.post('/bulk-delete', questionController.bulkDeleteQuestions);  // ✅ NEW LINE
-
+router.post('/bulk-delete', questionController.bulkDeleteQuestions);
 
 // Main CRUD routes
 router.get('/', questionController.getQuestions);

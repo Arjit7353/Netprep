@@ -52,7 +52,45 @@ const questionService = {
   bulkDeleteQuestions: async (ids) => {
     return apiHelper.post('/questions/bulk-delete', { ids });
   },
+// ADD these methods inside questionService object in client/src/services/questionService.js
+// Put them after the existing DI DATA APIs section
 
+  // ============================================================
+  // PYQ QUESTION BANK APIs — NEW
+  // ============================================================
+
+  getPYQQuestionBank: async (filters = {}) => {
+    const params = {
+      page: filters.page || 1,
+      limit: filters.limit || 20,
+      ...(filters.paper && { paper: filters.paper }),
+      ...(filters.year && { year: filters.year }),
+      ...(filters.session && { session: filters.session }),
+      ...(filters.shift && { shift: filters.shift }),
+      ...(filters.unitId && { unitId: filters.unitId }),
+      ...(filters.chapter && { chapter: filters.chapter }),
+      ...(filters.topic && { topic: filters.topic }),
+      ...(filters.type && { type: filters.type }),
+      ...(filters.difficulty && { difficulty: filters.difficulty }),
+      ...(filters.hasContent !== undefined && { hasContent: String(filters.hasContent) }),
+      ...(filters.search && { search: filters.search }),
+      ...(filters.sortBy && { sortBy: filters.sortBy }),
+      ...(filters.sortOrder && { sortOrder: filters.sortOrder }),
+    };
+    return apiHelper.get('/questions/pyq-bank', params);
+  },
+
+  getPYQQuestionById: async (pyqId) => {
+    return apiHelper.get(`/questions/pyq-question/${pyqId}`);
+  },
+
+  updatePYQQuestion: async (pyqId, updates) => {
+    return apiHelper.put(`/questions/pyq-question/${pyqId}`, updates);
+  },
+
+  bulkUpdatePYQQuestions: async (pyqIds, updates) => {
+    return apiHelper.put('/questions/pyq-bank/bulk-update', { pyqIds, updates });
+  },
   // ============================================================
   // IMPORT APIs
   // ============================================================

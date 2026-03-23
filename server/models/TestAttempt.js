@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 
 const answerSchema = new mongoose.Schema({
+  // ═══ FIX: Changed from ObjectId to Mixed to support PYQ string IDs ═══
   questionId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Question',
+    type: mongoose.Schema.Types.Mixed,
     required: true
   },
   questionNumber: {
@@ -11,7 +11,7 @@ const answerSchema = new mongoose.Schema({
   },
   selectedAnswer: {
     type: Number,
-    default: -1  // -1 means not answered
+    default: -1
   },
   correctAnswer: {
     type: Number
@@ -21,7 +21,7 @@ const answerSchema = new mongoose.Schema({
     default: false
   },
   timeTaken: {
-    type: Number,  // Time spent on this question in seconds
+    type: Number,
     default: 0
   },
   markedForReview: {
@@ -51,23 +51,19 @@ const topicAnalysisSchema = new mongoose.Schema({
 }, { _id: false });
 
 const testAttemptSchema = new mongoose.Schema({
-  // Reference to the test
   testId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Test',
     required: [true, 'Test ID is required']
   },
 
-  // Attempt number for this test
   attemptNumber: {
     type: Number,
     default: 1
   },
 
-  // Answers array
   answers: [answerSchema],
 
-  // Score calculation
   score: {
     type: Number,
     default: 0
@@ -77,7 +73,6 @@ const testAttemptSchema = new mongoose.Schema({
     type: Number
   },
 
-  // Question counts
   correctCount: {
     type: Number,
     default: 0
@@ -98,26 +93,23 @@ const testAttemptSchema = new mongoose.Schema({
     default: 0
   },
 
-  // Accuracy percentage
   accuracy: {
     type: Number,
     default: 0
   },
 
-  // Percentage score
   percentage: {
     type: Number,
     default: 0
   },
 
-  // Time tracking
   totalTimeTaken: {
-    type: Number,  // In seconds
+    type: Number,
     default: 0
   },
 
   averageTimePerQuestion: {
-    type: Number,  // In seconds
+    type: Number,
     default: 0
   },
 
@@ -129,25 +121,21 @@ const testAttemptSchema = new mongoose.Schema({
     type: Date
   },
 
-  // Current question index (for resuming)
   currentQuestionIndex: {
     type: Number,
     default: 0
   },
 
-  // Remaining time (for resuming)
   remainingTime: {
-    type: Number  // In seconds
+    type: Number
   },
 
-  // Status
   status: {
     type: String,
     enum: ['in_progress', 'completed', 'abandoned', 'paused'],
     default: 'in_progress'
   },
 
-  // Topic Analysis
   topicAnalysis: [topicAnalysisSchema]
 
 }, {
@@ -158,19 +146,30 @@ const testAttemptSchema = new mongoose.Schema({
 
 /**
  * Initialize answers array from questions
+ * ═══ FIX: Filters out null/undefined questions, handles both ObjectId and string _id ═══
  */
 testAttemptSchema.methods.initializeAnswers = function(questions) {
-  this.answers = questions.map((question, index) => ({
-    questionId: question._id,
-    questionNumber: index + 1,
-    selectedAnswer: -1,
-    correctAnswer: question.correctAnswer,
-    isCorrect: false,
-    timeTaken: 0,
-    markedForReview: false,
-    visited: false
-  }));
+  this.answers = questions
+    .filter(q => q && q._id) // Safety: skip null/missing questions
+    .map((question, index) => ({
+      questionId: question._id, // Works for both ObjectId and PYQ string
+      questionNumber: index + 1,
+      selectedAnswer: -1,
+      correctAnswer: question.correctAnswer,
+      isCorrect: false,
+      timeTaken: 0,
+      markedForReview: false,
+      visited: false
+    }));
   return this;
+};
+
+/**
+ * ═══ FIX: Safe string comparison for both ObjectId and PYQ string IDs ═══
+ */
+const safeIdMatch = (a, b) => {
+  if (!a || !b) return false;
+  return String(a) === String(b);
 };
 
 /**
@@ -178,7 +177,7 @@ testAttemptSchema.methods.initializeAnswers = function(questions) {
  */
 testAttemptSchema.methods.updateAnswer = function(questionId, selectedAnswer, timeTaken = 0) {
   const answerIndex = this.answers.findIndex(
-    a => a.questionId.toString() === questionId.toString()
+    a => safeIdMatch(a.questionId, questionId)
   );
 
   if (answerIndex !== -1) {
@@ -187,7 +186,6 @@ testAttemptSchema.methods.updateAnswer = function(questionId, selectedAnswer, ti
     this.answers[answerIndex].answeredAt = new Date();
     this.answers[answerIndex].visited = true;
     
-    // Check if correct
     this.answers[answerIndex].isCorrect = 
       selectedAnswer === this.answers[answerIndex].correctAnswer;
   }
@@ -200,7 +198,7 @@ testAttemptSchema.methods.updateAnswer = function(questionId, selectedAnswer, ti
  */
 testAttemptSchema.methods.toggleMarkForReview = function(questionId) {
   const answerIndex = this.answers.findIndex(
-    a => a.questionId.toString() === questionId.toString()
+    a => safeIdMatch(a.questionId, questionId)
   );
 
   if (answerIndex !== -1) {
@@ -216,7 +214,7 @@ testAttemptSchema.methods.toggleMarkForReview = function(questionId) {
  */
 testAttemptSchema.methods.clearResponse = function(questionId) {
   const answerIndex = this.answers.findIndex(
-    a => a.questionId.toString() === questionId.toString()
+    a => safeIdMatch(a.questionId, questionId)
   );
 
   if (answerIndex !== -1) {
@@ -279,23 +277,21 @@ testAttemptSchema.methods.getAnswerStatuses = function() {
 
 /**
  * Calculate results after submission
+ * ═══ FIX: Uses safeIdMatch for both ObjectId and PYQ string IDs ═══
  */
 testAttemptSchema.methods.calculateResults = async function(questions, test) {
-  const Question = mongoose.model('Question');
-  
   let correctCount = 0;
   let wrongCount = 0;
   let skippedCount = 0;
 
-  // Topic-wise analysis map
   const topicMap = new Map();
 
   for (const answer of this.answers) {
-    const question = questions.find(q => q._id.toString() === answer.questionId.toString());
+    // ═══ FIX: Use safe string comparison ═══
+    const question = questions.find(q => safeIdMatch(q._id, answer.questionId));
     
     if (!question) continue;
 
-    // Check answer
     if (answer.selectedAnswer === -1) {
       skippedCount++;
       answer.isCorrect = false;
@@ -307,7 +303,6 @@ testAttemptSchema.methods.calculateResults = async function(questions, test) {
       answer.isCorrect = false;
     }
 
-    // Update topic analysis
     const topicKey = question.unit || 'General';
     if (!topicMap.has(topicKey)) {
       topicMap.set(topicKey, {
@@ -331,37 +326,31 @@ testAttemptSchema.methods.calculateResults = async function(questions, test) {
     }
   }
 
-  // Calculate score
   const marksPerQuestion = test.marksPerQuestion || 2;
   const negativeMarks = test.negativeMarking ? (test.negativeMarks || 0) : 0;
   
   this.score = (correctCount * marksPerQuestion) - (wrongCount * negativeMarks);
   this.score = Math.max(0, this.score);
 
-  // Update counts
   this.correctCount = correctCount;
   this.wrongCount = wrongCount;
   this.skippedCount = skippedCount;
   this.markedForReviewCount = this.answers.filter(a => a.markedForReview).length;
 
-  // Calculate accuracy and percentage
   const attempted = correctCount + wrongCount;
   this.accuracy = attempted > 0 ? Math.round((correctCount / attempted) * 100) : 0;
   this.percentage = this.totalMarks > 0 ? Math.round((this.score / this.totalMarks) * 100) : 0;
 
-  // Calculate average time per question
   const totalTime = this.answers.reduce((sum, a) => sum + (a.timeTaken || 0), 0);
   this.averageTimePerQuestion = this.answers.length > 0 
     ? Math.round(totalTime / this.answers.length) 
     : 0;
 
-  // Set topic analysis
   this.topicAnalysis = Array.from(topicMap.values()).map(stats => ({
     ...stats,
     accuracy: stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0
   }));
 
-  // Update status
   this.status = 'completed';
   this.completedAt = new Date();
 
@@ -370,9 +359,6 @@ testAttemptSchema.methods.calculateResults = async function(questions, test) {
 
 // ==================== STATIC METHODS ====================
 
-/**
- * Get recent attempts
- */
 testAttemptSchema.statics.getRecentAttempts = async function(limit = 10) {
   return this.find({ status: 'completed' })
     .sort({ completedAt: -1 })
@@ -380,25 +366,16 @@ testAttemptSchema.statics.getRecentAttempts = async function(limit = 10) {
     .populate('testId', 'title testType paper');
 };
 
-/**
- * Get attempt history for a test
- */
 testAttemptSchema.statics.getAttemptHistory = async function(testId) {
   return this.find({ testId, status: 'completed' })
     .sort({ completedAt: -1 })
     .select('score percentage accuracy correctCount wrongCount skippedCount totalTimeTaken completedAt attemptNumber');
 };
 
-/**
- * Get in-progress attempt for a test
- */
 testAttemptSchema.statics.getInProgress = async function(testId) {
   return this.findOne({ testId, status: 'in_progress' });
 };
 
-/**
- * Get best attempt for a test
- */
 testAttemptSchema.statics.getBestAttempt = async function(testId) {
   return this.findOne({ testId, status: 'completed' })
     .sort({ score: -1 })
@@ -411,7 +388,6 @@ testAttemptSchema.index({ status: 1 });
 testAttemptSchema.index({ createdAt: -1 });
 testAttemptSchema.index({ completedAt: -1 });
 
-// Ensure virtuals are included
 testAttemptSchema.set('toJSON', { virtuals: true });
 testAttemptSchema.set('toObject', { virtuals: true });
 

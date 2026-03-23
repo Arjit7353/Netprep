@@ -950,7 +950,683 @@ const getDIDataById = async (req, res, next) => {
     res.json({ success: true, data: { ...diData.toObject(), questions } });
   } catch (error) { next(error); }
 };
+// ================================================================
+// PYQ QUESTION BANK — Edit PYQ question in PYQAnalysis doc
+// When edited, auto-update any Test that references this PYQ question
+// ================================================================
 
+// @desc    Get single PYQ question by pyqId (e.g. "pyq_abc123_5")
+// @route   GET /api/questions/pyq-question/:pyqId
+const getPYQQuestionById = async (req, res, next) => {
+  try {
+    const { pyqId } = req.params;
+    
+    if (!pyqId || !pyqId.startsWith('pyq_')) {
+      return res.status(400).json({ success: false, message: 'Invalid PYQ ID format' });
+    }
+
+    const match = pyqId.match(/^pyq_([a-f0-9]{24})_(\d+)$/i);
+    if (!match) {
+      return res.status(400).json({ success: false, message: 'Invalid PYQ ID format. Expected: pyq_{docId}_{qNo}' });
+    }
+
+    const [, docId, qNoStr] = match;
+    const qNo = parseInt(qNoStr, 10);
+
+    const PYQAnalysis = require('../models/PYQAnalysis');
+    const pyqDoc = await PYQAnalysis.findById(docId).lean();
+    
+    if (!pyqDoc) {
+      return res.status(404).json({ success: false, message: 'PYQ document not found' });
+    }
+
+    const questionEntry = (pyqDoc.questionTopicMap || []).find(q => q.qNo === qNo);
+    if (!questionEntry) {
+      return res.status(404).json({ success: false, message: `Question #${qNo} not found in PYQ ${pyqDoc.displayLabel}` });
+    }
+
+    // Find which tests reference this PYQ question
+    const Test = require('../models/Test');
+    const testsUsingThis = await Test.find({
+      questions: pyqId,
+      status: { $ne: 'archived' }
+    }).select('_id title testType').lean();
+
+    res.json({
+      success: true,
+      data: {
+        pyqId,
+        docId,
+        qNo,
+        pyqLabel: pyqDoc.displayLabel,
+        year: pyqDoc.year,
+        session: pyqDoc.session,
+        shift: pyqDoc.shift,
+        paper: pyqDoc.paper,
+        question: questionEntry,
+        linkedTests: testsUsingThis.map(t => ({
+          _id: t._id,
+          title: t.title,
+          testType: t.testType
+        }))
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update a PYQ question inside PYQAnalysis document
+//          Also triggers cache invalidation for any test using this question
+// @route   PUT /api/questions/pyq-question/:pyqId
+const updatePYQQuestion = async (req, res, next) => {
+  try {
+    const { pyqId } = req.params;
+    const updates = req.body;
+
+    if (!pyqId || !pyqId.startsWith('pyq_')) {
+      return res.status(400).json({ success: false, message: 'Invalid PYQ ID format' });
+    }
+
+    const match = pyqId.match(/^pyq_([a-f0-9]{24})_(\d+)$/i);
+    if (!match) {
+      return res.status(400).json({ success: false, message: 'Invalid PYQ ID format' });
+    }
+
+    const [, docId, qNoStr] = match;
+    const qNo = parseInt(qNoStr, 10);
+
+    const PYQAnalysis = require('../models/PYQAnalysis');
+    const pyqDoc = await PYQAnalysis.findById(docId);
+
+    if (!pyqDoc) {
+      return res.status(404).json({ success: false, message: 'PYQ document not found' });
+    }
+
+    const qIndex = (pyqDoc.questionTopicMap || []).findIndex(q => q.qNo === qNo);
+    if (qIndex === -1) {
+      return res.status(404).json({ success: false, message: `Question #${qNo} not found` });
+    }
+
+    // ═══ Apply updates to the question entry ═══
+    const existingQ = pyqDoc.questionTopicMap[qIndex];
+
+    // Allowed editable fields
+    const editableFields = [
+      'questionText', 'questionTextHi', 'questionTextEn',
+      'options', 'optionsHi', 'optionsEn',
+      'correctAnswer',
+      'explanation', 'explanationHi', 'explanationEn',
+      'assertion', 'assertionHi', 'assertionEn',
+      'reason', 'reasonHi', 'reasonEn',
+      'statements', 'statementsHi', 'statementsEn', 'correctStatements',
+      'listA', 'listAHi', 'listAEn',
+      'listB', 'listBHi', 'listBEn', 'correctMatch',
+      'items', 'itemsHi', 'itemsEn', 'correctOrder',
+      'passage', 'passageHi', 'passageEn', 'passageTitle',
+      'caseletText', 'caseletTextHi', 'caseletTextEn',
+      'instruction', 'instructionHi',
+      'type', 'difficulty', 'importance',
+      'unitId', 'unitName', 'chapter', 'chapterHi',
+      'topic', 'topicHi', 'subtopic', 'concept',
+      'keyTerms', 'source'
+    ];
+
+    let changedFields = [];
+
+    for (const field of editableFields) {
+      if (updates[field] !== undefined) {
+        const oldVal = JSON.stringify(existingQ[field]);
+        const newVal = JSON.stringify(updates[field]);
+        if (oldVal !== newVal) {
+          existingQ[field] = updates[field];
+          changedFields.push(field);
+        }
+      }
+    }
+
+    // Handle sub-questions update
+    if (updates.subQuestions !== undefined) {
+      existingQ.subQuestions = updates.subQuestions;
+      changedFields.push('subQuestions');
+    }
+
+    // Recalculate hasContent
+    const hasContent = !!(
+      existingQ.questionTextHi || existingQ.questionTextEn || existingQ.questionText ||
+      existingQ.assertionHi || existingQ.assertion ||
+      existingQ.passageHi || existingQ.passage ||
+      existingQ.caseletTextHi || existingQ.caseletText ||
+      (existingQ.optionsHi && existingQ.optionsHi.length > 0) ||
+      (existingQ.optionsEn && existingQ.optionsEn.length > 0) ||
+      (existingQ.options && existingQ.options.length > 0) ||
+      (existingQ.statementsHi && existingQ.statementsHi.length > 0) ||
+      (existingQ.listAHi && existingQ.listAHi.length > 0) ||
+      (existingQ.itemsHi && existingQ.itemsHi.length > 0) ||
+      (existingQ.subQuestions && existingQ.subQuestions.length > 0)
+    );
+    existingQ.hasContent = hasContent;
+
+    if (changedFields.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No changes detected',
+        data: { pyqId, changedFields: [], linkedTestsUpdated: 0 }
+      });
+    }
+
+    // Save the updated questionTopicMap
+    pyqDoc.questionTopicMap[qIndex] = existingQ;
+    pyqDoc.markModified('questionTopicMap');
+    pyqDoc.updatedAt = new Date();
+    await pyqDoc.save();
+
+    // ═══ AUTO-UPDATE TESTS ═══
+    // Since tests store PYQ question IDs as strings like "pyq_abc_5",
+    // and the actual question data is resolved at runtime from PYQAnalysis,
+    // updating the PYQAnalysis doc means tests automatically get updated data.
+    // But we should update the test's updatedAt to invalidate any caches.
+    const Test = require('../models/Test');
+    const testUpdateResult = await Test.updateMany(
+      {
+        questions: pyqId,
+        status: { $ne: 'archived' }
+      },
+      {
+        $set: { updatedAt: new Date() }
+      }
+    );
+
+    console.log(`[PYQ Edit] Updated Q${qNo} in ${pyqDoc.displayLabel}. Fields: ${changedFields.join(', ')}. Tests refreshed: ${testUpdateResult.modifiedCount}`);
+
+    res.json({
+      success: true,
+      message: `PYQ Question #${qNo} updated successfully`,
+      data: {
+        pyqId,
+        qNo,
+        pyqLabel: pyqDoc.displayLabel,
+        changedFields,
+        linkedTestsUpdated: testUpdateResult.modifiedCount,
+        updatedQuestion: existingQ
+      }
+    });
+  } catch (error) {
+    console.error('[PYQ Edit] Error:', error.message);
+    next(error);
+  }
+};
+
+// @desc    Get all PYQ questions for Question Bank view (paginated, filtered)
+// @route   GET /api/questions/pyq-bank
+const getPYQQuestionBank = async (req, res, next) => {
+  try {
+    const {
+      page = 1, limit = 20,
+      paper, year, session, shift,
+      unitId, chapter, topic, type,
+      difficulty, hasContent,
+      search, sortBy = 'qNo', sortOrder = 'asc'
+    } = req.query;
+
+    const PYQAnalysis = require('../models/PYQAnalysis');
+
+    // Build filter for PYQ documents
+    const docFilter = { isActive: true };
+    if (paper) docFilter.paper = paper;
+    if (year) docFilter.year = year;
+    if (session) docFilter.session = session.toLowerCase();
+    if (shift && shift !== 'none') docFilter.shift = shift;
+
+    const pyqDocs = await PYQAnalysis.find(docFilter)
+      .sort({ year: -1, session: 1, shift: 1 })
+      .lean();
+
+    if (pyqDocs.length === 0) {
+      return res.json({
+        success: true,
+        data: [],
+        pagination: { page: 1, limit: parseInt(limit), total: 0, pages: 0 },
+        filters: { years: [], sessions: [], units: [], types: [] }
+      });
+    }
+
+    // ═══ FIX: Build unitName map from unitWeightage across ALL docs ═══
+    // unitWeightage has proper unitName, unitId, chapters etc.
+    const globalUnitNameMap = {};     // unitId → unitName (English)
+    const globalUnitNameHiMap = {};   // unitId → unitNameHi (Hindi)
+    const globalChaptersMap = {};     // unitId → Set of chapters
+    const globalTopicsMap = {};       // "unitId|chapter" → Set of topics
+
+    for (const doc of pyqDocs) {
+      // From unitWeightage — most reliable source of unit names
+      for (const uw of (doc.unitWeightage || [])) {
+        if (!uw.unitId) continue;
+        
+        if (uw.unitName && uw.unitName.length > 2) {
+          // Keep the longest/best name seen
+          if (!globalUnitNameMap[uw.unitId] || 
+              uw.unitName.length > globalUnitNameMap[uw.unitId].length) {
+            globalUnitNameMap[uw.unitId] = uw.unitName;
+          }
+        }
+        if (uw.unitNameHi && uw.unitNameHi.length > 2) {
+          if (!globalUnitNameHiMap[uw.unitId] ||
+              uw.unitNameHi.length > globalUnitNameHiMap[uw.unitId].length) {
+            globalUnitNameHiMap[uw.unitId] = uw.unitNameHi;
+          }
+        }
+      }
+
+      // Also scan questionTopicMap for unit names stored there
+      for (const q of (doc.questionTopicMap || [])) {
+        if (!q.unitId) continue;
+
+        // Unit name from question entries
+        if (q.unitName && q.unitName.length > 2 && q.unitName !== q.unitId) {
+          if (!globalUnitNameMap[q.unitId] ||
+              q.unitName.length > globalUnitNameMap[q.unitId].length) {
+            globalUnitNameMap[q.unitId] = q.unitName;
+          }
+        }
+        if (q.unitNameHi && q.unitNameHi.length > 2) {
+          if (!globalUnitNameHiMap[q.unitId] ||
+              q.unitNameHi.length > globalUnitNameHiMap[q.unitId].length) {
+            globalUnitNameHiMap[q.unitId] = q.unitNameHi;
+          }
+        }
+
+        // Chapters map
+        if (q.chapter) {
+          if (!globalChaptersMap[q.unitId]) globalChaptersMap[q.unitId] = new Set();
+          globalChaptersMap[q.unitId].add(q.chapter);
+        }
+
+        // Topics map
+        if (q.chapter && q.topic) {
+          const key = `${q.unitId}|${q.chapter}`;
+          if (!globalTopicsMap[key]) globalTopicsMap[key] = new Set();
+          globalTopicsMap[key].add(q.topic);
+        }
+      }
+    }
+
+    // ═══ Collect all questions from matching PYQ docs ═══
+    let allQuestions = [];
+    const Test = require('../models/Test');
+
+    for (const doc of pyqDocs) {
+      const qtm = doc.questionTopicMap || [];
+
+      for (const q of qtm) {
+        // Apply question-level filters
+        if (unitId && q.unitId !== unitId) continue;
+        if (chapter && q.chapter && !q.chapter.toLowerCase().includes(chapter.toLowerCase())) continue;
+        if (topic && q.topic && !q.topic.toLowerCase().includes(topic.toLowerCase())) continue;
+        if (type && q.type !== type) continue;
+        if (difficulty && q.difficulty !== difficulty) continue;
+        if (hasContent === 'true' && !q.hasContent) continue;
+        if (hasContent === 'false' && q.hasContent) continue;
+
+        // Search filter
+        if (search) {
+          const searchLower = search.toLowerCase();
+          const searchableText = [
+            q.questionTextHi, q.questionTextEn, q.questionText,
+            q.topic, q.topicHi, q.chapter, q.chapterHi,
+            q.assertionHi, q.assertionEn,
+            q.passageHi, q.passageEn,
+            // Also search unit name
+            globalUnitNameMap[q.unitId],
+            globalUnitNameHiMap[q.unitId],
+            ...(q.optionsHi || []),
+            ...(q.optionsEn || []),
+            ...(q.statementsHi || []),
+            ...(q.keyTerms || [])
+          ].filter(Boolean).join(' ').toLowerCase();
+
+          if (!searchableText.includes(searchLower)) continue;
+        }
+
+        const pyqId = `pyq_${doc._id}_${q.qNo}`;
+
+        // ═══ FIX: Resolve unitName from global map ═══
+        const resolvedUnitName = 
+          globalUnitNameMap[q.unitId] ||    // From unitWeightage (best)
+          q.unitName ||                      // From questionTopicMap entry
+          q.unitId ||                        // Fallback to ID
+          '';
+
+        const resolvedUnitNameHi =
+          globalUnitNameHiMap[q.unitId] ||
+          q.unitNameHi ||
+          resolvedUnitName ||
+          '';
+
+        allQuestions.push({
+          pyqId,
+          docId: doc._id.toString(),
+          qNo: q.qNo,
+          pyqLabel: doc.displayLabel,
+          year: doc.year,
+          session: doc.session,
+          shift: doc.shift,
+          paper: doc.paper,
+          type: q.type || 'mcq',
+          unitId: q.unitId || '',
+          unitName: resolvedUnitName,       // ✅ Properly resolved
+          unitNameHi: resolvedUnitNameHi,   // ✅ Hindi name too
+          chapter: q.chapter || '',
+          chapterHi: q.chapterHi || '',
+          topic: q.topic || '',
+          topicHi: q.topicHi || '',
+          subtopic: q.subtopic || '',
+          difficulty: q.difficulty || 'medium',
+          importance: q.importance || 3,
+          hasContent: q.hasContent || false,
+          hasSubQuestions: q.hasSubQuestions || false,
+          questionPreview: (
+            q.questionTextHi || q.questionTextEn || q.questionText ||
+            q.assertionHi || q.assertion ||
+            q.topic || `Q${q.qNo}`
+          ).substring(0, 120),
+          // ✅ Also expose Hi preview for expanded row
+          questionPreviewHi: (q.questionTextHi || q.assertionHi || '').substring(0, 200),
+          questionPreviewEn: (q.questionTextEn || q.assertionEn || '').substring(0, 200),
+          optionCount: (q.optionsHi || q.optionsEn || q.options || []).length,
+          correctAnswer: q.correctAnswer,
+          keyTerms: q.keyTerms || [],
+          source: q.source || `PYQ ${doc.year} ${doc.session}`
+        });
+      }
+    }
+
+    // Sort
+    const sortMultiplier = sortOrder === 'desc' ? -1 : 1;
+    allQuestions.sort((a, b) => {
+      switch (sortBy) {
+        case 'year':
+          if (a.year !== b.year) return (a.year > b.year ? -1 : 1) * sortMultiplier;
+          return (a.qNo - b.qNo) * sortMultiplier;
+        case 'type':
+          if (a.type !== b.type) return a.type.localeCompare(b.type) * sortMultiplier;
+          return a.qNo - b.qNo;
+        case 'difficulty': {
+          const diffOrder = { easy: 1, medium: 2, hard: 3 };
+          return ((diffOrder[a.difficulty] || 2) - (diffOrder[b.difficulty] || 2)) * sortMultiplier;
+        }
+        case 'unit':
+          if (a.unitId !== b.unitId) return a.unitId.localeCompare(b.unitId) * sortMultiplier;
+          return a.qNo - b.qNo;
+        case 'importance':
+          return ((b.importance || 3) - (a.importance || 3)) * sortMultiplier;
+        case 'qNo':
+        default:
+          if (a.year !== b.year) return (b.year || '').localeCompare(a.year || '');
+          return (a.qNo - b.qNo) * sortMultiplier;
+      }
+    });
+
+    // Paginate
+    const total = allQuestions.length;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const startIdx = (pageNum - 1) * limitNum;
+    const paginatedQuestions = allQuestions.slice(startIdx, startIdx + limitNum);
+
+    // ═══ FIX: Build filters with proper unit names ═══
+    const filterYears = [...new Set(allQuestions.map(q => q.year))].sort().reverse();
+    const filterSessions = [...new Set(allQuestions.map(q => q.session))];
+    const filterUnits = {};
+    const filterTypes = {};
+    const filterDifficulties = {};
+
+    allQuestions.forEach(q => {
+      if (q.unitId) {
+        if (!filterUnits[q.unitId]) {
+          filterUnits[q.unitId] = {
+            id: q.unitId,
+            name: q.unitName,           // ✅ Resolved name
+            nameHi: q.unitNameHi,       // ✅ Hindi name
+            count: 0,
+            chapters: new Set(),
+            topics: new Set()
+          };
+        }
+        // Update name if better one found
+        if (q.unitName && q.unitName !== q.unitId && 
+            q.unitName.length > filterUnits[q.unitId].name.length) {
+          filterUnits[q.unitId].name = q.unitName;
+        }
+        filterUnits[q.unitId].count++;
+        if (q.chapter) filterUnits[q.unitId].chapters.add(q.chapter);
+        if (q.topic) filterUnits[q.unitId].topics.add(q.topic);
+      }
+      if (q.type) {
+        if (!filterTypes[q.type]) filterTypes[q.type] = { type: q.type, count: 0 };
+        filterTypes[q.type].count++;
+      }
+      if (q.difficulty) {
+        if (!filterDifficulties[q.difficulty]) filterDifficulties[q.difficulty] = { difficulty: q.difficulty, count: 0 };
+        filterDifficulties[q.difficulty].count++;
+      }
+    });
+
+    // Build chapters list per unit
+    const filterChapters = [];
+    Object.entries(globalChaptersMap).forEach(([uid, chapSet]) => {
+      chapSet.forEach(chap => {
+        filterChapters.push({
+          unitId: uid,
+          unitName: globalUnitNameMap[uid] || uid,
+          chapter: chap,
+          count: allQuestions.filter(q => q.unitId === uid && q.chapter === chap).length
+        });
+      });
+    });
+    filterChapters.sort((a, b) => b.count - a.count);
+
+    // Build topics list
+    const filterTopics = [];
+    Object.entries(globalTopicsMap).forEach(([key, topicSet]) => {
+      const [uid, chap] = key.split('|');
+      topicSet.forEach(t => {
+        filterTopics.push({
+          unitId: uid,
+          chapter: chap,
+          topic: t,
+          count: allQuestions.filter(q => q.unitId === uid && q.chapter === chap && q.topic === t).length
+        });
+      });
+    });
+    filterTopics.sort((a, b) => b.count - a.count);
+
+    // Check test usage
+    const allPyqIds = paginatedQuestions.map(q => q.pyqId);
+    let testUsageMap = {};
+    if (allPyqIds.length > 0) {
+      try {
+        const testsWithPYQ = await Test.find({
+          questions: { $in: allPyqIds },
+          status: { $ne: 'archived' }
+        }).select('questions title').lean();
+
+        testsWithPYQ.forEach(test => {
+          (test.questions || []).forEach(qId => {
+            const idStr = typeof qId === 'string' ? qId : String(qId);
+            if (allPyqIds.includes(idStr)) {
+              if (!testUsageMap[idStr]) testUsageMap[idStr] = [];
+              testUsageMap[idStr].push({ _id: test._id, title: test.title });
+            }
+          });
+        });
+      } catch (e) {
+        console.warn('[PYQ Bank] Test usage check failed:', e.message);
+      }
+    }
+
+    // Enrich with test usage
+    const enrichedQuestions = paginatedQuestions.map(q => ({
+      ...q,
+      usedInTests: testUsageMap[q.pyqId] || [],
+      usedInTestCount: (testUsageMap[q.pyqId] || []).length
+    }));
+
+    // Stats
+    const stats = {
+      totalQuestions: total,
+      withContent: allQuestions.filter(q => q.hasContent).length,
+      withoutContent: allQuestions.filter(q => !q.hasContent).length,
+      byDifficulty: Object.values(filterDifficulties),
+      pyqPapers: pyqDocs.length
+    };
+
+    // ═══ FIX: Serialize Sets before sending ═══
+    const serializedUnits = Object.values(filterUnits)
+      .map(u => ({
+        id: u.id,
+        name: u.name,
+        nameHi: u.nameHi,
+        count: u.count,
+        chapterCount: u.chapters.size,
+        topicCount: u.topics.size
+      }))
+      .sort((a, b) => {
+        const numA = parseInt((a.id.match(/\d+/) || ['999'])[0]);
+        const numB = parseInt((b.id.match(/\d+/) || ['999'])[0]);
+        return numA - numB;
+      });
+
+    res.json({
+      success: true,
+      data: enrichedQuestions,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum)
+      },
+      filters: {
+        years: filterYears,
+        sessions: filterSessions,
+        units: serializedUnits,          // ✅ With proper names
+        chapters: filterChapters,        // ✅ NEW: chapters list
+        topics: filterTopics.slice(0, 100), // ✅ NEW: top 100 topics
+        types: Object.values(filterTypes).sort((a, b) => b.count - a.count),
+        difficulties: Object.values(filterDifficulties)
+      },
+      stats
+    });
+  } catch (error) {
+    console.error('[PYQ Bank] Error:', error.message);
+    next(error);
+  }
+};
+
+// @desc    Bulk update PYQ questions (e.g., change difficulty/topic for multiple)
+// @route   PUT /api/questions/pyq-bank/bulk-update
+const bulkUpdatePYQQuestions = async (req, res, next) => {
+  try {
+    const { pyqIds, updates } = req.body;
+
+    if (!pyqIds || !Array.isArray(pyqIds) || pyqIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'pyqIds array required' });
+    }
+
+    if (!updates || typeof updates !== 'object') {
+      return res.status(400).json({ success: false, message: 'updates object required' });
+    }
+
+    const PYQAnalysis = require('../models/PYQAnalysis');
+    const Test = require('../models/Test');
+
+    // Group by docId
+    const docGroups = {};
+    for (const pyqId of pyqIds) {
+      const match = pyqId.match(/^pyq_([a-f0-9]{24})_(\d+)$/i);
+      if (!match) continue;
+      const [, docId, qNoStr] = match;
+      if (!docGroups[docId]) docGroups[docId] = [];
+      docGroups[docId].push({ qNo: parseInt(qNoStr), pyqId });
+    }
+
+    let updatedCount = 0;
+    let testUpdateCount = 0;
+    const errors = [];
+
+    // Allowed bulk-editable fields (metadata only, not content)
+    const bulkEditableFields = [
+      'difficulty', 'importance', 'unitId', 'unitName',
+      'chapter', 'chapterHi', 'topic', 'topicHi',
+      'subtopic', 'concept', 'keyTerms', 'type'
+    ];
+
+    for (const [docId, questions] of Object.entries(docGroups)) {
+      try {
+        const pyqDoc = await PYQAnalysis.findById(docId);
+        if (!pyqDoc) {
+          errors.push({ docId, error: 'Document not found' });
+          continue;
+        }
+
+        let docChanged = false;
+
+        for (const { qNo, pyqId } of questions) {
+          const qIndex = (pyqDoc.questionTopicMap || []).findIndex(q => q.qNo === qNo);
+          if (qIndex === -1) {
+            errors.push({ pyqId, error: `Q${qNo} not found` });
+            continue;
+          }
+
+          for (const field of bulkEditableFields) {
+            if (updates[field] !== undefined) {
+              pyqDoc.questionTopicMap[qIndex][field] = updates[field];
+              docChanged = true;
+            }
+          }
+          updatedCount++;
+        }
+
+        if (docChanged) {
+          pyqDoc.markModified('questionTopicMap');
+          pyqDoc.updatedAt = new Date();
+          await pyqDoc.save();
+
+          // Refresh tests
+          const pyqIdsForThisDoc = questions.map(q => q.pyqId);
+          const testResult = await Test.updateMany(
+            {
+              questions: { $in: pyqIdsForThisDoc },
+              status: { $ne: 'archived' }
+            },
+            { $set: { updatedAt: new Date() } }
+          );
+          testUpdateCount += testResult.modifiedCount;
+        }
+      } catch (err) {
+        errors.push({ docId, error: err.message });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Updated ${updatedCount} questions across ${Object.keys(docGroups).length} PYQ papers`,
+      data: {
+        updated: updatedCount,
+        testsRefreshed: testUpdateCount,
+        errors: errors.length,
+        errorDetails: errors.slice(0, 10)
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+// ═══════════════════════════════════════════════════
+// NOW UPDATE module.exports — add the new functions
+// ═══════════════════════════════════════════════════
+
+// REPLACE the existing module.exports at the bottom with:
 module.exports = {
   getQuestions,
   getQuestionStats,
@@ -968,5 +1644,10 @@ module.exports = {
   getPassageById,
   getDIDataList,
   createDIData,
-  getDIDataById
+  getDIDataById,
+  // ═══ NEW: PYQ Question Bank endpoints ═══
+  getPYQQuestionById,
+  updatePYQQuestion,
+  getPYQQuestionBank,
+  bulkUpdatePYQQuestions
 };

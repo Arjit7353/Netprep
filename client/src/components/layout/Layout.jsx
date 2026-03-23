@@ -1,71 +1,77 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
 const Layout = ({ children, language: propLanguage, setLanguage: propSetLanguage }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Default closed on mobile
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  
-  // Use prop language or fallback to local state
-  const [localLanguage, setLocalLanguage] = useState(propLanguage || 'en');
-  const language = propLanguage || localLanguage;
-  const setLanguage = propSetLanguage || setLocalLanguage;
 
-  // Check if mobile
+  const [localLanguage, setLocalLanguage] = useState(() => {
+    try {
+      const stored = localStorage.getItem('netprep-language');
+      return (stored === 'hi' || stored === 'en') ? stored : 'en';
+    } catch { return 'en'; }
+  });
+
+  const language = propLanguage ?? localLanguage;
+
+  const setLanguage = useCallback((newLang) => {
+    if (propSetLanguage) propSetLanguage(newLang);
+    else {
+      setLocalLanguage(newLang);
+      try { localStorage.setItem('netprep-language', newLang); } catch {}
+    }
+  }, [propSetLanguage]);
+
   useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
-      // Auto open sidebar on desktop, close on mobile
-      setSidebarOpen(!mobile);
-    };
+    if (propLanguage && propLanguage !== localLanguage) setLocalLanguage(propLanguage);
+  }, [propLanguage]);
 
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+  useEffect(() => {
+    const check = () => {
+      const m = window.innerWidth < 1024;
+      setIsMobile(m);
+      setSidebarOpen(!m);
+    };
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, []);
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
+  // ⌘B toggle
+  useEffect(() => {
+    const h = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+        e.preventDefault();
+        setSidebarOpen(p => !p);
+      }
+    };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, []);
 
-  const closeSidebar = () => {
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
-  };
+  const toggle = useCallback(() => setSidebarOpen(p => !p), []);
+  const close = useCallback(() => { if (isMobile) setSidebarOpen(false); }, [isMobile]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-secondary-900 transition-colors duration-300">
-      {/* Sidebar */}
-      <Sidebar 
-        isOpen={sidebarOpen} 
-        onToggle={toggleSidebar}
-        onClose={closeSidebar}
-        language={language}
-        isMobile={isMobile}
-      />
+    <div className="min-h-screen bg-gray-50 dark:bg-secondary-900">
+      <Sidebar isOpen={sidebarOpen} onToggle={toggle} onClose={close} language={language} isMobile={isMobile} />
 
-      {/* Main Content Area */}
-      <div 
-        className={`
-          min-h-screen transition-all duration-300 ease-in-out
-          ${!isMobile && sidebarOpen ? 'lg:ml-64' : ''}
-          ${!isMobile && !sidebarOpen ? 'lg:ml-20' : ''}
-        `}
-      >
-        {/* Header */}
-        <Header 
-          onMenuClick={toggleSidebar}
+      <div className={`min-h-screen sb-content-push ${
+        !isMobile && sidebarOpen ? 'lg:ml-[264px]' : ''
+      } ${
+        !isMobile && !sidebarOpen ? 'lg:ml-[66px]' : ''
+      }`}>
+        <Header
+          onMenuClick={toggle}
           language={language}
           onLanguageChange={setLanguage}
           sidebarOpen={sidebarOpen}
         />
 
-        {/* Page Content */}
         <main className="p-4 lg:p-6 pt-20 lg:pt-24">
           <div className="max-w-7xl mx-auto">
-            {typeof children === 'function' 
+            {typeof children === 'function'
               ? children({ language, setLanguage })
               : children
             }
@@ -73,11 +79,12 @@ const Layout = ({ children, language: propLanguage, setLanguage: propSetLanguage
         </main>
       </div>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile overlay */}
       {isMobile && sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 dark:bg-black/75 z-30 lg:hidden"
-          onClick={closeSidebar}
+        <div
+          className="fixed inset-0 z-30 lg:hidden bg-black/30 dark:bg-black/50 backdrop-blur-[3px]"
+          style={{ animation: 'sb-fade-in 0.2s ease both' }}
+          onClick={close}
         />
       )}
     </div>
