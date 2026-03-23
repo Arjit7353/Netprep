@@ -18,6 +18,8 @@ import Results from './pages/Results';
 import ResultDetail from './pages/ResultDetail';
 import SolutionPage from './pages/SolutionPage';
 import ManageSyllabus from './pages/ManageSyllabus';
+import PYQHub from './pages/PYQHub';  // ✅ NEW
+
 
 // ─────────────────────────────────────────────
 //  ADVANCED FULL-SCREEN LOADER
@@ -376,6 +378,8 @@ function App() {
             <AdvancedLoader serverReady={serverReady && minTimePassed} />
           )}
           <Routes>
+          <Route path="/pyq/*" element={<PYQHub language={language} setLanguage={setLanguage} />} />
+
             {/* Dashboard */}
             <Route
               path="/"

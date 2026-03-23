@@ -624,5 +624,228 @@ const StatBox = ({ value, label, color }) => {
     </div>
   );
 };
+// ============================================================
+// ★ UNIFIED PYQ+QUESTIONS TEMPLATE — Analysis + All Q Types
+// ============================================================
+export const unifiedPYQTemplate = {
+  year: "2024",
+  session: "december",
+  shift: "none",
+  paper: "paper2",
+  subject: "History",
+  language: "hi",
 
+  overview: {
+    totalQuestions: 100,
+    totalMarks: 200,
+    marksPerQuestion: 2,
+    negativeMarking: false,
+    questionRange: { start: 51, end: 150 }
+  },
+
+  questionTypeBreakdown: [
+    { type: "mcq", label: "MCQ", count: 40, percentage: 40 },
+    { type: "assertion_reason", label: "Assertion-Reason", count: 5, percentage: 5 },
+    { type: "match_following", label: "Match Following", count: 10, percentage: 10 },
+    { type: "sequence_order", label: "Chronology", count: 10, percentage: 10 },
+    { type: "statement_based", label: "Multi-Statement", count: 25, percentage: 25 },
+    { type: "passage", label: "Comprehension", count: 10, percentage: 10 }
+  ],
+
+  unitWeightage: [
+    { unitId: "unit1", unitName: "UNIT I: Sources", questionCount: 10, marks: 20, percentage: 10, difficulty: "Easy", roiScore: 4 }
+  ],
+
+  questions: [
+    // ── MCQ ──
+    {
+      qNo: 51,
+      type: "mcq",
+      unitId: "unit1",
+      chapter: "Archaeological Sources",
+      topic: "Epigraphy",
+      difficulty: "easy",
+      importance: 3,
+      question: "भारत की सबसे प्राचीन लिपि कौन सी है?",
+      options: ["ब्राह्मी", "खरोष्ठी", "देवनागरी", "तमिल"],
+      correct: 0,
+      explanation: "ब्राह्मी सबसे प्राचीन ज्ञात लिपि है।",
+      keyTerms: ["brahmi", "script"]
+    },
+
+    // ── ASSERTION-REASON ──
+    {
+      qNo: 52,
+      type: "assertion_reason",
+      unitId: "unit2",
+      chapter: "Mauryan Empire",
+      topic: "Ashoka",
+      difficulty: "medium",
+      assertion: "अशोक ने धम्म को बढ़ावा दिया",
+      reason: "वह सामाजिक व्यवस्था बनाए रखना चाहता था",
+      options: ["दोनों सही, R A की व्याख्या है", "दोनों सही, R A की व्याख्या नहीं", "A सही, R गलत", "A गलत, R सही"],
+      correct: 0,
+      explanation: "अशोक का धम्म सामाजिक सद्भाव के लिए था।"
+    },
+
+    // ── MATCH FOLLOWING ──
+    {
+      qNo: 53,
+      type: "match_following",
+      unitId: "unit4",
+      chapter: "Mughal Empire",
+      question: "सूची-I को सूची-II से मिलाइए:",
+      listA: ["अकबर", "जहांगीर", "शाहजहां", "औरंगजेब"],
+      listB: ["सुलह-ए-कुल", "नूरजहां", "ताजमहल", "आलमगीर"],
+      correctMatch: [0, 1, 2, 3],
+      options: ["A-I, B-II, C-III, D-IV", "A-II, B-I, C-IV, D-III", "A-III, B-IV, C-I, D-II", "A-IV, B-III, C-II, D-I"],
+      correct: 0,
+      explanation: "सही मिलान।"
+    },
+
+    // ── SEQUENCE ORDER ──
+    {
+      qNo: 54,
+      type: "sequence_order",
+      unitId: "unit7",
+      chapter: "British Expansion",
+      question: "कालक्रमानुसार लगाइए:",
+      items: ["प्लासी का युद्ध", "बक्सर का युद्ध", "तीसरा आंग्ल-मैसूर युद्ध"],
+      correctOrder: [0, 1, 2],
+      options: ["1-2-3", "2-1-3", "3-1-2", "1-3-2"],
+      correct: 0,
+      explanation: "प्लासी(1757)→बक्सर(1764)→तीसरा मैसूर(1790)"
+    },
+
+    // ── STATEMENT BASED ──
+    {
+      qNo: 55,
+      type: "statement_based",
+      unitId: "unit2",
+      chapter: "Mauryan Empire",
+      question: "कौन से कथन सही हैं?",
+      statements: ["कृषि प्रमुख थी", "राज्य खदानों का मालिक था", "कोई व्यापार श्रेणी नहीं"],
+      correctStatements: [0, 1],
+      options: ["केवल 1 और 2", "केवल 2 और 3", "केवल 1 और 3", "1, 2 और 3"],
+      correct: 0,
+      explanation: "कथन 3 गलत।"
+    },
+
+    // ── PASSAGE ──
+    {
+      qNo: 56,
+      type: "passage",
+      unitId: "unit7",
+      chapter: "Revolt of 1857",
+      passage: "1857 का विद्रोह ब्रिटिश शासन के खिलाफ एक बड़ा विद्रोह था। यह मेरठ से शुरू हुआ।",
+      passageTitle: "1857 का विद्रोह",
+      questions: [
+        { question: "विद्रोह कहाँ से शुरू हुआ?", options: ["दिल्ली", "मेरठ", "लखनऊ", "कानपुर"], correct: 1, explanation: "मेरठ से।" },
+        { question: "किसे नेता बनाया?", options: ["नाना साहब", "बहादुर शाह", "लक्ष्मीबाई", "तात्या टोपे"], correct: 1, explanation: "बहादुर शाह ज़फर।" }
+      ]
+    },
+
+    // ── DI TABLE ──
+    {
+      qNo: 58,
+      type: "di_table",
+      unitId: "unit7",
+      diTitle: "कंपनियों का उत्पादन (हजार में)",
+      tableData: {
+        headers: ["कंपनी", "2021", "2022", "2023"],
+        rows: [["A", 100, 120, 140], ["B", 80, 90, 110]]
+      },
+      questions: [
+        { question: "A का कुल उत्पादन?", options: ["360", "280", "340", "300"], correct: 0, explanation: "100+120+140=360" }
+      ]
+    },
+
+    // ── DI BAR CHART ──
+    {
+      qNo: 59,
+      type: "di_bar_chart",
+      unitId: "unit7",
+      diTitle: "बिक्री डेटा",
+      chartData: {
+        labels: ["Q1", "Q2", "Q3", "Q4"],
+        datasets: [{ label: "Sales", data: [40, 55, 45, 70], color: "#3B82F6" }],
+        xAxisLabel: "तिमाही",
+        yAxisLabel: "बिक्री"
+      },
+      questions: [
+        { question: "कुल बिक्री?", options: ["200", "210", "220", "230"], correct: 1, explanation: "40+55+45+70=210" }
+      ]
+    },
+
+    // ── DI PIE CHART ──
+    {
+      qNo: 60,
+      type: "di_pie_chart",
+      unitId: "unit7",
+      diTitle: "बजट वितरण (कुल 5 करोड़)",
+      chartData: {
+        labels: ["शिक्षा", "स्वास्थ्य", "रक्षा"],
+        datasets: [{ label: "बजट %", data: [30, 25, 45] }]
+      },
+      questions: [
+        { question: "शिक्षा को कितना?", options: ["1.25 करोड़", "1.50 करोड़", "2.00 करोड़", "2.25 करोड़"], correct: 1, explanation: "30% of 5=1.50" }
+      ]
+    },
+
+    // ── DI LINE GRAPH ──
+    {
+      qNo: 61,
+      type: "di_line_graph",
+      unitId: "unit7",
+      diTitle: "तापमान",
+      chartData: {
+        labels: ["सोम", "मंगल", "बुध", "गुरु"],
+        datasets: [
+          { label: "शहर A", data: [28, 30, 32, 31], color: "#FF6384" },
+          { label: "शहर B", data: [25, 26, 28, 30], color: "#36A2EB" }
+        ]
+      },
+      questions: [
+        { question: "अधिकतम अंतर किस दिन?", options: ["सोम", "मंगल", "बुध", "गुरु"], correct: 2, explanation: "बुध: 32-28=4" }
+      ]
+    },
+
+    // ── DI CASELET ──
+    {
+      qNo: 62,
+      type: "di_caselet",
+      unitId: "unit7",
+      diTitle: "कंपनी वित्त",
+      caseletText: "राजस्व 50 करोड़। 40% A, 35% B, शेष C से। व्यय 35 करोड़।",
+      questions: [
+        { question: "C से राजस्व?", options: ["10 करोड़", "12.5 करोड़", "15 करोड़", "17.5 करोड़"], correct: 1, explanation: "25% of 50=12.5" }
+      ]
+    }
+  ],
+
+  topTopics: [
+    { rank: 1, topic: "1857 का विद्रोह", unitId: "unit7", questionCount: 7, mustScore: true }
+  ],
+
+  conceptsTracked: [
+    { concept: "धम्म", unitId: "unit2", qNo: "Q52", type: "assertion_reason" }
+  ],
+
+  trends: [
+    { trend: "Statement-based बढ़ रहे हैं", direction: "increasing", tip: "elimination practice" }
+  ],
+
+  difficultyMatrix: [
+    { zone: "GREEN", qRange: "Q51-Q65", type: "MCQ", difficulty: "Easy", targetScore: "80%" }
+  ]
+};
+
+// Add to ALL_TEMPLATES
+ALL_TEMPLATES.unified_pyq = {
+  name: 'Unified PYQ + Questions',
+  nameHi: 'एकीकृत PYQ + प्रश्न',
+  description: 'Analysis + All 11 question types in ONE file',
+  category: 'featured',
+  template: unifiedPYQTemplate
+};
 export default JSONImport;

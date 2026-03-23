@@ -1,6 +1,8 @@
 // client/src/hooks/useTestList.js
-// ⭐ FIX: Always fresh filter options, no stale cache
-// ⭐ FIX: Proper handling of multi-unit tests (comma-separated)
+// ═══════════════════════════════════════════════════════
+// UPGRADED: PYQ-aware filtering, smart unit matching,
+// source type filters, PYQ year filters
+// ═══════════════════════════════════════════════════════
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import testService from '../services/testService';
@@ -8,21 +10,6 @@ import testService from '../services/testService';
 const getBaseUrl = () => {
   const url = import.meta.env.VITE_API_URL || '';
   return url.replace(/\/api\/?$/, '');
-};
-
-// ⭐ FIX: Helper to parse comma-separated units
-const parseUnits = (unitStr) => {
-  if (!unitStr) return [];
-  return unitStr.split(',').map(u => u.trim()).filter(u => u.length > 0);
-};
-
-// ⭐ FIX: Extract unique units from both raw and split values
-const extractAllUnits = (countsByUnit = []) => {
-  const unitSet = new Set();
-  countsByUnit.forEach(item => {
-    if (item.unit) unitSet.add(item.unit);
-  });
-  return Array.from(unitSet);
 };
 
 export const useTestList = () => {
@@ -39,6 +26,8 @@ export const useTestList = () => {
     paper: '', unit: '', chapter: '', topic: '',
     testType: '', search: '', status: 'active',
     sortBy: 'createdAt', sortOrder: 'desc',
+    // NEW: PYQ-specific filters
+    hasPYQ: '', sourceType: '', pyqYear: ''
   });
 
   const [selectedTests, setSelectedTests] = useState(new Set());
@@ -50,7 +39,7 @@ export const useTestList = () => {
   const abortRef = useRef(null);
   const mountedRef = useRef(true);
 
-  // ── Load Filter Options (NEVER cached) ──
+  // ── Load Filter Options ──
   const loadFilterOptions = useCallback(async () => {
     if (!mountedRef.current) return;
     setFilterOptionsLoading(true);
@@ -68,7 +57,7 @@ export const useTestList = () => {
   }, [filters.paper, filters.unit]);
 
   // ── Load Tests ──
-  const loadTests = useCallback(async (page = 1, force = false) => {
+  const loadTests = useCallback(async (page = 1) => {
     if (abortRef.current) abortRef.current.abort();
     abortRef.current = new AbortController();
 
@@ -86,6 +75,10 @@ export const useTestList = () => {
       if (filters.topic) params.topic = filters.topic;
       if (filters.testType) params.testType = filters.testType;
       if (filters.search) params.search = filters.search;
+      // PYQ filters
+      if (filters.hasPYQ) params.hasPYQ = filters.hasPYQ;
+      if (filters.sourceType) params.sourceType = filters.sourceType;
+      if (filters.pyqYear) params.pyqYear = filters.pyqYear;
 
       const result = await testService.getTests(params);
       if (mountedRef.current) {
@@ -133,10 +126,12 @@ export const useTestList = () => {
           return td.questions;
         }
         const ids = td.questions.map((q) => (typeof q === 'string' ? q : q._id || String(q)));
-        if (ids.length > 0) {
+        // Filter out PYQ synthetic IDs for bulk fetch — they're already resolved by getTestById
+        const realIds = ids.filter(id => !/^pyq_/i.test(id));
+        if (realIds.length > 0) {
           const br = await fetch(`${BASE}/api/questions/bulk`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids }),
+            body: JSON.stringify({ ids: realIds }),
           });
           if (br.ok) {
             const bd = await br.json();
@@ -163,11 +158,18 @@ export const useTestList = () => {
   }, []);
 
   const clearFilters = useCallback(() => {
-    setFilters({ paper: '', unit: '', chapter: '', topic: '', testType: '', search: '', status: 'active', sortBy: 'createdAt', sortOrder: 'desc' });
+    setFilters({
+      paper: '', unit: '', chapter: '', topic: '',
+      testType: '', search: '', status: 'active',
+      sortBy: 'createdAt', sortOrder: 'desc',
+      hasPYQ: '', sourceType: '', pyqYear: ''
+    });
   }, []);
 
   const hasActiveFilters = useMemo(
-    () => !!(filters.paper || filters.unit || filters.chapter || filters.topic || filters.testType || filters.search),
+    () => !!(filters.paper || filters.unit || filters.chapter || filters.topic ||
+             filters.testType || filters.search ||
+             filters.hasPYQ || filters.sourceType || filters.pyqYear),
     [filters]
   );
 
@@ -193,12 +195,11 @@ export const useTestList = () => {
   // ── Computed ──
   const unitsForPaper = useMemo(() => {
     if (!filterOptions?.countsByUnit) return [];
-    // ⭐ FIX: Deduplicate units using Set, then sort
     const uniqueUnits = new Set();
     filterOptions.countsByUnit
       .filter((i) => (!filters.paper || i.paper === filters.paper) && i.unit?.trim())
       .forEach((i) => uniqueUnits.add(i.unit));
-    
+
     return Array.from(uniqueUnits)
       .sort((a, b) => {
         const nA = parseInt((a.match(/\d+/) || ['999'])[0]);
@@ -206,7 +207,6 @@ export const useTestList = () => {
         return nA - nB;
       })
       .map(unit => {
-        // Find the corresponding count entry
         const countEntry = filterOptions.countsByUnit.find(
           i => (!filters.paper || i.paper === filters.paper) && i.unit === unit
         );
@@ -220,6 +220,15 @@ export const useTestList = () => {
     return g;
   }, [tests]);
 
+  // NEW: PYQ-specific computed
+  const pyqTestsCount = useMemo(() => {
+    return filterOptions?.pyqStats?.testsWithPYQ || filterOptions?.countsByType?.pyq_year || 0;
+  }, [filterOptions]);
+
+  const countsBySource = useMemo(() => {
+    return filterOptions?.countsBySource || {};
+  }, [filterOptions]);
+
   // ── Effects ──
   useEffect(() => {
     mountedRef.current = true;
@@ -228,18 +237,8 @@ export const useTestList = () => {
     return () => { mountedRef.current = false; if (abortRef.current) abortRef.current.abort(); };
   }, []);
 
-  // Reload tests when filters or refreshKey change
   useEffect(() => { loadTests(1); }, [filters, refreshKey]);
-
-  // Reload filter options when paper/unit changes or after refresh
   useEffect(() => { loadFilterOptions(); }, [filters.paper, filters.unit, refreshKey]);
-
-  // Also fetch global filter options (no paper/unit filter) for home view counts
-  useEffect(() => {
-    if (!filters.paper && !filters.unit) {
-      loadFilterOptions();
-    }
-  }, [filters.paper, filters.unit]);
 
   const refresh = useCallback(() => {
     setRefreshKey(k => k + 1);
@@ -254,6 +253,8 @@ export const useTestList = () => {
     toggleSelection, selectAll, clearSelection, bulkDelete, bulkLoading,
     questionsCache, loadingQuestions, fetchQuestionsForTest,
     unitsForPaper, testsByType,
+    // NEW exports
+    pyqTestsCount, countsBySource,
   };
 };
 

@@ -134,7 +134,7 @@ const QuestionDisplay = ({
     );
   };
 
-  /* ─── Assertion-Reason ─── */
+    /* ─── Assertion-Reason ─── */
   const renderAssertionReason = () => {
     const assertion = getBilingualText(question.assertionReasonData?.assertion, language);
     const reason = getBilingualText(question.assertionReasonData?.reason, language);
@@ -142,10 +142,11 @@ const QuestionDisplay = ({
 
     return (
       <div className="space-y-4">
+        {/* ═══ FIX: Show proper instruction, not topic/chapter name ═══ */}
         <div className="text-slate-700 dark:text-slate-300 font-medium">
-          {questionText || (language === 'hi'
-            ? 'निम्नलिखित दो कथनों को पढ़ें और सही विकल्प चुनें:'
-            : 'Read the following two statements and choose the correct option:')}
+          {language === 'hi'
+            ? 'निम्नलिखित दो कथनों पर विचार करें:'
+            : 'Consider the following two statements:'}
         </div>
 
         {/* Assertion Card */}
@@ -174,7 +175,6 @@ const QuestionDisplay = ({
       </div>
     );
   };
-
   /* ─── Match Following (TABLE) ─── */
   const renderMatchFollowing = () => {
     const listA = getBilingualArray(question.matchData?.listA, language);
@@ -310,17 +310,22 @@ const QuestionDisplay = ({
       </div>
     );
   };
-
   /* ─── Passage Based ─── */
   const renderPassageBased = () => {
-    const passage = question.passageId;
-    const passageContent = getBilingualText(passage?.content, language);
-    const passageTitle = passage?.title || '';
+    // ═══ FIX: Get passage from multiple possible sources ═══
+    const passageObj = question.passageId;
+    const passageContent = getBilingualText(passageObj?.content, language);
+    const passageTitle = passageObj?.title || '';
     const options = getBilingualArray(question.options, language);
+
+    // If no passage from passageId, check if question itself has passage-like content
+    // (happens with PYQ questions where passage wasn't linked properly)
+    const hasPassageContent = !!passageContent;
 
     return (
       <div className="space-y-4">
-        {passageContent && (
+        {/* Passage Content */}
+        {hasPassageContent && (
           <div className="rounded-2xl overflow-hidden border border-teal-200 dark:border-teal-800">
             <div className="px-4 py-2.5 bg-gradient-to-r from-teal-600 to-teal-700 text-white text-sm font-bold flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
@@ -334,6 +339,21 @@ const QuestionDisplay = ({
           </div>
         )}
 
+        {/* No passage warning */}
+        {!hasPassageContent && (
+          <div className="rounded-2xl overflow-hidden border border-amber-200 dark:border-amber-800">
+            <div className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-bold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              {language === 'hi' ? 'गद्यांश आधारित' : 'Passage Based'}
+            </div>
+            <div className="px-5 py-4 bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-300 text-sm">
+              {language === 'hi' 
+                ? 'गद्यांश लोड नहीं हुआ। कृपया प्रश्न का उत्तर दिए गए विकल्पों के आधार पर दें।'
+                : 'Passage not loaded. Please answer based on available options.'}
+            </div>
+          </div>
+        )}
+
         {question?.passageOrder && (
           <span className="inline-block px-3 py-1 rounded-lg bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 text-xs font-semibold">
             {language === 'hi'
@@ -342,15 +362,25 @@ const QuestionDisplay = ({
           </span>
         )}
 
-        <div className="text-slate-800 dark:text-slate-200 text-[17px] leading-[1.7] font-medium">
-          {questionText}
-        </div>
+        {/* Question Text */}
+        {questionText && (
+          <div className="text-slate-800 dark:text-slate-200 text-[17px] leading-[1.7] font-medium">
+            {questionText}
+          </div>
+        )}
 
-        {renderOptions(options)}
+        {/* Options */}
+        {options.length > 0 && renderOptions(options)}
+
+        {/* If no question text and no options, show topic as hint */}
+        {!questionText && options.length === 0 && (
+          <div className="text-slate-500 dark:text-slate-400 text-sm italic">
+            {question.topic || question.chapter || (language === 'hi' ? 'प्रश्न डेटा उपलब्ध नहीं' : 'Question data not available')}
+          </div>
+        )}
       </div>
     );
   };
-
   /* ─── DI Table ─── */
   const renderDITable = () => {
     const di = question.diDataId;

@@ -1,190 +1,103 @@
 /**
- * Smart Parser Utility for Frontend
- * Detects question types and validates JSON structure
+ * Smart Parser - Unified Format Support
+ * Detects question types from single unified JSON
  */
 
-// Question type detection patterns
-const TYPE_PATTERNS = {
-  assertion_reason: ['assertion', 'reason'],
-  match_following: ['listA', 'listB'],
-  sequence_order: ['items', 'correctOrder'],
-  statement_based: ['statements', 'correctStatements'],
-  passage_based: ['passage', 'passageContent'],
-  di_table: ['tableData'],
-  di_bar_chart: ['chartData', 'barChart'],
-  di_pie_chart: ['pieChart'],
-  di_line_graph: ['lineGraph'],
-  di_mixed: ['mixedChart'],
-  di_caselet: ['caseletText']
-};
-
-/**
- * Detect question type from question data
- * @param {Object} questionData - Raw question data
- * @returns {string} Detected question type
- */
-export const detectQuestionType = (questionData) => {
-  // If type is explicitly provided
-  if (questionData.type) {
-    return normalizeType(questionData.type);
-  }
-
-  if (questionData.questionType) {
-    return normalizeType(questionData.questionType);
-  }
-
-  const keys = Object.keys(questionData);
-
-  // Check for assertion-reason
-  if (keys.includes('assertion') && keys.includes('reason')) {
-    return 'assertion_reason';
-  }
-
-  // Check for match following
-  if (keys.includes('listA') && keys.includes('listB')) {
-    return 'match_following';
-  }
-
-  // Check for sequence order
-  if (keys.includes('items') && keys.includes('correctOrder')) {
-    return 'sequence_order';
-  }
-
-  // Check for statement based
-  if (keys.includes('statements') && keys.includes('correctStatements')) {
-    return 'statement_based';
-  }
-
-  // Check for passage based
-  if (keys.includes('passage') || keys.includes('passageContent')) {
-    return 'passage_based';
-  }
-
-  // Check for DI types
-  if (questionData.diData) {
-    const diData = questionData.diData;
-    if (diData.tableData) return 'di_table';
-    if (diData.chartData) {
-      const chartType = diData.chartData.type || diData.diType;
-      if (chartType === 'bar' || chartType === 'bar_chart') return 'di_bar_chart';
-      if (chartType === 'pie' || chartType === 'pie_chart') return 'di_pie_chart';
-      if (chartType === 'line' || chartType === 'line_graph') return 'di_line_graph';
-      if (chartType === 'mixed') return 'di_mixed';
-      return 'di_bar_chart';
-    }
-    if (diData.caseletText) return 'di_caselet';
-  }
-
-  // Check for standalone DI data
-  if (keys.includes('tableData')) return 'di_table';
-  if (keys.includes('caseletText')) return 'di_caselet';
-  if (keys.includes('chartData')) {
-    const chartType = questionData.chartData?.type;
-    if (chartType === 'pie') return 'di_pie_chart';
-    if (chartType === 'line') return 'di_line_graph';
+export const detectQuestionType = (q) => {
+  if (q.type) return normalizeType(q.type);
+  if (q.questionType) return normalizeType(q.questionType);
+  if (q.assertion || q.assertionHi) return 'assertion_reason';
+  if (q.listA?.length > 0 && q.listB?.length > 0) return 'match_following';
+  if (q.items?.length > 0 && q.correctOrder) return 'sequence_order';
+  if (q.statements?.length > 0 && q.correctStatements) return 'statement_based';
+  if (q.passage || q.passageHi) return 'passage';
+  if (q.tableData?.headers?.length > 0) return 'di_table';
+  
+  if (q.chartData?.datasets?.length > 0) {
+    const ct = q.chartData?.chartType || q.chartData?.type;
+    if (ct === 'pie') return 'di_pie_chart';
+    if (ct === 'line') return 'di_line_graph';
     return 'di_bar_chart';
   }
-
-  // Default to MCQ
+  
+  if (q.caseletText || q.caseletTextHi) return 'di_caselet';
+  if (q.questions?.length > 0 && (q.passage || q.tableData || q.chartData || q.caseletText)) return 'passage';
+  
   return 'mcq';
 };
 
-/**
- * Normalize question type string
- * @param {string} type - Raw type string
- * @returns {string} Normalized type
- */
 export const normalizeType = (type) => {
-  const typeMap = {
-    'mcq': 'mcq',
-    'multiple_choice': 'mcq',
-    'multiplechoice': 'mcq',
-    'assertion': 'assertion_reason',
-    'assertion_reason': 'assertion_reason',
-    'assertionreason': 'assertion_reason',
-    'a-r': 'assertion_reason',
-    'ar': 'assertion_reason',
-    'match': 'match_following',
-    'match_following': 'match_following',
-    'matchfollowing': 'match_following',
-    'matching': 'match_following',
-    'sequence': 'sequence_order',
-    'sequence_order': 'sequence_order',
-    'sequenceorder': 'sequence_order',
-    'chronological': 'sequence_order',
-    'order': 'sequence_order',
-    'statement': 'statement_based',
-    'statement_based': 'statement_based',
-    'statementbased': 'statement_based',
-    'statements': 'statement_based',
-    'passage': 'passage_based',
-    'passage_based': 'passage_based',
-    'passagebased': 'passage_based',
-    'comprehension': 'passage_based',
-    'di_table': 'di_table',
-    'table': 'di_table',
-    'ditable': 'di_table',
-    'di_bar': 'di_bar_chart',
-    'di_bar_chart': 'di_bar_chart',
-    'bar': 'di_bar_chart',
-    'barchart': 'di_bar_chart',
-    'di_pie': 'di_pie_chart',
-    'di_pie_chart': 'di_pie_chart',
-    'pie': 'di_pie_chart',
-    'piechart': 'di_pie_chart',
-    'di_line': 'di_line_graph',
-    'di_line_graph': 'di_line_graph',
-    'line': 'di_line_graph',
-    'linegraph': 'di_line_graph',
-    'di_mixed': 'di_mixed',
-    'mixed': 'di_mixed',
-    'di_caselet': 'di_caselet',
-    'caselet': 'di_caselet'
+  const map = {
+    'mcq': 'mcq', 'simple_mcq': 'mcq', 'multiple_choice': 'mcq',
+    'assertion_reason': 'assertion_reason', 'assertion': 'assertion_reason', 'ar': 'assertion_reason', 'a-r': 'assertion_reason',
+    'match_following': 'match_following', 'matching': 'match_following', 'match': 'match_following',
+    'sequence_order': 'sequence_order', 'chronology': 'sequence_order', 'sequence': 'sequence_order', 'order': 'sequence_order',
+    'statement_based': 'statement_based', 'multi_statement': 'statement_based', 'statements': 'statement_based', 'statement': 'statement_based',
+    'passage': 'passage', 'passage_based': 'passage', 'comprehension': 'passage',
+    'di_table': 'di_table', 'table': 'di_table',
+    'di_bar_chart': 'di_bar_chart', 'bar_chart': 'di_bar_chart', 'bar': 'di_bar_chart',
+    'di_pie_chart': 'di_pie_chart', 'pie_chart': 'di_pie_chart', 'pie': 'di_pie_chart',
+    'di_line_graph': 'di_line_graph', 'line_graph': 'di_line_graph', 'line': 'di_line_graph',
+    'di_caselet': 'di_caselet', 'caselet': 'di_caselet',
+    'di_mixed': 'di_mixed', 'mixed': 'di_mixed'
   };
-
-  return typeMap[type?.toLowerCase()] || 'mcq';
+  return map[type?.toLowerCase()] || 'mcq';
 };
 
-/**
- * Parse JSON and extract question summary
- * @param {Object} jsonData - JSON data to parse
- * @returns {Object} Parsed summary
- */
+export const detectLanguage = (data) => {
+  const hindiPattern = /[\u0900-\u097F]/;
+  if (data.language === 'hi' || data.language === 'en') return data.language;
+  
+  const questions = data.questions || data.questionTopicMap || [];
+  const samples = [];
+  
+  for (const q of questions.slice(0, 10)) {
+    if (q.question) samples.push(q.question);
+    if (q.questionText) samples.push(q.questionText);
+    if (q.assertion) samples.push(q.assertion);
+    if (q.passage) samples.push(q.passage);
+    if (q.caseletText) samples.push(q.caseletText);
+    if (q.options?.length) samples.push(q.options[0]);
+  }
+  
+  let hi = 0, en = 0;
+  for (const s of samples) {
+    if (typeof s !== 'string') continue;
+    if (hindiPattern.test(s)) hi++; else en++;
+  }
+  
+  return hi > en ? 'hi' : 'en';
+};
+
 export const parseJSONSummary = (jsonData) => {
+  const questions = jsonData.questions || jsonData.questionTopicMap || [];
   const summary = {
-    totalQuestions: 0,
+    totalQuestions: questions.length,
     byType: {},
-    passages: 0,
-    diSets: 0,
-    language: jsonData.language || jsonData.defaultMeta?.language || 'hi',
-    paper: jsonData.paper || jsonData.defaultMeta?.paper || 'paper1',
+    withContent: 0,
+    withoutContent: 0,
+    language: detectLanguage(jsonData),
+    paper: jsonData.paper || 'paper1',
+    hasAnalysis: !!(jsonData.unitWeightage?.length || jsonData.topTopics?.length || jsonData.trends?.length),
     errors: [],
     warnings: []
   };
 
-  if (!jsonData.questions || !Array.isArray(jsonData.questions)) {
-    summary.errors.push('No questions array found');
-    return summary;
-  }
-
-  summary.totalQuestions = jsonData.questions.length;
-
-  jsonData.questions.forEach((q, index) => {
+  questions.forEach((q, idx) => {
     const type = detectQuestionType(q);
     summary.byType[type] = (summary.byType[type] || 0) + 1;
+    
+    const hasContent = !!(q.question || q.questionText || q.assertion || q.passage || 
+      q.tableData || q.chartData || q.caseletText || q.options?.length ||
+      q.statements?.length || q.listA?.length || q.items?.length || q.questions?.length);
+      
+    if (hasContent) summary.withContent++;
+    else summary.withoutContent++;
 
-    // Count passages and DI sets
-    if (type === 'passage_based' && q.passage) {
-      summary.passages++;
-    }
-    if (type.startsWith('di_') && q.diData) {
-      summary.diSets++;
-    }
-
-    // Check for potential issues
-    if (q.correct === undefined && q.correctAnswer === undefined) {
-      if (!q.diData?.questions && !q.passage?.questions) {
-        summary.warnings.push(`Question ${index + 1}: Missing correct answer`);
+    // Validate
+    if (['mcq', 'assertion_reason', 'match_following', 'sequence_order', 'statement_based'].includes(type)) {
+      if (q.correct === undefined && q.correctAnswer === undefined) {
+        summary.warnings.push(`Q${q.qNo || idx + 1}: missing correct answer`);
       }
     }
   });
@@ -192,98 +105,65 @@ export const parseJSONSummary = (jsonData) => {
   return summary;
 };
 
-/**
- * Validate JSON structure
- * @param {string|Object} jsonInput - JSON string or object
- * @returns {Object} Validation result
- */
 export const validateJSON = (jsonInput) => {
-  const result = {
-    isValid: true,
-    data: null,
-    errors: [],
-    warnings: [],
-    summary: null
-  };
-
-  // Parse if string
+  const result = { isValid: true, data: null, errors: [], warnings: [], summary: null };
   let jsonData;
+  
   if (typeof jsonInput === 'string') {
-    try {
-      jsonData = JSON.parse(jsonInput);
-    } catch (err) {
-      result.isValid = false;
-      result.errors.push(`Invalid JSON: ${err.message}`);
-      return result;
+    try { 
+      jsonData = JSON.parse(jsonInput); 
+    } catch (err) { 
+      result.isValid = false; 
+      result.errors.push(`Invalid JSON: ${err.message}`); 
+      return result; 
     }
   } else {
     jsonData = jsonInput;
   }
-
+  
   result.data = jsonData;
-
-  // Check for questions array
-  if (!jsonData.questions) {
+  
+  // Must have questions
+  const questions = jsonData.questions || jsonData.questionTopicMap;
+  if (!questions || !Array.isArray(questions) || questions.length === 0) {
     result.isValid = false;
     result.errors.push('Missing "questions" array');
     return result;
   }
-
-  if (!Array.isArray(jsonData.questions)) {
-    result.isValid = false;
-    result.errors.push('"questions" must be an array');
-    return result;
+  
+  // For PYQ format, need year + session + paper
+  if (jsonData.year && jsonData.session) {
+    if (!/^\d{4}$/.test(String(jsonData.year))) {
+      result.errors.push('Invalid year format');
+      result.isValid = false;
+    }
   }
-
-  if (jsonData.questions.length === 0) {
-    result.isValid = false;
-    result.errors.push('"questions" array is empty');
-    return result;
-  }
-
-  // Check language
-  const language = jsonData.language || jsonData.defaultMeta?.language;
-  if (!language) {
-    result.warnings.push('No language specified, defaulting to "hi" (Hindi)');
-  } else if (!['hi', 'en'].includes(language)) {
-    result.errors.push('Invalid language. Must be "hi" or "en"');
+  
+  if (jsonData.paper && !['paper1', 'paper2'].includes(jsonData.paper)) {
+    result.errors.push('paper must be "paper1" or "paper2"');
     result.isValid = false;
   }
-
-  // Check paper
-  const paper = jsonData.paper || jsonData.defaultMeta?.paper;
-  if (!paper) {
-    result.warnings.push('No paper specified, defaulting to "paper1"');
-  } else if (!['paper1', 'paper2'].includes(paper)) {
-    result.errors.push('Invalid paper. Must be "paper1" or "paper2"');
-    result.isValid = false;
-  }
-
-  // Get summary
+  
   result.summary = parseJSONSummary(jsonData);
   result.warnings = [...result.warnings, ...result.summary.warnings];
-
+  
   return result;
 };
 
-/**
- * Format JSON string with proper indentation
- * @param {string|Object} json - JSON to format
- * @returns {string} Formatted JSON string
- */
 export const formatJSON = (json) => {
   try {
     const data = typeof json === 'string' ? JSON.parse(json) : json;
     return JSON.stringify(data, null, 2);
-  } catch (err) {
+  } catch {
     return typeof json === 'string' ? json : JSON.stringify(json);
   }
 };
 
-export default {
-  detectQuestionType,
-  normalizeType,
-  parseJSONSummary,
-  validateJSON,
-  formatJSON
+export default { 
+  detectQuestionType, 
+  normalizeType, 
+  detectLanguage, 
+  parseJSONSummary, 
+  validateJSON, 
+  formatJSON 
 };

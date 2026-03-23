@@ -1,712 +1,582 @@
-// server/scripts/repairAllTranslations.js
-// ═══════════════════════════════════════════════════════════════════
-//  ULTIMATE REPAIR SCRIPT v3.0 — Fixes EVERY field of EVERY type
-//  
-//  Covers: MCQ, Assertion-Reason, Match Following, Sequence Order,
-//          Statement Based, Passage Based, DI Table, DI Bar Chart,
-//          DI Pie Chart, DI Line Graph, DI Mixed, DI Caselet
+// server/scripts/fixCorruptedTranslations.js
+// ═══════════════════════════════════════════════════════════════
+// FINAL FIX SCRIPT — Correctly fixes ALL Hindi letter code corruptions
+// FIXED: \b word boundary does NOT work with Devanagari in JS
+//        Using lookahead/lookbehind with Unicode-aware patterns instead
 //
-//  Fields: question, options, explanation, assertion, reason,
-//          listA, listB, items, statements, passage content,
-//          DI title, instruction, caseletText, table headers,
-//          chart labels, dataset labels, footers
-//
-//  RUN:  node server/scripts/repairAllTranslations.js
-// ═══════════════════════════════════════════════════════════════════
+// Usage:
+//   node scripts/fixCorruptedTranslations.js --dry-run
+//   node scripts/fixCorruptedTranslations.js
+//   node scripts/fixCorruptedTranslations.js --verbose
+// ═══════════════════════════════════════════════════════════════
 
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const mongoose = require('mongoose');
-const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-const MONGO_URI = process.env.MONGO_URI;
-if (!MONGO_URI) { console.error('ERROR: MONGO_URI not found in .env'); process.exit(1); }
-
-// ═══════════════════════════════════════════════════
-//     MASTER CORRUPTION FIX TABLE (70+ patterns)
-// ═══════════════════════════════════════════════════
-
-const FIXES = [
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // CATEGORY 1: Parenthesized Letter Labels
-  // Found in: ALL types (question, options, explanation)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  { find: /\(\s*ए\s*\)/g, fix: '(A)', cat: 'label' },
-  { find: /\(\s*बी\s*\)/g, fix: '(B)', cat: 'label' },
-  { find: /\(\s*सी\s*\)/g, fix: '(C)', cat: 'label' },
-  { find: /\(\s*डी\s*\)/g, fix: '(D)', cat: 'label' },
-  { find: /\(\s*ई\s*\)/g, fix: '(E)', cat: 'label' },
-  { find: /\(\s*एफ\s*\)/g, fix: '(F)', cat: 'label' },
-  { find: /\(\s*आर\s*\)/g, fix: '(R)', cat: 'label' },
-  { find: /\(\s*एस\s*\)/g, fix: '(S)', cat: 'label' },
-  { find: /\(\s*पी\s*\)/g, fix: '(P)', cat: 'label' },
-  { find: /\(\s*क्यू\s*\)/g, fix: '(Q)', cat: 'label' },
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // CATEGORY 2: Parenthesized Roman Numeral Labels
-  // Found in: Match Following, Sequence, options
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  { find: /\(\s*आई\s*\)/g, fix: '(i)', cat: 'roman' },
-  { find: /\(\s*ii\s*\)/g, fix: '(ii)', cat: 'roman' },
-  { find: /\(\s*iii\s*\)/g, fix: '(iii)', cat: 'roman' },
-  { find: /\(\s*iv\s*\)/g, fix: '(iv)', cat: 'roman' },
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // CATEGORY 3: Match Code Corruptions (A-I → ए-आई)
-  // Found in: Match Following options, explanation
-  // Full set: A/B/C/D × I/II/III/IV/V/VI
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // A-*
-  { find: /ए\s*[-–—]\s*आई\b/g, fix: 'A-I', cat: 'match' },
-  { find: /ए\s*[-–—]\s*II\b/g, fix: 'A-II', cat: 'match' },
-  { find: /ए\s*[-–—]\s*द्वितीय\b/g, fix: 'A-II', cat: 'match' },
-  { find: /ए\s*[-–—]\s*III\b/g, fix: 'A-III', cat: 'match' },
-  { find: /ए\s*[-–—]\s*तृतीय\b/g, fix: 'A-III', cat: 'match' },
-  { find: /ए\s*[-–—]\s*IV\b/g, fix: 'A-IV', cat: 'match' },
-  { find: /ए\s*[-–—]\s*चतुर्थ\b/g, fix: 'A-IV', cat: 'match' },
-  { find: /ए\s*[-–—]\s*वी\b/g, fix: 'A-V', cat: 'match' },
-  { find: /ए\s*[-–—]\s*छठा\b/g, fix: 'A-VI', cat: 'match' },
-  // B-*
-  { find: /बी\s*[-–—]\s*आई\b/g, fix: 'B-I', cat: 'match' },
-  { find: /बी\s*[-–—]\s*II\b/g, fix: 'B-II', cat: 'match' },
-  { find: /बी\s*[-–—]\s*द्वितीय\b/g, fix: 'B-II', cat: 'match' },
-  { find: /बी\s*[-–—]\s*III\b/g, fix: 'B-III', cat: 'match' },
-  { find: /बी\s*[-–—]\s*तृतीय\b/g, fix: 'B-III', cat: 'match' },
-  { find: /बी\s*[-–—]\s*IV\b/g, fix: 'B-IV', cat: 'match' },
-  { find: /बी\s*[-–—]\s*चतुर्थ\b/g, fix: 'B-IV', cat: 'match' },
-  { find: /बी\s*[-–—]\s*वी\b/g, fix: 'B-V', cat: 'match' },
-  { find: /बी\s*[-–—]\s*छठा\b/g, fix: 'B-VI', cat: 'match' },
-  // C-*
-  { find: /सी\s*[-–—]\s*आई\b/g, fix: 'C-I', cat: 'match' },
-  { find: /सी\s*[-–—]\s*II\b/g, fix: 'C-II', cat: 'match' },
-  { find: /सी\s*[-–—]\s*द्वितीय\b/g, fix: 'C-II', cat: 'match' },
-  { find: /सी\s*[-–—]\s*III\b/g, fix: 'C-III', cat: 'match' },
-  { find: /सी\s*[-–—]\s*तृतीय\b/g, fix: 'C-III', cat: 'match' },
-  { find: /सी\s*[-–—]\s*IV\b/g, fix: 'C-IV', cat: 'match' },
-  { find: /सी\s*[-–—]\s*चतुर्थ\b/g, fix: 'C-IV', cat: 'match' },
-  { find: /सी\s*[-–—]\s*वी\b/g, fix: 'C-V', cat: 'match' },
-  { find: /सी\s*[-–—]\s*छठा\b/g, fix: 'C-VI', cat: 'match' },
-  // D-*
-  { find: /डी\s*[-–—]\s*आई\b/g, fix: 'D-I', cat: 'match' },
-  { find: /डी\s*[-–—]\s*II\b/g, fix: 'D-II', cat: 'match' },
-  { find: /डी\s*[-–—]\s*द्वितीय\b/g, fix: 'D-II', cat: 'match' },
-  { find: /डी\s*[-–—]\s*III\b/g, fix: 'D-III', cat: 'match' },
-  { find: /डी\s*[-–—]\s*तृतीय\b/g, fix: 'D-III', cat: 'match' },
-  { find: /डी\s*[-–—]\s*IV\b/g, fix: 'D-IV', cat: 'match' },
-  { find: /डी\s*[-–—]\s*चतुर्थ\b/g, fix: 'D-IV', cat: 'match' },
-  { find: /डी\s*[-–—]\s*वी\b/g, fix: 'D-V', cat: 'match' },
-  { find: /डी\s*[-–—]\s*छठा\b/g, fix: 'D-VI', cat: 'match' },
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // CATEGORY 4: Assertion-Reason Compound Labels
-  // Found in: A-R question, options, explanation
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  { find: /अभिकथन\s*\(\s*ए\s*\)/g, fix: 'अभिकथन (A)', cat: 'ar' },
-  { find: /कारण\s*\(\s*आर\s*\)/g, fix: 'कारण (R)', cat: 'ar' },
-  { find: /\(ए\)\s*और\s*\(आर\)/g, fix: '(A) और (R)', cat: 'ar' },
-  { find: /\(आर\)\s*,?\s*\(ए\)\s*की/g, fix: '(R), (A) की', cat: 'ar' },
-  { find: /\(ए\)\s*सही\s*है/g, fix: '(A) सही है', cat: 'ar' },
-  { find: /\(आर\)\s*सही\s*है/g, fix: '(R) सही है', cat: 'ar' },
-  { find: /\(ए\)\s*गलत\s*है/g, fix: '(A) गलत है', cat: 'ar' },
-  { find: /\(आर\)\s*गलत\s*है/g, fix: '(R) गलत है', cat: 'ar' },
-  { find: /\(आर\)\s*,?\s*\(ए\)\s*का/g, fix: '(R), (A) का', cat: 'ar' },
-  { find: /\(आर\)\s*,?\s*\(ए\)\s*के/g, fix: '(R), (A) के', cat: 'ar' },
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // CATEGORY 5: Statement/List Marker Corruptions
-  // Found in: Statement Based, Sequence, explanation
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  { find: /कथन\s+आई\b/g, fix: 'कथन I', cat: 'stmt' },
-  { find: /कथन\s+द्वितीय\b/g, fix: 'कथन II', cat: 'stmt' },
-  { find: /कथन\s+तृतीय\b/g, fix: 'कथन III', cat: 'stmt' },
-  { find: /कथन\s+चतुर्थ\b/g, fix: 'कथन IV', cat: 'stmt' },
-  { find: /कथन\s+वी\b/g, fix: 'कथन V', cat: 'stmt' },
-  { find: /कथन\s+छठा\b/g, fix: 'कथन VI', cat: 'stmt' },
-
-  { find: /सूची\s*[-–]?\s*आई\b/g, fix: 'सूची-I', cat: 'list' },
-  { find: /सूची\s*[-–]?\s*द्वितीय\b/g, fix: 'सूची-II', cat: 'list' },
-  { find: /स्तंभ\s*[-–]?\s*आई\b/g, fix: 'स्तंभ-I', cat: 'list' },
-  { find: /स्तंभ\s*[-–]?\s*द्वितीय\b/g, fix: 'स्तंभ-II', cat: 'list' },
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // CATEGORY 6: English Text Corruptions
-  // When English text gets wrongly transliterated to Hindi-style
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  { find: /Statement\s+Ai\b/gi, fix: 'Statement I', cat: 'en_fix' },
-  { find: /Statement\s+Dvitiy\b/gi, fix: 'Statement II', cat: 'en_fix' },
-  { find: /Statement\s+Tritiy\b/gi, fix: 'Statement III', cat: 'en_fix' },
-  { find: /List\s*[-–]?\s*Ai\b/gi, fix: 'List-I', cat: 'en_fix' },
-  { find: /List\s*[-–]?\s*Dvitiy\b/gi, fix: 'List-II', cat: 'en_fix' },
-  { find: /Column\s*[-–]?\s*Ai\b/gi, fix: 'Column-I', cat: 'en_fix' },
-  { find: /Column\s*[-–]?\s*Dvitiy\b/gi, fix: 'Column-II', cat: 'en_fix' },
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // CATEGORY 7: Standalone Roman Numeral Corruptions
-  // Found in: options (1 और 2, I and II), explanation
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  { find: /\bकेवल\s+आई\s+और\s+द्वितीय\b/g, fix: 'केवल I और II', cat: 'roman_text' },
-  { find: /\bकेवल\s+द्वितीय\s+और\s+तृतीय\b/g, fix: 'केवल II और III', cat: 'roman_text' },
-  { find: /\bकेवल\s+आई\s+और\s+तृतीय\b/g, fix: 'केवल I और III', cat: 'roman_text' },
-  { find: /\bकेवल\s+आई\b/g, fix: 'केवल I', cat: 'roman_text' },
-  { find: /\bकेवल\s+द्वितीय\b/g, fix: 'केवल II', cat: 'roman_text' },
-  { find: /\bकेवल\s+तृतीय\b/g, fix: 'केवल III', cat: 'roman_text' },
-
-  { find: /\b1\s+और\s+2\s+दोनों\b/g, fix: '1 और 2 दोनों', cat: 'num_text' },
-  { find: /\bआई,\s*द्वितीय,\s*तृतीय\b/g, fix: 'I, II, III', cat: 'roman_text' },
-  { find: /\bआई,\s*द्वितीय\b/g, fix: 'I, II', cat: 'roman_text' },
-  { find: /\bद्वितीय,\s*तृतीय\b/g, fix: 'II, III', cat: 'roman_text' },
-];
+const args = process.argv.slice(2);
+const DRY_RUN = args.includes('--dry-run');
+const VERBOSE  = args.includes('--verbose');
 
 // ═══════════════════════════════════════════════════
-//     CODE-LIKE TEXT DETECTION (for option sync)
+//  HELPER: Devanagari-safe word boundary simulation
+//  JS \b doesn't work with Unicode/Devanagari chars
+//  So we use: (?<![^\s,।()।-]) before and (?![^\s,।()।-]) after
 // ═══════════════════════════════════════════════════
 
-const VALID_MATCH_CODE = /^[A-Da-d]\s*[-–—]\s*[IVXivx]+(\s*[,;\s]\s*[A-Da-d]\s*[-–—]\s*[IVXivx]+)+\s*$/i;
-const VALID_MATCH_PAREN = /^[A-Da-d]\s*[-–—]\s*\([ivxIVX]+\)(\s*[,;\s]\s*[A-Da-d]\s*[-–—]\s*\([ivxIVX]+\))+\s*$/i;
-const PURE_NUMBER = /^\s*[-+]?\d+(\.\d+)?\s*%?\s*$/;
-const NUMBER_UNIT = /^\s*[-+]?\d+(\.\d+)?\s*°?[A-Za-z]{0,5}\s*$/;
-const ROMAN_ONLY = /^(VIII|VII|VI|IV|IX|III|II|I|V|X)$/;
+// Characters that can surround a "word" (delimiters)
+// Before a Hindi word: start of string, space, comma, (, -, –
+// After a Hindi word:  end of string, space, comma, ), -, –, ।, और, एवं, तथा
 
-function isCodeLike(text) {
-  if (!text) return false;
-  const t = text.trim();
-  return VALID_MATCH_CODE.test(t) || VALID_MATCH_PAREN.test(t) ||
-         PURE_NUMBER.test(t) || NUMBER_UNIT.test(t) || ROMAN_ONLY.test(t) ||
-         /^[A-Z]$/.test(t) || /^\d{3,4}\s*[-–—]\s*\d{3,4}$/.test(t);
+const B  = '(?:^|(?<=[\\s,।()\\[\\]\\-–—]))';   // before boundary (lookbehind)
+const E  = '(?=$|[\\s,।()\\[\\]\\-–—])';          // after boundary (lookahead)
+
+/**
+ * Core fix function — replaces Hindi letter codes with English
+ * Uses proper Unicode-aware boundaries instead of \b
+ */
+function fixHindiLetterCodes(text) {
+  if (!text || typeof text !== 'string') return { text: text || '', fixed: false };
+
+  const original = text;
+  let r = text;
+
+  // ══════════════════════════════════════════════════
+  // PASS 1: Match-code options with Roman numerals
+  //   "ए-III" → "A-III"   "ए-आई" → "A-I"
+  // ══════════════════════════════════════════════════
+
+  // With original Roman numerals (ए-III, बी-I etc.)
+  r = r.replace(/(?:^|(?<=[\s,।(]))ए(?=\s*[-–—]\s*(?:VIII|VII|VI|IV|IX|III|II|I|V|X))/g, 'A');
+  r = r.replace(/(?:^|(?<=[\s,।(]))बी(?=\s*[-–—]\s*(?:VIII|VII|VI|IV|IX|III|II|I|V|X))/g, 'B');
+  r = r.replace(/(?:^|(?<=[\s,।(]))सी(?=\s*[-–—]\s*(?:VIII|VII|VI|IV|IX|III|II|I|V|X))/g, 'C');
+  r = r.replace(/(?:^|(?<=[\s,।(]))डी(?=\s*[-–—]\s*(?:VIII|VII|VI|IV|IX|III|II|I|V|X))/g, 'D');
+  r = r.replace(/(?:^|(?<=[\s,।(]))ई(?=\s*[-–—]\s*(?:VIII|VII|VI|IV|IX|III|II|I|V|X))/g, 'E');
+
+  // With translated Roman numerals (ए-आई → A-I, ए-द्वितीय → A-II etc.)
+  const romanHi = { 'आई': 'I', 'द्वितीय': 'II', 'तृतीय': 'III', 'चतुर्थ': 'IV', 'वी': 'V', 'षष्ठ': 'VI', 'सप्तम': 'VII', 'अष्टम': 'VIII' };
+  for (const [hi, en] of Object.entries(romanHi)) {
+    r = r.replace(new RegExp(`ए\\s*[-–]\\s*${hi}`, 'g'), `A-${en}`);
+    r = r.replace(new RegExp(`बी\\s*[-–]\\s*${hi}`, 'g'), `B-${en}`);
+    r = r.replace(new RegExp(`सी\\s*[-–]\\s*${hi}`, 'g'), `C-${en}`);
+    r = r.replace(new RegExp(`डी\\s*[-–]\\s*${hi}`, 'g'), `D-${en}`);
+    r = r.replace(new RegExp(`ई\\s*[-–]\\s*${hi}`, 'g'), `E-${en}`);
+  }
+
+  // ══════════════════════════════════════════════════
+  // PASS 2: Parenthesized labels — (ए) → (A) etc.
+  //   These are unambiguous — always safe to replace
+  // ══════════════════════════════════════════════════
+
+  r = r.replace(/\(\s*ए\s*\)/g, '(A)');
+  r = r.replace(/\(\s*बी\s*\)/g, '(B)');
+  r = r.replace(/\(\s*सी\s*\)/g, '(C)');
+  r = r.replace(/\(\s*डी\s*\)/g, '(D)');
+  r = r.replace(/\(\s*ई\s*\)/g, '(E)');
+  r = r.replace(/\(\s*आर\s*\)/g, '(R)');
+  r = r.replace(/\(\s*आई\s*\)/g, '(i)');
+
+  // ══════════════════════════════════════════════════
+  // PASS 3: Statement/List labels
+  //   "कथन आई" → "कथन I"
+  //   "सूची-आई" → "सूची-I"
+  // ══════════════════════════════════════════════════
+
+  r = r.replace(/कथन\s+आई(?=\s|$|[,।])/g, 'कथन I');
+  r = r.replace(/कथन\s+द्वितीय(?=\s|$|[,।])/g, 'कथन II');
+  r = r.replace(/कथन\s+तृतीय(?=\s|$|[,।])/g, 'कथन III');
+  r = r.replace(/कथन\s+चतुर्थ(?=\s|$|[,।])/g, 'कथन IV');
+  r = r.replace(/स्टेटमेंट\s+आई(?=\s|$|[,।])/g, 'Statement I');
+  r = r.replace(/स्टेटमेंट\s+द्वितीय(?=\s|$|[,।])/g, 'Statement II');
+  r = r.replace(/अभिकथन\s*\(\s*ए\s*\)/g, 'अभिकथन (A)');
+  r = r.replace(/कारण\s*\(\s*आर\s*\)/g, 'कारण (R)');
+  r = r.replace(/सूची\s*[-–]?\s*आई(?=\s|$|[,।])/g, 'सूची-I');
+  r = r.replace(/सूची\s*[-–]?\s*द्वितीय(?=\s|$|[,।])/g, 'सूची-II');
+  r = r.replace(/सूची\s*[-–]?\s*तृतीय(?=\s|$|[,।])/g, 'सूची-III');
+  r = r.replace(/स्तंभ\s*[-–]?\s*आई(?=\s|$|[,।])/g, 'स्तंभ-I');
+  r = r.replace(/स्तंभ\s*[-–]?\s*द्वितीय(?=\s|$|[,।])/g, 'स्तंभ-II');
+
+  // ══════════════════════════════════════════════════
+  // PASS 4: THE MAIN FIX — Inline letter code replacement
+  //
+  // KEY INSIGHT: Use split-rejoin approach instead of regex \b
+  // Split by delimiters, check each token, replace if it's a letter code
+  // ══════════════════════════════════════════════════
+
+  r = replaceInlineLetterCodes(r);
+
+  // Cleanup double spaces
+  r = r.replace(/  +/g, ' ').trim();
+
+  return { text: r, fixed: r !== original };
 }
 
-// ═══════════════════════════════════════════════════
-//     CORE FIX FUNCTIONS
-// ═══════════════════════════════════════════════════
+/**
+ * Split-and-replace approach for inline letter codes.
+ * This correctly handles Devanagari without \b issues.
+ *
+ * Splits the string into tokens and non-tokens (delimiters),
+ * checks each token against the letter map, replaces if match.
+ */
+function replaceInlineLetterCodes(text) {
+  if (!text) return text;
 
-function isCorrupted(text) {
+  // Letter map: Hindi → English
+  const LETTER_MAP = {
+    'ए': 'A',
+    'बी': 'B',
+    'सी': 'C',
+    'डी': 'D',
+    'ई': 'E',
+  };
+
+  // Delimiter pattern: space, comma, (, ), [, ], -, –, —, ।, newline
+  // We split on these, keeping the delimiters
+  const DELIM_RE = /([\s,।()\[\]\-–—\n])/;
+
+  const parts = text.split(DELIM_RE);
+  let changed = false;
+  let inCodeContext = false;
+
+  // We scan through parts. A "code context" is determined by:
+  // 1. A prefix word (केवल, सभी, etc.) just seen
+  // 2. Or we're in a comma-separated list where the previous token was a letter code
+  // 3. Or the previous non-delimiter token was already a letter code (A/B/C/D/E)
+
+  const PREFIX_WORDS = new Set([
+    'केवल','सभी','उपरोक्त','उपर्युक्त','निम्नलिखित','दोनों',
+    'इनमें','कथन','statement'
+  ]);
+
+  // First pass: identify which positions are letter codes
+  // A token is a "code" if:
+  // - It's one of the Hindi letters AND
+  // - It appears after a prefix word, or in a comma-separated list of other codes
+
+  // Strategy: Do multiple passes
+  // Pass A: Replace बी, सी, डी everywhere (they're NEVER real Hindi words)
+  const safeReplaceResult = replaceSafeLetters(parts, changed);
+  const newParts = safeReplaceResult.parts;
+  changed = safeReplaceResult.changed;
+
+  // Pass B: Replace ए and ई in code context
+  replaceContextualLetters(newParts);
+
+  return newParts.join('');
+
+  function replaceSafeLetters(parts, changed) {
+    const result = [...parts];
+    for (let i = 0; i < result.length; i++) {
+      const token = result[i];
+      if (token === 'बी') { result[i] = 'B'; changed = true; }
+      else if (token === 'सी') { result[i] = 'C'; changed = true; }
+      else if (token === 'डी') { result[i] = 'D'; changed = true; }
+    }
+    return { parts: result, changed };
+  }
+
+  function replaceContextualLetters(parts) {
+    // Now parts may have a mix of B/C/D (replaced) and ए/ई (not yet replaced)
+    // We need to determine if ए and ई are in "code context"
+
+    // Find positions of actual content tokens (not delimiters)
+    // A delimiter is a single space, comma, (, ), etc.
+    const isDelim = (s) => /^[\s,।()\[\]\-–—\n]+$/.test(s);
+
+    for (let i = 0; i < parts.length; i++) {
+      if (parts[i] !== 'ए' && parts[i] !== 'ई') continue;
+
+      // Check context: look at surrounding non-delimiter tokens
+      const prev = getPrevToken(parts, i);
+      const next = getNextToken(parts, i);
+
+      let isCode = false;
+
+      // Rule 1: Previous token is a prefix word
+      if (prev && PREFIX_WORDS.has(prev.toLowerCase())) {
+        isCode = true;
+      }
+
+      // Rule 2: Previous token is already a letter code (A/B/C/D/E)
+      if (prev && /^[ABCDE]$/.test(prev)) {
+        isCode = true;
+      }
+
+      // Rule 3: Next token is a letter code or letter (A/B/C/D/E or ए/बी/सी/डी/ई converted)
+      if (next && (/^[ABCDE]$/.test(next) || Object.keys(LETTER_MAP).includes(next))) {
+        isCode = true;
+      }
+
+      // Rule 4: Surrounded by commas (is in a list)
+      const prevDelim = parts[i - 1];
+      const nextDelim = parts[i + 1];
+      if (prevDelim && /,/.test(prevDelim) && nextDelim && (/,/.test(nextDelim) || /^\s*(और|एवं|तथा)/.test(nextDelim) || nextDelim.trim() === '')) {
+        isCode = true;
+      }
+      if (prevDelim && /,/.test(prevDelim)) {
+        isCode = true;
+      }
+
+      // Rule 5: Nothing before (start of string) and next is a letter code
+      if (!prev && next && /^[ABCDE]$/.test(next)) {
+        isCode = true;
+      }
+
+      // Rule 6: Previous is "और/एवं/तथा" and we're in a list
+      if (prev && /^(और|एवं|तथा)$/.test(prev)) {
+        // Look further back — if there was a letter code before और, it's a list
+        const prevPrev = getPrevToken(parts, parts.indexOf(prev, 0));
+        if (prevPrev && /^[ABCDE]$/.test(prevPrev)) {
+          isCode = true;
+        }
+      }
+
+      if (isCode) {
+        parts[i] = parts[i] === 'ए' ? 'A' : 'E';
+        changed = true;
+      }
+    }
+  }
+
+  function getPrevToken(parts, idx) {
+    for (let i = idx - 1; i >= 0; i--) {
+      const p = parts[i].trim();
+      if (p && !/^[\s,।()\[\]\-–—]+$/.test(p)) return p;
+    }
+    return null;
+  }
+
+  function getNextToken(parts, idx) {
+    for (let i = idx + 1; i < parts.length; i++) {
+      const p = parts[i].trim();
+      if (p && !/^[\s,।()\[\]\-–—]+$/.test(p)) return p;
+    }
+    return null;
+  }
+}
+
+/**
+ * Check if an English option is a letter-code (should be mirrored to Hindi as-is)
+ */
+function isLetterCodeOption(text) {
   if (!text || typeof text !== 'string') return false;
-  for (const f of FIXES) {
-    if (new RegExp(f.find.source, f.find.flags).test(text)) return true;
-  }
-  return false;
+  const t = text.trim();
+  return /^[A-Ea-e](\s*,\s*[A-Ea-e]){1,}\s*$/.test(t) ||
+         /^(Only|All|Both|केवल|सभी)\s+[A-E]/.test(t) ||
+         /^[A-Da-d]\s*[-–—]\s*(VIII|VII|VI|IV|IX|III|II|I|V|X)/.test(t);
 }
 
-function applyFixes(text) {
-  if (!text || typeof text !== 'string') return { text, changed: false, count: 0, categories: [] };
-  let result = text;
+// ═══════════════════════════════════════════════════
+//  SELF-TEST
+// ═══════════════════════════════════════════════════
+
+function runSelfTest() {
+  const tests = [
+    ['केवल ए, बी, सी, डी',        'केवल A, B, C, D'],
+    ['केवल बी, सी, डी',            'केवल B, C, D'],
+    ['केवल ए, सी, ई',              'केवल A, C, E'],
+    ['केवल बी, डी और ई',           'केवल B, D और E'],
+    ['केवल A, C और D',             'केवल A, C और D'],   // already correct
+    ['केवल A, B और C',             'केवल A, B और C'],   // already correct
+    ['ए, बी, सी, डी, ई',           'A, B, C, D, E'],
+    ['ए-III, बी-I, सी-II, डी-IV', 'A-III, B-I, C-II, D-IV'],
+    ['(ए)',                         '(A)'],
+    ['(बी)',                         '(B)'],
+    ['(आर)',                         '(R)'],
+    ['कथन आई',                      'कथन I'],
+    ['सूची-आई',                      'सूची-I'],
+    ['अभिकथन (ए)',                   'अभिकथन (A)'],
+    ['कथन A, C, D सही हैं',         'कथन A, C, D सही हैं'], // already correct
+    ['कथन ए, बी, सी सही हैं',       'कथन A, B, C सही हैं'],
+    ['केवल बी, ई',                   'केवल B, E'],
+    ['सभी ए, बी, सी, डी',           'सभी A, B, C, D'],
+    ['ए, बी, सी, डी',               'A, B, C, D'],
+    ['केवल ए और बी',                'केवल A और B'],
+    ['केवल बी और डी',               'केवल B और D'],
+    ['केवल ए, बी और सी',            'केवल A, B और C'],
+    ['बी, सी, डी, ए',               'B, C, D, A'],
+    ['ए-द्वितीय',                    'A-II'],
+    ['बी-तृतीय',                      'B-III'],
+    ['सी-चतुर्थ',                     'C-IV'],
+    ['केवल ए, बी, सी, डी, ई',      'केवल A, B, C, D, E'],
+    // Real Hindi sentences — should NOT be changed
+    ['यह एक अच्छा काम है',          'यह एक अच्छा काम है'],   // no letter codes
+    ['नीति आयोग की स्थापना',        'नीति आयोग की स्थापना'], // no codes
+  ];
+
+  let passed = 0, failed = 0;
+  console.log('\n  Running self-tests...\n');
+
+  for (const [input, expected] of tests) {
+    const { text: result } = fixHindiLetterCodes(input);
+    const ok = result === expected;
+    if (ok) {
+      passed++;
+      if (VERBOSE) console.log(`    ✅ "${input}" → "${result}"`);
+    } else {
+      failed++;
+      console.log(`    ❌ "${input}"`);
+      console.log(`       Expected : "${expected}"`);
+      console.log(`       Got      : "${result}"`);
+    }
+  }
+
+  console.log(`\n  Self-test: ${passed}/${tests.length} passed${failed > 0 ? `, ${failed} FAILED` : ' ✅'}\n`);
+  return failed === 0;
+}
+
+// ═══════════════════════════════════════════════════
+//  PROCESS: PYQ Question fields
+// ═══════════════════════════════════════════════════
+
+function fixPYQQuestion(q) {
   let count = 0;
-  const categories = new Set();
 
-  for (const f of FIXES) {
-    const re = new RegExp(f.find.source, f.find.flags);
-    if (re.test(result)) {
-      result = result.replace(new RegExp(f.find.source, f.find.flags), f.fix);
-      count++;
-      if (f.cat) categories.add(f.cat);
+  const textFields = [
+    'questionText','questionTextHi',
+    'explanation','explanationHi',
+    'assertion','assertionHi',
+    'reason','reasonHi',
+    'passage','passageHi',
+    'caseletText','caseletTextHi',
+    'diTitle','diTitleHi',
+    'instruction','instructionHi',
+  ];
+
+  for (const f of textFields) {
+    if (q[f] && typeof q[f] === 'string') {
+      const { text, fixed } = fixHindiLetterCodes(q[f]);
+      if (fixed) { q[f] = text; count++; }
     }
   }
 
-  return { text: result, changed: result !== text, count, categories: [...categories] };
-}
-
-// ═══════════════════════════════════════════════════
-//     FIELD FIXING HELPERS
-// ═══════════════════════════════════════════════════
-
-function fixBilingualString(obj, fieldPath, repairs) {
-  if (!obj) return;
-  ['hi', 'en'].forEach(lang => {
-    if (obj[lang] && typeof obj[lang] === 'string' && isCorrupted(obj[lang])) {
-      const r = applyFixes(obj[lang]);
-      if (r.changed) {
-        repairs.push({
-          field: `${fieldPath}.${lang}`,
-          from: obj[lang].substring(0, 80),
-          to: r.text.substring(0, 80),
-          fixes: r.count,
-          categories: r.categories
-        });
-        obj[lang] = r.text;
+  // optionsHi
+  if (Array.isArray(q.optionsHi)) {
+    for (let i = 0; i < q.optionsHi.length; i++) {
+      if (!q.optionsHi[i]) continue;
+      // Priority 1: mirror English if it's a code
+      const en = Array.isArray(q.optionsEn) ? q.optionsEn[i] : null;
+      if (en && isLetterCodeOption(en) && q.optionsHi[i] !== en) {
+        if (VERBOSE) console.log(`      optHi[${i}]: "${q.optionsHi[i]}" → "${en}" (mirror)`);
+        q.optionsHi[i] = en; count++; continue;
       }
-    }
-  });
-}
-
-function fixBilingualArray(obj, fieldPath, repairs) {
-  if (!obj) return;
-  ['hi', 'en'].forEach(lang => {
-    if (obj[lang] && Array.isArray(obj[lang])) {
-      for (let i = 0; i < obj[lang].length; i++) {
-        const val = obj[lang][i];
-        if (val && typeof val === 'string' && isCorrupted(val)) {
-          const r = applyFixes(val);
-          if (r.changed) {
-            repairs.push({
-              field: `${fieldPath}.${lang}[${i}]`,
-              from: val.substring(0, 80),
-              to: r.text.substring(0, 80),
-              fixes: r.count,
-              categories: r.categories
-            });
-            obj[lang][i] = r.text;
-          }
-        }
-      }
-    }
-  });
-}
-
-function syncCodeLikeOptions(obj, fieldPath, repairs) {
-  if (!obj || !obj.hi || !obj.en) return;
-  const maxLen = Math.max(obj.hi.length, obj.en.length);
-
-  for (let i = 0; i < maxLen; i++) {
-    const hi = obj.hi[i] || '';
-    const en = obj.en[i] || '';
-
-    if (isCodeLike(hi) && en !== hi) {
-      repairs.push({
-        field: `${fieldPath}.en[${i}]`,
-        from: en.substring(0, 60),
-        to: hi,
-        fixes: 1,
-        categories: ['code_sync']
-      });
-      if (!obj.en) obj.en = [];
-      obj.en[i] = hi;
-    } else if (isCodeLike(en) && hi !== en) {
-      repairs.push({
-        field: `${fieldPath}.hi[${i}]`,
-        from: hi.substring(0, 60),
-        to: en,
-        fixes: 1,
-        categories: ['code_sync']
-      });
-      if (!obj.hi) obj.hi = [];
-      obj.hi[i] = en;
-    }
-  }
-}
-
-// ═══════════════════════════════════════════════════
-//     QUESTION REPAIR — ALL 12 TYPES
-// ═══════════════════════════════════════════════════
-
-function repairQuestion(q) {
-  const repairs = [];
-  const qType = q.questionType || 'mcq';
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // COMMON FIELDS (all 12 types have these)
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  fixBilingualString(q.question, 'question', repairs);
-  fixBilingualArray(q.options, 'options', repairs);
-  fixBilingualString(q.explanation, 'explanation', repairs);
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // TYPE-SPECIFIC FIELDS
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  // ASSERTION_REASON
-  if (q.assertionReasonData) {
-    fixBilingualString(q.assertionReasonData.assertion, 'assertionReasonData.assertion', repairs);
-    fixBilingualString(q.assertionReasonData.reason, 'assertionReasonData.reason', repairs);
-  }
-
-  // MATCH_FOLLOWING
-  if (q.matchData) {
-    fixBilingualArray(q.matchData.listA, 'matchData.listA', repairs);
-    fixBilingualArray(q.matchData.listB, 'matchData.listB', repairs);
-  }
-
-  // SEQUENCE_ORDER
-  if (q.sequenceData) {
-    fixBilingualArray(q.sequenceData.items, 'sequenceData.items', repairs);
-  }
-
-  // STATEMENT_BASED
-  if (q.statementData) {
-    fixBilingualArray(q.statementData.statements, 'statementData.statements', repairs);
-  }
-
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // CODE-LIKE OPTION SYNC
-  // (match_following & sequence_order options like "A-I, B-II")
-  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  if (['match_following', 'sequence_order', 'statement_based'].includes(qType)) {
-    syncCodeLikeOptions(q.options, 'options', repairs);
-  }
-
-  return repairs;
-}
-
-// ═══════════════════════════════════════════════════
-//     PASSAGE REPAIR
-// ═══════════════════════════════════════════════════
-
-function repairPassage(p) {
-  const repairs = [];
-  fixBilingualString(p.content, 'content', repairs);
-  fixBilingualString(p.title, 'title', repairs);
-  return repairs;
-}
-
-// ═══════════════════════════════════════════════════
-//     DI DATA REPAIR — ALL FIELDS
-// ═══════════════════════════════════════════════════
-
-function repairDIData(d) {
-  const repairs = [];
-
-  // Basic bilingual string fields
-  fixBilingualString(d.title, 'title', repairs);
-  fixBilingualString(d.instruction, 'instruction', repairs);
-  fixBilingualString(d.caseletText, 'caseletText', repairs);
-
-  // Table data
-  if (d.tableData) {
-    // Headers: { hi: [...], en: [...] }
-    fixBilingualArray(d.tableData.headers, 'tableData.headers', repairs);
-    // Footers: { hi: [...], en: [...] }
-    fixBilingualArray(d.tableData.footers, 'tableData.footers', repairs);
-
-    // Table rows can contain string values too
-    if (d.tableData.rows && Array.isArray(d.tableData.rows)) {
-      for (let ri = 0; ri < d.tableData.rows.length; ri++) {
-        const row = d.tableData.rows[ri];
-        if (Array.isArray(row)) {
-          for (let ci = 0; ci < row.length; ci++) {
-            const cell = row[ci];
-            if (cell && typeof cell === 'string' && isCorrupted(cell)) {
-              const r = applyFixes(cell);
-              if (r.changed) {
-                repairs.push({
-                  field: `tableData.rows[${ri}][${ci}]`,
-                  from: cell.substring(0, 40),
-                  to: r.text.substring(0, 40),
-                  fixes: r.count,
-                  categories: r.categories
-                });
-                d.tableData.rows[ri][ci] = r.text;
-              }
-            }
-          }
-        }
+      // Priority 2: inline fix
+      const { text, fixed } = fixHindiLetterCodes(q.optionsHi[i]);
+      if (fixed) {
+        if (VERBOSE) console.log(`      optHi[${i}]: "${q.optionsHi[i]}" → "${text}"`);
+        q.optionsHi[i] = text; count++;
       }
     }
   }
 
-  // Chart data
-  if (d.chartData) {
-    // Labels: { hi: [...], en: [...] }
-    fixBilingualArray(d.chartData.labels, 'chartData.labels', repairs);
+  // options (flat array)
+  if (Array.isArray(q.options)) {
+    for (let i = 0; i < q.options.length; i++) {
+      if (!q.options[i] || typeof q.options[i] !== 'string') continue;
+      const { text, fixed } = fixHindiLetterCodes(q.options[i]);
+      if (fixed) { q.options[i] = text; count++; }
+    }
+  }
 
-    // X/Y axis labels
-    fixBilingualString(d.chartData.xAxisLabel, 'chartData.xAxisLabel', repairs);
-    fixBilingualString(d.chartData.yAxisLabel, 'chartData.yAxisLabel', repairs);
-
-    // Dataset labels
-    if (d.chartData.datasets && Array.isArray(d.chartData.datasets)) {
-      for (let di = 0; di < d.chartData.datasets.length; di++) {
-        const ds = d.chartData.datasets[di];
-        if (ds && ds.label) {
-          fixBilingualString(ds.label, `chartData.datasets[${di}].label`, repairs);
-        }
+  // Array fields
+  for (const f of ['statementsHi','listAHi','listBHi','itemsHi']) {
+    if (Array.isArray(q[f])) {
+      for (let i = 0; i < q[f].length; i++) {
+        const { text, fixed } = fixHindiLetterCodes(q[f][i]);
+        if (fixed) { q[f][i] = text; count++; }
       }
     }
   }
 
-  return repairs;
+  // Sub-questions
+  if (Array.isArray(q.subQuestions)) {
+    for (const sq of q.subQuestions) count += fixPYQQuestion(sq);
+  }
+
+  return count;
 }
 
 // ═══════════════════════════════════════════════════
-//     BUILD UPDATE OBJECT FOR DB
+//  PROCESS: Question Bank document → $set update
 // ═══════════════════════════════════════════════════
 
 function buildQuestionUpdate(q) {
-  const update = { updatedAt: new Date() };
+  const update = {};
+  let fixCount = 0;
 
-  // Always include all fixable fields
-  if (q.question) update.question = q.question;
-  if (q.options) update.options = q.options;
-  if (q.explanation) update.explanation = q.explanation;
-  if (q.assertionReasonData) update.assertionReasonData = q.assertionReasonData;
-  if (q.matchData) update.matchData = q.matchData;
-  if (q.sequenceData) update.sequenceData = q.sequenceData;
-  if (q.statementData) update.statementData = q.statementData;
+  // options.hi
+  if (Array.isArray(q.options?.hi)) {
+    const arr = [...q.options.hi];
+    let changed = false;
+    for (let i = 0; i < arr.length; i++) {
+      if (!arr[i]) continue;
+      const en = q.options?.en?.[i];
+      if (en && isLetterCodeOption(en) && arr[i] !== en) {
+        arr[i] = en; changed = true; fixCount++; continue;
+      }
+      const { text, fixed } = fixHindiLetterCodes(arr[i]);
+      if (fixed) { arr[i] = text; changed = true; fixCount++; }
+    }
+    if (changed) update['options.hi'] = arr;
+  }
 
-  return update;
-}
+  // question.hi
+  if (q.question?.hi) {
+    const { text, fixed } = fixHindiLetterCodes(q.question.hi);
+    if (fixed) { update['question.hi'] = text; fixCount++; }
+  }
 
-function buildPassageUpdate(p) {
-  const update = { updatedAt: new Date() };
-  if (p.content) update.content = p.content;
-  if (p.title) update.title = p.title;
-  return update;
-}
+  // explanation.hi
+  if (q.explanation?.hi) {
+    const { text, fixed } = fixHindiLetterCodes(q.explanation.hi);
+    if (fixed) { update['explanation.hi'] = text; fixCount++; }
+  }
 
-function buildDIUpdate(d) {
-  const update = { updatedAt: new Date() };
-  if (d.title) update.title = d.title;
-  if (d.instruction) update.instruction = d.instruction;
-  if (d.caseletText) update.caseletText = d.caseletText;
-  if (d.tableData) update.tableData = d.tableData;
-  if (d.chartData) update.chartData = d.chartData;
-  return update;
+  // assertionReasonData
+  if (q.assertionReasonData?.assertion?.hi) {
+    const { text, fixed } = fixHindiLetterCodes(q.assertionReasonData.assertion.hi);
+    if (fixed) { update['assertionReasonData.assertion.hi'] = text; fixCount++; }
+  }
+  if (q.assertionReasonData?.reason?.hi) {
+    const { text, fixed } = fixHindiLetterCodes(q.assertionReasonData.reason.hi);
+    if (fixed) { update['assertionReasonData.reason.hi'] = text; fixCount++; }
+  }
+
+  // matchData
+  if (Array.isArray(q.matchData?.listA?.hi)) {
+    let changed = false;
+    const arr = q.matchData.listA.hi.map(item => {
+      const { text, fixed } = fixHindiLetterCodes(item);
+      if (fixed) changed = true, fixCount++;
+      return fixed ? text : item;
+    });
+    if (changed) update['matchData.listA.hi'] = arr;
+  }
+  if (Array.isArray(q.matchData?.listB?.hi)) {
+    let changed = false;
+    const arr = q.matchData.listB.hi.map(item => {
+      const { text, fixed } = fixHindiLetterCodes(item);
+      if (fixed) changed = true, fixCount++;
+      return fixed ? text : item;
+    });
+    if (changed) update['matchData.listB.hi'] = arr;
+  }
+
+  // sequenceData
+  if (Array.isArray(q.sequenceData?.items?.hi)) {
+    let changed = false;
+    const arr = q.sequenceData.items.hi.map(item => {
+      const { text, fixed } = fixHindiLetterCodes(item);
+      if (fixed) changed = true, fixCount++;
+      return fixed ? text : item;
+    });
+    if (changed) update['sequenceData.items.hi'] = arr;
+  }
+
+  // statementData
+  if (Array.isArray(q.statementData?.statements?.hi)) {
+    let changed = false;
+    const arr = q.statementData.statements.hi.map(item => {
+      const { text, fixed } = fixHindiLetterCodes(item);
+      if (fixed) changed = true, fixCount++;
+      return fixed ? text : item;
+    });
+    if (changed) update['statementData.statements.hi'] = arr;
+  }
+
+  return { update, fixCount };
 }
 
 // ═══════════════════════════════════════════════════
-//              MAIN EXECUTION
+//  MAIN
 // ═══════════════════════════════════════════════════
 
 async function main() {
-  console.log('');
-  console.log('╔════════════════════════════════════════════════════════════╗');
-  console.log('║  NETprep — ULTIMATE Translation Repair v3.0              ║');
-  console.log('║  Fixes ALL fields of ALL 12 question types               ║');
-  console.log('║  + Passages + DI Data (headers, labels, everything)      ║');
-  console.log('╚════════════════════════════════════════════════════════════╝');
-  console.log('');
-  console.log(`  Fix patterns loaded: ${FIXES.length}`);
-  console.log(`  Categories: label, roman, match, ar, stmt, list, en_fix, roman_text, code_sync`);
-  console.log('');
+  console.log('═══════════════════════════════════════════════════════');
+  console.log(' CORRUPTED TRANSLATION FIX SCRIPT — FINAL VERSION');
+  console.log(DRY_RUN ? ' MODE: DRY RUN (no DB changes)' : ' MODE: LIVE (saving to DB)');
+  console.log('═══════════════════════════════════════════════════════');
 
-  // Connect
-  await mongoose.connect(MONGO_URI);
-  console.log('  ✅ Connected to MongoDB\n');
+  const selfTestOk = runSelfTest();
+  if (!selfTestOk) {
+    console.error('Self-test failed. Aborting.');
+    process.exit(1);
+  }
 
-  const QSchema = new mongoose.Schema({}, { strict: false, collection: 'questions' });
-  const PSchema = new mongoose.Schema({}, { strict: false, collection: 'passages' });
-  const DSchema = new mongoose.Schema({}, { strict: false, collection: 'didatas' });
+  const mongoUri = process.env.MONGO_URI;
+  if (!mongoUri) { console.error('ERROR: MONGO_URI not set'); process.exit(1); }
 
-  const Q = mongoose.models.Question || mongoose.model('Question', QSchema);
-  const P = mongoose.models.Passage || mongoose.model('Passage', PSchema);
-  const D = mongoose.models.DIData || mongoose.model('DIData', DSchema);
+  await mongoose.connect(mongoUri);
+  console.log('✅ Connected to MongoDB\n');
 
-  const grandTotal = { scanned: 0, corrupted: 0, repaired: 0, failed: 0 };
+  const stats = { pyqDocs: 0, pyqFixed: 0, pyqFields: 0, qDocs: 0, qFixed: 0, qFields: 0 };
 
-  // ════════════════════════════════════════════════════
-  //  PHASE 1: QUESTIONS (all 12 types)
-  // ════════════════════════════════════════════════════
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('  PHASE 1: Questions — ALL 12 types, ALL fields');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  // ── PART 1: PYQAnalysis ────────────────────────────
+  console.log('━━━ PART 1: PYQAnalysis ━━━\n');
+  const PYQAnalysis = require('../models/PYQAnalysis');
+  const pyqDocs = await PYQAnalysis.find({ isActive: true }).lean();
+  stats.pyqDocs = pyqDocs.length;
+  console.log(`  Found ${pyqDocs.length} PYQ documents\n`);
 
-  const allQ = await Q.find({ isActive: { $ne: false } }).lean();
-  console.log(`  Total questions: ${allQ.length}\n`);
-  grandTotal.scanned += allQ.length;
-
-  const qByType = {};
-  const qByField = {};
-  const qByCat = {};
-  let qCorrupted = 0, qRepaired = 0, qFailed = 0;
-  const qExamples = [];
-
-  for (const q of allQ) {
-    const copy = JSON.parse(JSON.stringify(q));
-    const repairs = repairQuestion(copy);
-
-    if (repairs.length > 0) {
-      qCorrupted++;
-      const type = q.questionType || 'unknown';
-      qByType[type] = (qByType[type] || 0) + 1;
-
-      for (const r of repairs) {
-        const rootField = r.field.split('.')[0];
-        qByField[rootField] = (qByField[rootField] || 0) + 1;
-        for (const c of (r.categories || [])) {
-          qByCat[c] = (qByCat[c] || 0) + 1;
-        }
+  for (const doc of pyqDocs) {
+    const qtm = doc.questionTopicMap || [];
+    let docFix = 0;
+    for (let qi = 0; qi < qtm.length; qi++) {
+      const fc = fixPYQQuestion(qtm[qi]);
+      if (fc > 0) { docFix += fc; if (VERBOSE) console.log(`    Q${qtm[qi].qNo}: ${fc} fixes`); }
+    }
+    if (docFix > 0) {
+      stats.pyqFixed++; stats.pyqFields += docFix;
+      if (!DRY_RUN) {
+        await PYQAnalysis.updateOne({ _id: doc._id }, { $set: { questionTopicMap: qtm, updatedAt: new Date() } });
       }
+      console.log(`  ${DRY_RUN ? '🔍' : '✅'} ${doc.displayLabel}: ${docFix} fields fixed`);
+    } else {
+      console.log(`  ⬜ ${doc.displayLabel}: clean`);
+    }
+  }
 
-      if (qExamples.length < 10) {
-        qExamples.push({
-          num: q.questionNumber,
-          type,
-          count: repairs.length,
-          repairs: repairs.slice(0, 3)
-        });
-      }
+  console.log(`\n  PYQ: ${stats.pyqFixed}/${stats.pyqDocs} docs, ${stats.pyqFields} fields\n`);
 
-      try {
-        const update = buildQuestionUpdate(copy);
-        await Q.updateOne({ _id: q._id }, { $set: update });
-        qRepaired++;
-      } catch (e) {
-        qFailed++;
-      }
+  // ── PART 2: Question Bank ──────────────────────────
+  console.log('━━━ PART 2: Question Bank ━━━\n');
+  const Question = require('../models/Question');
+  const questions = await Question.find({ isActive: { $ne: false } }).lean();
+  stats.qDocs = questions.length;
+  console.log(`  Found ${questions.length} questions\n`);
 
-      if (qRepaired % 100 === 0 && qRepaired > 0) {
-        process.stdout.write(`  ... fixed ${qRepaired}/${qCorrupted}\r`);
+  let shown = 0;
+  for (const q of questions) {
+    const { update, fixCount } = buildQuestionUpdate(q);
+    if (fixCount > 0) {
+      stats.qFixed++; stats.qFields += fixCount;
+      if (!DRY_RUN) { update.updatedAt = new Date(); await Question.updateOne({ _id: q._id }, { $set: update }); }
+      if (shown < 30 || VERBOSE) {
+        console.log(`  ${DRY_RUN ? '🔍' : '✅'} Q#${q.questionNumber} (${q.questionType}): ${fixCount} fixes`);
+        shown++;
+      } else if (shown === 30) {
+        console.log(`  ... use --verbose to see all`); shown++;
       }
     }
   }
 
-  grandTotal.corrupted += qCorrupted;
-  grandTotal.repaired += qRepaired;
-  grandTotal.failed += qFailed;
+  console.log(`\n  Questions: ${stats.qFixed}/${stats.qDocs} docs, ${stats.qFields} fields\n`);
 
-  console.log(`\n  📊 Question Results:`);
-  console.log(`     Scanned:   ${allQ.length}`);
-  console.log(`     Corrupted: ${qCorrupted}`);
-  console.log(`     ✅ Fixed:  ${qRepaired}`);
-  console.log(`     ❌ Failed: ${qFailed}`);
-
-  if (Object.keys(qByType).length > 0) {
-    console.log(`\n  By Question Type:`);
-    const typeOrder = ['mcq', 'assertion_reason', 'match_following', 'sequence_order',
-                       'statement_based', 'passage_based', 'di_table', 'di_bar_chart',
-                       'di_pie_chart', 'di_line_graph', 'di_mixed', 'di_caselet'];
-    for (const t of typeOrder) {
-      if (qByType[t]) console.log(`     ${t}: ${qByType[t]} corrupted`);
-    }
-    for (const [t, c] of Object.entries(qByType)) {
-      if (!typeOrder.includes(t)) console.log(`     ${t}: ${c} corrupted`);
-    }
-  }
-
-  if (Object.keys(qByField).length > 0) {
-    console.log(`\n  By Field:`);
-    for (const [f, c] of Object.entries(qByField).sort((a, b) => b[1] - a[1])) {
-      console.log(`     ${f}: ${c} fixes`);
-    }
-  }
-
-  if (Object.keys(qByCat).length > 0) {
-    console.log(`\n  By Corruption Category:`);
-    for (const [c, n] of Object.entries(qByCat).sort((a, b) => b[1] - a[1])) {
-      console.log(`     ${c}: ${n} fixes`);
-    }
-  }
-
-  if (qExamples.length > 0) {
-    console.log(`\n  Examples (first ${qExamples.length}):`);
-    qExamples.forEach((ex, i) => {
-      console.log(`\n  [${i + 1}] Q#${ex.num} (${ex.type}) — ${ex.count} fix(es):`);
-      ex.repairs.forEach(r => {
-        console.log(`      ${r.field}:`);
-        console.log(`        ❌ "${r.from}"`);
-        console.log(`        ✅ "${r.to}"`);
-        if (r.categories?.length) console.log(`        📂 ${r.categories.join(', ')}`);
-      });
-    });
-  }
-
-  // ════════════════════════════════════════════════════
-  //  PHASE 2: PASSAGES
-  // ════════════════════════════════════════════════════
-  console.log('\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('  PHASE 2: Passages — content, title');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-  let pCount = 0, pFixed = 0;
-  try {
-    const allP = await P.find({ isActive: { $ne: false } }).lean();
-    pCount = allP.length;
-    console.log(`  Total passages: ${pCount}`);
-    grandTotal.scanned += pCount;
-
-    for (const p of allP) {
-      const copy = JSON.parse(JSON.stringify(p));
-      const repairs = repairPassage(copy);
-      if (repairs.length > 0) {
-        try {
-          await P.updateOne({ _id: p._id }, { $set: buildPassageUpdate(copy) });
-          pFixed++;
-          grandTotal.repaired++;
-        } catch (e) { grandTotal.failed++; }
-        grandTotal.corrupted++;
-      }
-    }
-    console.log(`  ✅ Fixed: ${pFixed}/${pCount}`);
-  } catch (e) {
-    console.log(`  ⚠️ Passages: ${e.message}`);
-  }
-
-  // ════════════════════════════════════════════════════
-  //  PHASE 3: DI DATA — title, instruction, caseletText,
-  //           table headers, footers, rows,
-  //           chart labels, axis labels, dataset labels
-  // ════════════════════════════════════════════════════
-  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('  PHASE 3: DI Data — ALL fields (title, headers, labels, etc.)');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-  let dCount = 0, dFixed = 0;
-  try {
-    const allD = await D.find({ isActive: { $ne: false } }).lean();
-    dCount = allD.length;
-    console.log(`  Total DI Data: ${dCount}`);
-    grandTotal.scanned += dCount;
-
-    for (const d of allD) {
-      const copy = JSON.parse(JSON.stringify(d));
-      const repairs = repairDIData(copy);
-      if (repairs.length > 0) {
-        try {
-          await D.updateOne({ _id: d._id }, { $set: buildDIUpdate(copy) });
-          dFixed++;
-          grandTotal.repaired++;
-          if (repairs.length > 0 && dFixed <= 3) {
-            console.log(`    DI#${d.diNumber || d._id}: ${repairs.length} fixes`);
-            repairs.slice(0, 2).forEach(r => {
-              console.log(`      ${r.field}: "${r.from}" → "${r.to}"`);
-            });
-          }
-        } catch (e) { grandTotal.failed++; }
-        grandTotal.corrupted++;
-      }
-    }
-    console.log(`  ✅ Fixed: ${dFixed}/${dCount}`);
-  } catch (e) {
-    console.log(`  ⚠️ DI Data: ${e.message}`);
-  }
-
-  // ════════════════════════════════════════════════════
-  //  FINAL REPORT
-  // ════════════════════════════════════════════════════
-  console.log('\n');
-  console.log('╔════════════════════════════════════════════════════════════╗');
-  console.log('║                    FINAL REPORT                          ║');
-  console.log('╠════════════════════════════════════════════════════════════╣');
-  console.log(`║  Total Scanned:    ${grandTotal.scanned.toString().padStart(6)} documents`);
-  console.log(`║  Total Corrupted:  ${grandTotal.corrupted.toString().padStart(6)} documents`);
-  console.log(`║  Total Repaired:   ${grandTotal.repaired.toString().padStart(6)} documents`);
-  console.log(`║  Total Failed:     ${grandTotal.failed.toString().padStart(6)} documents`);
-  console.log('╠════════════════════════════════════════════════════════════╣');
-  console.log(`║  Questions: ${qRepaired} fixed (${Object.keys(qByType).length} types affected)`);
-  console.log(`║  Passages:  ${pFixed} fixed`);
-  console.log(`║  DI Data:   ${dFixed} fixed`);
-  console.log('╠════════════════════════════════════════════════════════════╣');
-
-  if (grandTotal.repaired > 0) {
-    console.log('║                                                          ║');
-    console.log('║  🎉 ALL CORRUPTED TRANSLATIONS FIXED!                   ║');
-    console.log('║                                                          ║');
-  } else {
-    console.log('║                                                          ║');
-    console.log('║  ✅ DATABASE IS CLEAN — NO CORRUPTIONS FOUND            ║');
-    console.log('║                                                          ║');
-  }
-
-  console.log('║  🛡️  New imports protected by translateHelper v3          ║');
-  console.log('║                                                          ║');
-  console.log('║  Fields covered per question type:                       ║');
-  console.log('║  ┌─────────────────────┬────────────────────────────┐    ║');
-  console.log('║  │ MCQ                 │ question, options, expl.   │    ║');
-  console.log('║  │ Assertion-Reason    │ + assertion, reason        │    ║');
-  console.log('║  │ Match Following     │ + listA, listB + code sync│    ║');
-  console.log('║  │ Sequence Order      │ + items + code sync       │    ║');
-  console.log('║  │ Statement Based     │ + statements + code sync  │    ║');
-  console.log('║  │ Passage Based       │ + passage content         │    ║');
-  console.log('║  │ DI Table            │ + headers, footers, rows  │    ║');
-  console.log('║  │ DI Bar/Pie/Line     │ + labels, axis, datasets  │    ║');
-  console.log('║  │ DI Caselet          │ + caseletText             │    ║');
-  console.log('║  │ DI Mixed            │ + all chart fields        │    ║');
-  console.log('║  └─────────────────────┴────────────────────────────┘    ║');
-  console.log('╚════════════════════════════════════════════════════════════╝');
+  // ── SUMMARY ────────────────────────────────────────
+  console.log('═══════════════════════════════════════════════════════');
+  console.log(' SUMMARY');
+  console.log('═══════════════════════════════════════════════════════');
+  console.log(`  PYQ Documents : ${stats.pyqFixed}/${stats.pyqDocs} (${stats.pyqFields} fields)`);
+  console.log(`  Questions     : ${stats.qFixed}/${stats.qDocs} (${stats.qFields} fields)`);
+  console.log(`  TOTAL FIXED   : ${stats.pyqFields + stats.qFields} fields`);
+  if (DRY_RUN) { console.log('\n  ⚠️  DRY RUN — nothing saved. Remove --dry-run to apply.'); }
+  else { console.log('\n  ✅ All changes saved to database'); }
+  console.log('═══════════════════════════════════════════════════════\n');
 
   await mongoose.disconnect();
-  console.log('\n  Disconnected from MongoDB');
   process.exit(0);
 }
 
 main().catch(err => {
-  console.error('💥 Fatal error:', err);
+  console.error('\n❌ FATAL:', err.message, '\n', err.stack);
   process.exit(1);
 });
