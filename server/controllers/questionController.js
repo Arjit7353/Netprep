@@ -14,10 +14,8 @@ const escapeRegex = (str) => {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
-// Extract filter value from string, array, or CSV
 const toFilterValue = (val) => {
   if (val === null || val === undefined || val === '') return null;
-
   if (Array.isArray(val)) {
     const cleaned = val
       .map(v => (typeof v === 'string' ? v.trim() : v))
@@ -26,18 +24,16 @@ const toFilterValue = (val) => {
     if (cleaned.length === 1) return cleaned[0];
     return cleaned;
   }
-
   if (typeof val === 'string') {
     const trimmed = val.trim();
     if (!trimmed) return null;
     return trimmed;
   }
-
   return val;
 };
 
 // ================================================================
-// 🔧 FIX: NORMALIZATION HELPERS (safety net before DB save)
+// NORMALIZATION HELPERS
 // ================================================================
 
 const VALID_PAPERS = ['paper1', 'paper2'];
@@ -66,7 +62,6 @@ const normalizeDifficultyValue = (value) => {
   return 'medium';
 };
 
-// 🔧 FIX: Normalize all enum fields before DB save
 const normalizeBeforeSave = (qd) => {
   qd.paper = normalizePaperValue(qd.paper);
   qd.difficulty = normalizeDifficultyValue(qd.difficulty);
@@ -86,16 +81,13 @@ const normalizeBeforeSave = (qd) => {
 
 const buildSmartFilter = (fieldName, value) => {
   if (!value) return null;
-
   if (typeof value === 'string') {
     return buildSingleSmartFilter(fieldName, value);
   }
-
   if (Array.isArray(value)) {
     if (value.length === 1) {
       return buildSingleSmartFilter(fieldName, value[0]);
     }
-
     const conditions = value.map(v => {
       const f = buildSingleSmartFilter(fieldName, v);
       if (f && f[fieldName]) {
@@ -103,50 +95,38 @@ const buildSmartFilter = (fieldName, value) => {
       }
       return null;
     }).filter(Boolean);
-
     if (conditions.length === 0) return null;
     if (conditions.length === 1) return conditions[0];
     return { $or: conditions };
   }
-
   return null;
 };
 
 const buildSingleSmartFilter = (fieldName, value) => {
   if (!value || typeof value !== 'string') return null;
-
   const trimmed = value.trim();
   if (!trimmed) return null;
-
   const basePart = trimmed.split(':')[0].trim();
-
   const stopWords = ['the', 'and', 'for', 'with', 'from', 'that', 'this', 'are', 'was', 'were', 'has', 'have', 'its', 'unit', 'chapter'];
   const allWords = trimmed
     .replace(/[^a-zA-Z0-9\u0900-\u097F\s]/g, ' ')
     .split(/\s+/)
     .filter(w => w.length >= 3 && !stopWords.includes(w.toLowerCase()));
-
   const regexParts = [];
-
   regexParts.push(escapeRegex(trimmed));
-
   if (basePart !== trimmed) {
     regexParts.push('^' + escapeRegex(basePart) + '(\\b|$|:)');
   }
-
   const sortedWords = [...allWords].sort((a, b) => b.length - a.length).slice(0, 2);
   sortedWords.forEach(word => {
     if (word.length >= 4) {
       regexParts.push(escapeRegex(word));
     }
   });
-
   if (regexParts.length === 0) {
     return { [fieldName]: trimmed };
   }
-
   const combinedRegex = regexParts.join('|');
-
   return {
     [fieldName]: {
       $regex: combinedRegex,
@@ -166,7 +146,7 @@ const buildExactFilter = (value) => {
 };
 
 // ================================================================
-// 🔧 FIX: IMPROVED DUPLICATE CHECK HELPERS
+// DUPLICATE CHECK HELPERS
 // ================================================================
 
 const extractQuestionText = (questionData) => {
@@ -178,10 +158,8 @@ const extractQuestionText = (questionData) => {
   return '';
 };
 
-// 🔧 FIX: Extract type-specific unique text for duplicate comparison
 const extractUniqueText = (questionData) => {
   const type = questionData.questionType;
-
   switch (type) {
     case 'assertion_reason': {
       if (questionData.assertionReasonData?.assertion) {
@@ -191,7 +169,6 @@ const extractUniqueText = (questionData) => {
       }
       break;
     }
-
     case 'match_following': {
       if (questionData.matchData?.listA) {
         const listA = questionData.matchData.listA;
@@ -205,9 +182,7 @@ const extractUniqueText = (questionData) => {
       }
       break;
     }
-
     case 'sequence_order': {
-      // 🔧 FIX: Use items instead of generic question text
       if (questionData.sequenceData?.items) {
         const items = questionData.sequenceData.items;
         const hiItems = typeof items === 'object' && !Array.isArray(items)
@@ -220,9 +195,7 @@ const extractUniqueText = (questionData) => {
       }
       break;
     }
-
     case 'statement_based': {
-      // 🔧 FIX: Use first statement instead of generic question text
       if (questionData.statementData?.statements) {
         const stmts = questionData.statementData.statements;
         const hiStmts = typeof stmts === 'object' && !Array.isArray(stmts)
@@ -235,33 +208,22 @@ const extractUniqueText = (questionData) => {
       }
       break;
     }
-
     default:
       break;
   }
-
-  // Fallback to question text
   return extractQuestionText(questionData);
 };
 
 const isDuplicateQuestion = async (questionData) => {
   try {
-    // 🔧 FIX: Use type-specific text extraction
     const searchText = extractUniqueText(questionData);
-
     if (!searchText || searchText.length < 15) return false;
-
-    // Use first 80 chars for more precise matching
     const searchSnippet = searchText.substring(0, 80);
     const escapedSnippet = escapeRegex(searchSnippet);
-
-    // 🔧 FIX: Build search conditions based on question type
     const searchConditions = [
       { 'question.hi': { $regex: escapedSnippet, $options: 'i' } },
       { 'question.en': { $regex: escapedSnippet, $options: 'i' } }
     ];
-
-    // Add type-specific search fields
     const type = questionData.questionType;
     if (type === 'assertion_reason') {
       searchConditions.push(
@@ -284,12 +246,10 @@ const isDuplicateQuestion = async (questionData) => {
         { 'statementData.statements.en': { $regex: escapedSnippet, $options: 'i' } }
       );
     }
-
     const existing = await Question.findOne({
       isActive: { $ne: false },
       $or: searchConditions
     }).select('_id questionNumber').lean();
-
     return !!existing;
   } catch (err) {
     console.warn('[DuplicateCheck] Error:', err.message);
@@ -297,40 +257,32 @@ const isDuplicateQuestion = async (questionData) => {
   }
 };
 
-// 🔧 FIX: Extract text for raw JSON (before smart parsing)
 const extractRawUniqueText = (q, type) => {
   switch (type) {
     case 'assertion_reason':
       if (q.assertion && q.assertion.length >= 15) return q.assertion;
       break;
-
     case 'match_following':
       if (q.listA && Array.isArray(q.listA) && q.listA.length >= 2) {
         const text = q.listA.slice(0, 3).join(' | ');
         if (text.length >= 15) return text;
       }
       break;
-
     case 'sequence_order':
-      // 🔧 FIX: Use items array for duplicate check
       if (q.items && Array.isArray(q.items) && q.items.length >= 2) {
         const text = q.items.slice(0, 3).join(' | ');
         if (text.length >= 15) return text;
       }
       break;
-
     case 'statement_based':
       if (q.statements && Array.isArray(q.statements) && q.statements.length >= 1) {
         const text = q.statements.slice(0, 2).join(' | ');
         if (text.length >= 15) return text;
       }
       break;
-
     default:
       break;
   }
-
-  // Fallback
   return q.question || q.questionText || '';
 };
 
@@ -339,28 +291,19 @@ const checkDuplicatesForPreview = async (jsonData) => {
     const questions = jsonData.questions || [];
     const duplicates = [];
     let checkedCount = 0;
-
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
       if (!q || typeof q !== 'object') continue;
-
       const type = smartParser.detectQuestionType(q);
       if (type === 'passage_based' || type.startsWith('di_')) continue;
-
-      // 🔧 FIX: Use type-specific text extraction
       const searchText = extractRawUniqueText(q, type);
-
       if (!searchText || searchText.length < 15) continue;
-
       const searchSnippet = searchText.substring(0, 80);
       const escapedSnippet = escapeRegex(searchSnippet);
-
-      // 🔧 FIX: Search across all relevant fields
       const searchConditions = [
         { 'question.hi': { $regex: escapedSnippet, $options: 'i' } },
         { 'question.en': { $regex: escapedSnippet, $options: 'i' } }
       ];
-
       if (type === 'assertion_reason') {
         searchConditions.push(
           { 'assertionReasonData.assertion.hi': { $regex: escapedSnippet, $options: 'i' } },
@@ -382,12 +325,10 @@ const checkDuplicatesForPreview = async (jsonData) => {
           { 'statementData.statements.en': { $regex: escapedSnippet, $options: 'i' } }
         );
       }
-
       const existing = await Question.findOne({
         isActive: { $ne: false },
         $or: searchConditions
       }).select('questionNumber question assertionReasonData sequenceData matchData statementData').lean();
-
       if (existing) {
         const existingText = existing.question?.hi || existing.question?.en ||
           existing.assertionReasonData?.assertion?.hi ||
@@ -402,11 +343,9 @@ const checkDuplicatesForPreview = async (jsonData) => {
           existingText: existingText.substring(0, 100)
         });
       }
-
       checkedCount++;
       if (checkedCount >= 50) break;
     }
-
     return { found: duplicates.length, checkedCount, list: duplicates.slice(0, 10) };
   } catch (err) {
     console.warn('[DuplicatesPreview] Failed:', err.message);
@@ -611,19 +550,13 @@ const getQuestionById = async (req, res, next) => {
 const createQuestion = async (req, res, next) => {
   try {
     const questionData = req.body;
-
-    // 🔧 FIX: Normalize before save
     normalizeBeforeSave(questionData);
-
     const srcLang = questionData.language || 'hi';
     try { await translateHelper.translateQuestion(questionData, srcLang); }
     catch (e) { console.warn('Translation failed:', e.message); }
-
     const question = await Question.create(questionData);
-
     if (question.passageId) await Passage.findByIdAndUpdate(question.passageId, { $inc: { questionCount: 1 } });
     if (question.diDataId) await DIData.findByIdAndUpdate(question.diDataId, { $inc: { questionCount: 1 } });
-
     res.status(201).json({ success: true, message: 'Question created', data: question });
   } catch (error) { next(error); }
 };
@@ -711,7 +644,6 @@ const importQuestions = async (req, res, next) => {
       try {
         const gid = pd._groupId; delete pd._groupId;
         if (!pd.content) pd.content = { hi: '', en: '' };
-        // 🔧 FIX: Normalize passage fields
         pd.paper = normalizePaperValue(pd.paper);
         const p = await Passage.create(pd);
         savedPassages.push(p);
@@ -724,7 +656,6 @@ const importQuestions = async (req, res, next) => {
       try {
         const gid = dd._groupId; delete dd._groupId;
         if (!dd.title) dd.title = { hi: 'DI', en: 'DI' };
-        // 🔧 FIX: Normalize DI fields
         dd.paper = normalizePaperValue(dd.paper);
         const d = await DIData.create(dd);
         savedDIData.push(d);
@@ -747,10 +678,7 @@ const importQuestions = async (req, res, next) => {
           }
         }
 
-        // 🔧 FIX: Normalize ALL fields before save
         normalizeBeforeSave(qd);
-
-        // Clean internal flags
         delete qd._idx;
         delete qd._src;
 
@@ -773,7 +701,6 @@ const importQuestions = async (req, res, next) => {
     const totalErrors = [...parseResult.errors, ...saveErrors];
     console.log(`[Import] Done: ${savedQuestions.length} saved, ${skippedQuestions.length} skipped, ${totalErrors.length} errors`);
 
-    // 🔧 FIX: Log errors for debugging
     if (totalErrors.length > 0) {
       console.log('[Import] Error details:', totalErrors.slice(0, 5));
     }
@@ -795,11 +722,8 @@ const updateQuestion = async (req, res, next) => {
   try {
     const updates = req.body;
     if (updates.language) { try { await translateHelper.translateQuestion(updates, updates.language); } catch (e) {} }
-
-    // 🔧 FIX: Normalize before update
     if (updates.paper) updates.paper = normalizePaperValue(updates.paper);
     if (updates.difficulty) updates.difficulty = normalizeDifficultyValue(updates.difficulty);
-
     const question = await Question.findByIdAndUpdate(req.params.id, { ...updates, updatedAt: new Date() }, { new: true, runValidators: true });
     if (!question) return res.status(404).json({ success: false, message: 'Question not found' });
     res.json({ success: true, message: 'Question updated', data: question });
@@ -950,17 +874,17 @@ const getDIDataById = async (req, res, next) => {
     res.json({ success: true, data: { ...diData.toObject(), questions } });
   } catch (error) { next(error); }
 };
+
 // ================================================================
-// PYQ QUESTION BANK — Edit PYQ question in PYQAnalysis doc
-// When edited, auto-update any Test that references this PYQ question
+// PYQ QUESTION BANK
 // ================================================================
 
-// @desc    Get single PYQ question by pyqId (e.g. "pyq_abc123_5")
+// @desc    Get single PYQ question by pyqId
 // @route   GET /api/questions/pyq-question/:pyqId
 const getPYQQuestionById = async (req, res, next) => {
   try {
     const { pyqId } = req.params;
-    
+
     if (!pyqId || !pyqId.startsWith('pyq_')) {
       return res.status(400).json({ success: false, message: 'Invalid PYQ ID format' });
     }
@@ -975,7 +899,7 @@ const getPYQQuestionById = async (req, res, next) => {
 
     const PYQAnalysis = require('../models/PYQAnalysis');
     const pyqDoc = await PYQAnalysis.findById(docId).lean();
-    
+
     if (!pyqDoc) {
       return res.status(404).json({ success: false, message: 'PYQ document not found' });
     }
@@ -985,7 +909,6 @@ const getPYQQuestionById = async (req, res, next) => {
       return res.status(404).json({ success: false, message: `Question #${qNo} not found in PYQ ${pyqDoc.displayLabel}` });
     }
 
-    // Find which tests reference this PYQ question
     const Test = require('../models/Test');
     const testsUsingThis = await Test.find({
       questions: pyqId,
@@ -1016,8 +939,7 @@ const getPYQQuestionById = async (req, res, next) => {
   }
 };
 
-// @desc    Update a PYQ question inside PYQAnalysis document
-//          Also triggers cache invalidation for any test using this question
+// @desc    Update a PYQ question with review/verification support
 // @route   PUT /api/questions/pyq-question/:pyqId
 const updatePYQQuestion = async (req, res, next) => {
   try {
@@ -1048,10 +970,9 @@ const updatePYQQuestion = async (req, res, next) => {
       return res.status(404).json({ success: false, message: `Question #${qNo} not found` });
     }
 
-    // ═══ Apply updates to the question entry ═══
     const existingQ = pyqDoc.questionTopicMap[qIndex];
 
-    // Allowed editable fields
+    // ═══ Content editable fields ═══
     const editableFields = [
       'questionText', 'questionTextHi', 'questionTextEn',
       'options', 'optionsHi', 'optionsEn',
@@ -1072,13 +993,44 @@ const updatePYQQuestion = async (req, res, next) => {
       'keyTerms', 'source'
     ];
 
-    let changedFields = [];
+    // ═══ Review/verification fields ═══
+    const reviewFields = [
+      'verificationStatus', 'correctnessStatus',
+      'reviewNotes', 'reviewedBy',
+      'isFlagged', 'flagReason'
+    ];
 
+    let changedFields = [];
+    let previousValues = {};
+    const actionType = updates._actionType || 'edit';
+    const actionNote = updates._actionNote || '';
+    const actionBy = updates._actionBy || 'admin';
+
+    // Clean internal action fields
+    delete updates._actionType;
+    delete updates._actionNote;
+    delete updates._actionBy;
+
+    // ═══ Apply content updates ═══
     for (const field of editableFields) {
       if (updates[field] !== undefined) {
         const oldVal = JSON.stringify(existingQ[field]);
         const newVal = JSON.stringify(updates[field]);
         if (oldVal !== newVal) {
+          previousValues[field] = existingQ[field];
+          existingQ[field] = updates[field];
+          changedFields.push(field);
+        }
+      }
+    }
+
+    // ═══ Apply review/verification updates ═══
+    for (const field of reviewFields) {
+      if (updates[field] !== undefined) {
+        const oldVal = JSON.stringify(existingQ[field]);
+        const newVal = JSON.stringify(updates[field]);
+        if (oldVal !== newVal) {
+          previousValues[field] = existingQ[field];
           existingQ[field] = updates[field];
           changedFields.push(field);
         }
@@ -1087,11 +1039,41 @@ const updatePYQQuestion = async (req, res, next) => {
 
     // Handle sub-questions update
     if (updates.subQuestions !== undefined) {
+      previousValues.subQuestions = existingQ.subQuestions;
       existingQ.subQuestions = updates.subQuestions;
       changedFields.push('subQuestions');
     }
 
-    // Recalculate hasContent
+    // ═══ Handle verification status changes ═══
+    if (updates.verificationStatus) {
+      existingQ.verificationStatus = updates.verificationStatus;
+      if (updates.verificationStatus === 'approved' || updates.verificationStatus === 'verified') {
+        existingQ.reviewedAt = new Date();
+        existingQ.reviewedBy = actionBy;
+      }
+    }
+
+    if (updates.correctnessStatus) {
+      existingQ.correctnessStatus = updates.correctnessStatus;
+    }
+
+    if (updates.reviewNotes !== undefined) {
+      existingQ.reviewNotes = updates.reviewNotes;
+    }
+
+    // ═══ Handle flagging ═══
+    if (updates.isFlagged !== undefined) {
+      existingQ.isFlagged = updates.isFlagged;
+      if (updates.isFlagged) {
+        existingQ.flaggedAt = new Date();
+        existingQ.flagReason = updates.flagReason || '';
+      } else {
+        existingQ.flagReason = '';
+        existingQ.flaggedAt = null;
+      }
+    }
+
+    // ═══ Recalculate hasContent ═══
     const hasContent = !!(
       existingQ.questionTextHi || existingQ.questionTextEn || existingQ.questionText ||
       existingQ.assertionHi || existingQ.assertion ||
@@ -1107,6 +1089,48 @@ const updatePYQQuestion = async (req, res, next) => {
     );
     existingQ.hasContent = hasContent;
 
+    // ═══ Calculate quality score ═══
+    let qualityScore = 0;
+    const qType = existingQ.type || 'mcq';
+
+    // Base: Question text (30 points)
+    if (existingQ.questionTextHi && existingQ.questionTextHi.length > 10) qualityScore += 15;
+    if (existingQ.questionTextEn && existingQ.questionTextEn.length > 10) qualityScore += 15;
+
+    // Options (20 points)
+    if (existingQ.optionsHi && existingQ.optionsHi.length >= 4) qualityScore += 10;
+    if (existingQ.optionsEn && existingQ.optionsEn.length >= 4) qualityScore += 10;
+
+    // Correct answer (10 points)
+    if (existingQ.correctAnswer !== null && existingQ.correctAnswer !== undefined) qualityScore += 10;
+
+    // Explanation (15 points)
+    if (existingQ.explanationHi && existingQ.explanationHi.length > 10) qualityScore += 8;
+    if (existingQ.explanationEn && existingQ.explanationEn.length > 10) qualityScore += 7;
+
+    // Metadata (15 points)
+    if (existingQ.chapter) qualityScore += 5;
+    if (existingQ.topic) qualityScore += 5;
+    if (existingQ.difficulty) qualityScore += 3;
+    if (existingQ.keyTerms && existingQ.keyTerms.length > 0) qualityScore += 2;
+
+    // Type-specific bonus (10 points)
+    if (qType === 'assertion_reason') {
+      if (existingQ.assertionHi || existingQ.assertionEn) qualityScore += 5;
+      if (existingQ.reasonHi || existingQ.reasonEn) qualityScore += 5;
+    } else if (qType === 'match_following' || qType === 'matching') {
+      if ((existingQ.listAHi || []).length >= 2) qualityScore += 5;
+      if ((existingQ.listBHi || []).length >= 2) qualityScore += 5;
+    } else if (qType === 'statement_based' || qType === 'multi_statement') {
+      if ((existingQ.statementsHi || []).length >= 2) qualityScore += 10;
+    } else if (qType === 'sequence_order' || qType === 'chronology') {
+      if ((existingQ.itemsHi || []).length >= 2) qualityScore += 10;
+    } else {
+      qualityScore += 10;
+    }
+
+    existingQ.qualityScore = Math.min(100, qualityScore);
+
     if (changedFields.length === 0) {
       return res.json({
         success: true,
@@ -1115,39 +1139,53 @@ const updatePYQQuestion = async (req, res, next) => {
       });
     }
 
-    // Save the updated questionTopicMap
+    // ═══ Record edit history ═══
+    if (!existingQ.editHistory) existingQ.editHistory = [];
+    existingQ.editHistory.unshift({
+      timestamp: new Date(),
+      action: actionType,
+      changedFields: changedFields,
+      previousValues: Object.keys(previousValues).length > 0 ? previousValues : undefined,
+      editedBy: actionBy,
+      note: actionNote || `${actionType}: ${changedFields.join(', ')}`
+    });
+    if (existingQ.editHistory.length > 20) {
+      existingQ.editHistory = existingQ.editHistory.slice(0, 20);
+    }
+
+    // Update edit metadata
+    existingQ.lastEditedAt = new Date();
+    existingQ.lastEditedBy = actionBy;
+    existingQ.editCount = (existingQ.editCount || 0) + 1;
+
+    // Save
     pyqDoc.questionTopicMap[qIndex] = existingQ;
     pyqDoc.markModified('questionTopicMap');
     pyqDoc.updatedAt = new Date();
     await pyqDoc.save();
 
-    // ═══ AUTO-UPDATE TESTS ═══
-    // Since tests store PYQ question IDs as strings like "pyq_abc_5",
-    // and the actual question data is resolved at runtime from PYQAnalysis,
-    // updating the PYQAnalysis doc means tests automatically get updated data.
-    // But we should update the test's updatedAt to invalidate any caches.
+    // Auto-update tests
     const Test = require('../models/Test');
     const testUpdateResult = await Test.updateMany(
-      {
-        questions: pyqId,
-        status: { $ne: 'archived' }
-      },
-      {
-        $set: { updatedAt: new Date() }
-      }
+      { questions: pyqId, status: { $ne: 'archived' } },
+      { $set: { updatedAt: new Date() } }
     );
 
-    console.log(`[PYQ Edit] Updated Q${qNo} in ${pyqDoc.displayLabel}. Fields: ${changedFields.join(', ')}. Tests refreshed: ${testUpdateResult.modifiedCount}`);
+    console.log(`[PYQ Edit] ${actionType} Q${qNo} in ${pyqDoc.displayLabel}. Fields: ${changedFields.join(', ')}. Tests: ${testUpdateResult.modifiedCount}`);
 
     res.json({
       success: true,
-      message: `PYQ Question #${qNo} updated successfully`,
+      message: `PYQ Question #${qNo} ${actionType === 'edit' ? 'updated' : actionType} successfully`,
       data: {
-        pyqId,
-        qNo,
+        pyqId, qNo,
         pyqLabel: pyqDoc.displayLabel,
         changedFields,
+        actionType,
         linkedTestsUpdated: testUpdateResult.modifiedCount,
+        qualityScore: existingQ.qualityScore,
+        verificationStatus: existingQ.verificationStatus,
+        correctnessStatus: existingQ.correctnessStatus,
+        editCount: existingQ.editCount,
         updatedQuestion: existingQ
       }
     });
@@ -1166,7 +1204,12 @@ const getPYQQuestionBank = async (req, res, next) => {
       paper, year, session, shift,
       unitId, chapter, topic, type,
       difficulty, hasContent,
-      search, sortBy = 'qNo', sortOrder = 'asc'
+      search, sortBy = 'qNo', sortOrder = 'asc',
+      // ═══ NEW: Review filters ═══
+      verificationStatus: verStatus,
+      correctnessStatus: corStatus,
+      isFlagged: flaggedParam,
+      isEdited: editedParam
     } = req.query;
 
     const PYQAnalysis = require('../models/PYQAnalysis');
@@ -1191,21 +1234,17 @@ const getPYQQuestionBank = async (req, res, next) => {
       });
     }
 
-    // ═══ FIX: Build unitName map from unitWeightage across ALL docs ═══
-    // unitWeightage has proper unitName, unitId, chapters etc.
-    const globalUnitNameMap = {};     // unitId → unitName (English)
-    const globalUnitNameHiMap = {};   // unitId → unitNameHi (Hindi)
-    const globalChaptersMap = {};     // unitId → Set of chapters
-    const globalTopicsMap = {};       // "unitId|chapter" → Set of topics
+    // ═══ Build unitName map from unitWeightage across ALL docs ═══
+    const globalUnitNameMap = {};
+    const globalUnitNameHiMap = {};
+    const globalChaptersMap = {};
+    const globalTopicsMap = {};
 
     for (const doc of pyqDocs) {
-      // From unitWeightage — most reliable source of unit names
       for (const uw of (doc.unitWeightage || [])) {
         if (!uw.unitId) continue;
-        
         if (uw.unitName && uw.unitName.length > 2) {
-          // Keep the longest/best name seen
-          if (!globalUnitNameMap[uw.unitId] || 
+          if (!globalUnitNameMap[uw.unitId] ||
               uw.unitName.length > globalUnitNameMap[uw.unitId].length) {
             globalUnitNameMap[uw.unitId] = uw.unitName;
           }
@@ -1218,11 +1257,8 @@ const getPYQQuestionBank = async (req, res, next) => {
         }
       }
 
-      // Also scan questionTopicMap for unit names stored there
       for (const q of (doc.questionTopicMap || [])) {
         if (!q.unitId) continue;
-
-        // Unit name from question entries
         if (q.unitName && q.unitName.length > 2 && q.unitName !== q.unitId) {
           if (!globalUnitNameMap[q.unitId] ||
               q.unitName.length > globalUnitNameMap[q.unitId].length) {
@@ -1235,14 +1271,10 @@ const getPYQQuestionBank = async (req, res, next) => {
             globalUnitNameHiMap[q.unitId] = q.unitNameHi;
           }
         }
-
-        // Chapters map
         if (q.chapter) {
           if (!globalChaptersMap[q.unitId]) globalChaptersMap[q.unitId] = new Set();
           globalChaptersMap[q.unitId].add(q.chapter);
         }
-
-        // Topics map
         if (q.chapter && q.topic) {
           const key = `${q.unitId}|${q.chapter}`;
           if (!globalTopicsMap[key]) globalTopicsMap[key] = new Set();
@@ -1268,6 +1300,14 @@ const getPYQQuestionBank = async (req, res, next) => {
         if (hasContent === 'true' && !q.hasContent) continue;
         if (hasContent === 'false' && q.hasContent) continue;
 
+        // ═══ NEW: Verification & review filters ═══
+        if (verStatus && (q.verificationStatus || 'unchecked') !== verStatus) continue;
+        if (corStatus && (q.correctnessStatus || 'unknown') !== corStatus) continue;
+        if (flaggedParam === 'true' && !q.isFlagged) continue;
+        if (flaggedParam === 'false' && q.isFlagged) continue;
+        if (editedParam === 'true' && !(q.editCount > 0)) continue;
+        if (editedParam === 'false' && (q.editCount > 0)) continue;
+
         // Search filter
         if (search) {
           const searchLower = search.toLowerCase();
@@ -1276,7 +1316,6 @@ const getPYQQuestionBank = async (req, res, next) => {
             q.topic, q.topicHi, q.chapter, q.chapterHi,
             q.assertionHi, q.assertionEn,
             q.passageHi, q.passageEn,
-            // Also search unit name
             globalUnitNameMap[q.unitId],
             globalUnitNameHiMap[q.unitId],
             ...(q.optionsHi || []),
@@ -1290,11 +1329,10 @@ const getPYQQuestionBank = async (req, res, next) => {
 
         const pyqId = `pyq_${doc._id}_${q.qNo}`;
 
-        // ═══ FIX: Resolve unitName from global map ═══
-        const resolvedUnitName = 
-          globalUnitNameMap[q.unitId] ||    // From unitWeightage (best)
-          q.unitName ||                      // From questionTopicMap entry
-          q.unitId ||                        // Fallback to ID
+        const resolvedUnitName =
+          globalUnitNameMap[q.unitId] ||
+          q.unitName ||
+          q.unitId ||
           '';
 
         const resolvedUnitNameHi =
@@ -1314,8 +1352,8 @@ const getPYQQuestionBank = async (req, res, next) => {
           paper: doc.paper,
           type: q.type || 'mcq',
           unitId: q.unitId || '',
-          unitName: resolvedUnitName,       // ✅ Properly resolved
-          unitNameHi: resolvedUnitNameHi,   // ✅ Hindi name too
+          unitName: resolvedUnitName,
+          unitNameHi: resolvedUnitNameHi,
           chapter: q.chapter || '',
           chapterHi: q.chapterHi || '',
           topic: q.topic || '',
@@ -1330,13 +1368,24 @@ const getPYQQuestionBank = async (req, res, next) => {
             q.assertionHi || q.assertion ||
             q.topic || `Q${q.qNo}`
           ).substring(0, 120),
-          // ✅ Also expose Hi preview for expanded row
           questionPreviewHi: (q.questionTextHi || q.assertionHi || '').substring(0, 200),
           questionPreviewEn: (q.questionTextEn || q.assertionEn || '').substring(0, 200),
           optionCount: (q.optionsHi || q.optionsEn || q.options || []).length,
           correctAnswer: q.correctAnswer,
           keyTerms: q.keyTerms || [],
-          source: q.source || `PYQ ${doc.year} ${doc.session}`
+          source: q.source || `PYQ ${doc.year} ${doc.session}`,
+          // ═══ NEW: Review & Verification fields ═══
+          verificationStatus: q.verificationStatus || 'unchecked',
+          correctnessStatus: q.correctnessStatus || 'unknown',
+          qualityScore: q.qualityScore || 0,
+          editCount: q.editCount || 0,
+          lastEditedAt: q.lastEditedAt || null,
+          lastEditedBy: q.lastEditedBy || null,
+          reviewedAt: q.reviewedAt || null,
+          reviewedBy: q.reviewedBy || null,
+          reviewNotes: q.reviewNotes || '',
+          isFlagged: q.isFlagged || false,
+          flagReason: q.flagReason || '',
         });
       }
     }
@@ -1360,6 +1409,10 @@ const getPYQQuestionBank = async (req, res, next) => {
           return a.qNo - b.qNo;
         case 'importance':
           return ((b.importance || 3) - (a.importance || 3)) * sortMultiplier;
+        case 'qualityScore':
+          return ((b.qualityScore || 0) - (a.qualityScore || 0)) * sortMultiplier;
+        case 'editCount':
+          return ((b.editCount || 0) - (a.editCount || 0)) * sortMultiplier;
         case 'qNo':
         default:
           if (a.year !== b.year) return (b.year || '').localeCompare(a.year || '');
@@ -1374,7 +1427,7 @@ const getPYQQuestionBank = async (req, res, next) => {
     const startIdx = (pageNum - 1) * limitNum;
     const paginatedQuestions = allQuestions.slice(startIdx, startIdx + limitNum);
 
-    // ═══ FIX: Build filters with proper unit names ═══
+    // ═══ Build filters with proper unit names ═══
     const filterYears = [...new Set(allQuestions.map(q => q.year))].sort().reverse();
     const filterSessions = [...new Set(allQuestions.map(q => q.session))];
     const filterUnits = {};
@@ -1386,15 +1439,14 @@ const getPYQQuestionBank = async (req, res, next) => {
         if (!filterUnits[q.unitId]) {
           filterUnits[q.unitId] = {
             id: q.unitId,
-            name: q.unitName,           // ✅ Resolved name
-            nameHi: q.unitNameHi,       // ✅ Hindi name
+            name: q.unitName,
+            nameHi: q.unitNameHi,
             count: 0,
             chapters: new Set(),
             topics: new Set()
           };
         }
-        // Update name if better one found
-        if (q.unitName && q.unitName !== q.unitId && 
+        if (q.unitName && q.unitName !== q.unitId &&
             q.unitName.length > filterUnits[q.unitId].name.length) {
           filterUnits[q.unitId].name = q.unitName;
         }
@@ -1472,16 +1524,33 @@ const getPYQQuestionBank = async (req, res, next) => {
       usedInTestCount: (testUsageMap[q.pyqId] || []).length
     }));
 
+    // ═══ NEW: Review stats ═══
+    const reviewStats = {
+      unchecked: allQuestions.filter(q => q.verificationStatus === 'unchecked').length,
+      checked: allQuestions.filter(q => q.verificationStatus === 'checked').length,
+      verified: allQuestions.filter(q => q.verificationStatus === 'verified').length,
+      approved: allQuestions.filter(q => q.verificationStatus === 'approved').length,
+      rejected: allQuestions.filter(q => q.verificationStatus === 'rejected').length,
+      correct: allQuestions.filter(q => q.correctnessStatus === 'correct').length,
+      incorrect: allQuestions.filter(q => q.correctnessStatus === 'incorrect').length,
+      flagged: allQuestions.filter(q => q.isFlagged).length,
+      edited: allQuestions.filter(q => q.editCount > 0).length,
+      avgQuality: allQuestions.length > 0
+        ? Math.round(allQuestions.reduce((s, q) => s + (q.qualityScore || 0), 0) / allQuestions.length)
+        : 0,
+    };
+
     // Stats
     const stats = {
       totalQuestions: total,
       withContent: allQuestions.filter(q => q.hasContent).length,
       withoutContent: allQuestions.filter(q => !q.hasContent).length,
       byDifficulty: Object.values(filterDifficulties),
-      pyqPapers: pyqDocs.length
+      pyqPapers: pyqDocs.length,
+      review: reviewStats,
     };
 
-    // ═══ FIX: Serialize Sets before sending ═══
+    // Serialize Sets before sending
     const serializedUnits = Object.values(filterUnits)
       .map(u => ({
         id: u.id,
@@ -1509,9 +1578,9 @@ const getPYQQuestionBank = async (req, res, next) => {
       filters: {
         years: filterYears,
         sessions: filterSessions,
-        units: serializedUnits,          // ✅ With proper names
-        chapters: filterChapters,        // ✅ NEW: chapters list
-        topics: filterTopics.slice(0, 100), // ✅ NEW: top 100 topics
+        units: serializedUnits,
+        chapters: filterChapters,
+        topics: filterTopics.slice(0, 100),
         types: Object.values(filterTypes).sort((a, b) => b.count - a.count),
         difficulties: Object.values(filterDifficulties)
       },
@@ -1523,7 +1592,7 @@ const getPYQQuestionBank = async (req, res, next) => {
   }
 };
 
-// @desc    Bulk update PYQ questions (e.g., change difficulty/topic for multiple)
+// @desc    Bulk update PYQ questions with review support
 // @route   PUT /api/questions/pyq-bank/bulk-update
 const bulkUpdatePYQQuestions = async (req, res, next) => {
   try {
@@ -1540,6 +1609,13 @@ const bulkUpdatePYQQuestions = async (req, res, next) => {
     const PYQAnalysis = require('../models/PYQAnalysis');
     const Test = require('../models/Test');
 
+    const actionType = updates._actionType || 'bulk_edit';
+    const actionBy = updates._actionBy || 'admin';
+    const actionNote = updates._actionNote || '';
+    delete updates._actionType;
+    delete updates._actionBy;
+    delete updates._actionNote;
+
     // Group by docId
     const docGroups = {};
     for (const pyqId of pyqIds) {
@@ -1554,11 +1630,14 @@ const bulkUpdatePYQQuestions = async (req, res, next) => {
     let testUpdateCount = 0;
     const errors = [];
 
-    // Allowed bulk-editable fields (metadata only, not content)
+    // Allowed bulk-editable fields
     const bulkEditableFields = [
       'difficulty', 'importance', 'unitId', 'unitName',
       'chapter', 'chapterHi', 'topic', 'topicHi',
-      'subtopic', 'concept', 'keyTerms', 'type'
+      'subtopic', 'concept', 'keyTerms', 'type',
+      // ═══ NEW: Review fields ═══
+      'verificationStatus', 'correctnessStatus',
+      'reviewNotes', 'isFlagged', 'flagReason'
     ];
 
     for (const [docId, questions] of Object.entries(docGroups)) {
@@ -1578,12 +1657,45 @@ const bulkUpdatePYQQuestions = async (req, res, next) => {
             continue;
           }
 
+          const q = pyqDoc.questionTopicMap[qIndex];
+          const changedFields = [];
+
           for (const field of bulkEditableFields) {
             if (updates[field] !== undefined) {
-              pyqDoc.questionTopicMap[qIndex][field] = updates[field];
+              q[field] = updates[field];
+              changedFields.push(field);
               docChanged = true;
             }
           }
+
+          // Handle verification status side effects
+          if (updates.verificationStatus === 'approved' || updates.verificationStatus === 'verified') {
+            q.reviewedAt = new Date();
+            q.reviewedBy = actionBy;
+          }
+          if (updates.isFlagged === true) {
+            q.flaggedAt = new Date();
+          }
+          if (updates.isFlagged === false) {
+            q.flagReason = '';
+            q.flaggedAt = null;
+          }
+
+          // Record in edit history
+          if (!q.editHistory) q.editHistory = [];
+          q.editHistory.unshift({
+            timestamp: new Date(),
+            action: actionType,
+            changedFields,
+            editedBy: actionBy,
+            note: actionNote || `Bulk ${actionType}: ${changedFields.join(', ')}`
+          });
+          if (q.editHistory.length > 20) q.editHistory = q.editHistory.slice(0, 20);
+
+          q.lastEditedAt = new Date();
+          q.lastEditedBy = actionBy;
+          q.editCount = (q.editCount || 0) + 1;
+
           updatedCount++;
         }
 
@@ -1592,13 +1704,9 @@ const bulkUpdatePYQQuestions = async (req, res, next) => {
           pyqDoc.updatedAt = new Date();
           await pyqDoc.save();
 
-          // Refresh tests
-          const pyqIdsForThisDoc = questions.map(q => q.pyqId);
+          const pyqIdsForDoc = questions.map(q => q.pyqId);
           const testResult = await Test.updateMany(
-            {
-              questions: { $in: pyqIdsForThisDoc },
-              status: { $ne: 'archived' }
-            },
+            { questions: { $in: pyqIdsForDoc }, status: { $ne: 'archived' } },
             { $set: { updatedAt: new Date() } }
           );
           testUpdateCount += testResult.modifiedCount;
@@ -1610,7 +1718,7 @@ const bulkUpdatePYQQuestions = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: `Updated ${updatedCount} questions across ${Object.keys(docGroups).length} PYQ papers`,
+      message: `${actionType}: ${updatedCount} questions across ${Object.keys(docGroups).length} PYQ papers`,
       data: {
         updated: updatedCount,
         testsRefreshed: testUpdateCount,
@@ -1622,11 +1730,11 @@ const bulkUpdatePYQQuestions = async (req, res, next) => {
     next(error);
   }
 };
-// ═══════════════════════════════════════════════════
-// NOW UPDATE module.exports — add the new functions
-// ═══════════════════════════════════════════════════
 
-// REPLACE the existing module.exports at the bottom with:
+// ================================================================
+// EXPORTS
+// ================================================================
+
 module.exports = {
   getQuestions,
   getQuestionStats,
@@ -1645,7 +1753,7 @@ module.exports = {
   getDIDataList,
   createDIData,
   getDIDataById,
-  // ═══ NEW: PYQ Question Bank endpoints ═══
+  // PYQ Question Bank endpoints
   getPYQQuestionById,
   updatePYQQuestion,
   getPYQQuestionBank,

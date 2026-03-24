@@ -1,3 +1,5 @@
+// client/src/services/questionService.js
+
 import { apiHelper } from './api';
 
 const questionService = {
@@ -52,11 +54,9 @@ const questionService = {
   bulkDeleteQuestions: async (ids) => {
     return apiHelper.post('/questions/bulk-delete', { ids });
   },
-// ADD these methods inside questionService object in client/src/services/questionService.js
-// Put them after the existing DI DATA APIs section
 
   // ============================================================
-  // PYQ QUESTION BANK APIs — NEW
+  // PYQ QUESTION BANK APIs
   // ============================================================
 
   getPYQQuestionBank: async (filters = {}) => {
@@ -72,10 +72,15 @@ const questionService = {
       ...(filters.topic && { topic: filters.topic }),
       ...(filters.type && { type: filters.type }),
       ...(filters.difficulty && { difficulty: filters.difficulty }),
-      ...(filters.hasContent !== undefined && { hasContent: String(filters.hasContent) }),
+      ...(filters.hasContent !== undefined && filters.hasContent !== '' && { hasContent: String(filters.hasContent) }),
       ...(filters.search && { search: filters.search }),
       ...(filters.sortBy && { sortBy: filters.sortBy }),
       ...(filters.sortOrder && { sortOrder: filters.sortOrder }),
+      // ═══ Review filters ═══
+      ...(filters.verificationStatus && { verificationStatus: filters.verificationStatus }),
+      ...(filters.correctnessStatus && { correctnessStatus: filters.correctnessStatus }),
+      ...(filters.isFlagged !== undefined && filters.isFlagged !== '' && { isFlagged: String(filters.isFlagged) }),
+      ...(filters.isEdited !== undefined && filters.isEdited !== '' && { isEdited: String(filters.isEdited) }),
     };
     return apiHelper.get('/questions/pyq-bank', params);
   },
@@ -91,6 +96,55 @@ const questionService = {
   bulkUpdatePYQQuestions: async (pyqIds, updates) => {
     return apiHelper.put('/questions/pyq-bank/bulk-update', { pyqIds, updates });
   },
+
+  // ═══ Review & Verification APIs ═══
+
+  verifyPYQQuestion: async (pyqId, verificationStatus, notes = '', correctnessStatus = null) => {
+    const updates = {
+      verificationStatus,
+      _actionType: verificationStatus === 'approved' ? 'approve' : verificationStatus === 'rejected' ? 'reject' : 'verify',
+      _actionBy: 'admin',
+      _actionNote: notes,
+    };
+    if (notes) updates.reviewNotes = notes;
+    if (correctnessStatus) updates.correctnessStatus = correctnessStatus;
+    return apiHelper.put(`/questions/pyq-question/${pyqId}`, updates);
+  },
+
+  flagPYQQuestion: async (pyqId, isFlagged, reason = '') => {
+    return apiHelper.put(`/questions/pyq-question/${pyqId}`, {
+      isFlagged,
+      flagReason: reason,
+      _actionType: isFlagged ? 'flag' : 'unflag',
+      _actionBy: 'admin',
+    });
+  },
+
+  bulkVerifyPYQQuestions: async (pyqIds, verificationStatus, notes = '') => {
+    return apiHelper.put('/questions/pyq-bank/bulk-update', {
+      pyqIds,
+      updates: {
+        verificationStatus,
+        reviewNotes: notes,
+        _actionType: `bulk_${verificationStatus}`,
+        _actionBy: 'admin',
+        _actionNote: notes,
+      }
+    });
+  },
+
+  bulkFlagPYQQuestions: async (pyqIds, isFlagged, reason = '') => {
+    return apiHelper.put('/questions/pyq-bank/bulk-update', {
+      pyqIds,
+      updates: {
+        isFlagged,
+        flagReason: reason,
+        _actionType: isFlagged ? 'bulk_flag' : 'bulk_unflag',
+        _actionBy: 'admin',
+      }
+    });
+  },
+
   // ============================================================
   // IMPORT APIs
   // ============================================================
@@ -113,12 +167,10 @@ const questionService = {
     return apiHelper.post('/questions/import/validate', jsonData);
   },
 
-  // ★ NEW: Translate a single text (for preview edit)
   translateText: async (text, from = 'hi', to = 'en') => {
     return apiHelper.post('/translate', { text, from, to });
   },
 
-  // ★ NEW: Batch translate multiple texts
   translateBatch: async (texts, from = 'hi', to = 'en') => {
     return apiHelper.post('/translate/batch', { texts, from, to });
   },
@@ -340,7 +392,51 @@ const questionService = {
       hard: { bg: 'bg-red-100', text: 'text-red-700' }
     };
     return colors[difficulty] || { bg: 'bg-gray-100', text: 'text-gray-700' };
-  }
+  },
+
+  // ═══ NEW: Verification status helpers ═══
+
+  getVerificationStatusLabel: (status, language = 'en') => {
+    const labels = {
+      unchecked: { hi: 'अनजांचा', en: 'Unchecked' },
+      checked: { hi: 'जांचा गया', en: 'Checked' },
+      verified: { hi: 'सत्यापित', en: 'Verified' },
+      approved: { hi: 'स्वीकृत', en: 'Approved' },
+      rejected: { hi: 'अस्वीकृत', en: 'Rejected' },
+    };
+    return labels[status]?.[language] || status || 'Unchecked';
+  },
+
+  getVerificationStatusColor: (status) => {
+    const colors = {
+      unchecked: { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-300' },
+      checked: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300' },
+      verified: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300' },
+      approved: { bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-300' },
+      rejected: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300' },
+    };
+    return colors[status] || colors.unchecked;
+  },
+
+  getCorrectnessStatusLabel: (status, language = 'en') => {
+    const labels = {
+      unknown: { hi: 'अज्ञात', en: 'Unknown' },
+      correct: { hi: 'सही', en: 'Correct' },
+      incorrect: { hi: 'गलत', en: 'Incorrect' },
+      disputed: { hi: 'विवादित', en: 'Disputed' },
+    };
+    return labels[status]?.[language] || status || 'Unknown';
+  },
+
+  getCorrectnessStatusColor: (status) => {
+    const colors = {
+      unknown: { bg: 'bg-gray-100', text: 'text-gray-600' },
+      correct: { bg: 'bg-green-100', text: 'text-green-700' },
+      incorrect: { bg: 'bg-red-100', text: 'text-red-700' },
+      disputed: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
+    };
+    return colors[status] || colors.unknown;
+  },
 };
 
 export default questionService;

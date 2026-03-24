@@ -160,7 +160,44 @@ const questionTopicMapSchema = new mongoose.Schema({
   pyqSession: { type: String },
   pyqShift: { type: String },
 
+  // ═══════════════════════════════════════════════════════════════
+  // ── Review & Verification System ──
+  // ═══════════════════════════════════════════════════════════════
+  verificationStatus: {
+    type: String,
+    enum: ['unchecked', 'checked', 'verified', 'approved', 'rejected'],
+    default: 'unchecked'
+  },
+  correctnessStatus: {
+    type: String,
+    enum: ['unknown', 'correct', 'incorrect', 'partially_correct', 'needs_review'],
+    default: 'unknown'
+  },
+  reviewNotes: { type: String },
+  reviewedBy: { type: String },
+  reviewedAt: { type: Date },
+  lastEditedAt: { type: Date },
+  lastEditedBy: { type: String },
+  editCount: { type: Number, default: 0 },
+  qualityScore: { type: Number, default: 0, min: 0, max: 100 },
+
+  // ── Edit History (last 20 entries) ──
+  editHistory: [{
+    timestamp: { type: Date, default: Date.now },
+    action: { type: String }, // 'edit', 'verify', 'approve', 'reject', 'review'
+    changedFields: [{ type: String }],
+    previousValues: { type: mongoose.Schema.Types.Mixed },
+    editedBy: { type: String, default: 'admin' },
+    note: { type: String },
+    _id: false
+  }],
+
   // ── Flags ──
+  isFlagged: { type: Boolean, default: false },
+  flagReason: { type: String },
+  flaggedAt: { type: Date },
+
+  // ── Original Flags ──
   hasContent: { type: Boolean, default: false },
   hasSubQuestions: { type: Boolean, default: false }
 }, { _id: false });
