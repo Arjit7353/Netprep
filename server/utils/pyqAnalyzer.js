@@ -1,6 +1,7 @@
 // server/utils/pyqAnalyzer.js
 // ═══════════════════════════════════════════════════════════════
-// PYQ Analyzer v3.0 — FIXED: Content-aware language detection
+// PYQ Analyzer v3.1 — Enhanced with pre-cleaning stuck words
+// + Content-aware language detection
 // + Field verification to ensure content matches field names
 // ═══════════════════════════════════════════════════════════════
 
@@ -9,9 +10,9 @@ const mongoose = require('mongoose');
 // ═══ GLOBAL CONSTANT ═══
 const HINDI_PATTERN = /[\u0900-\u097F]/;
 
-const ROMAN_MAP = {1:'I',2:'II',3:'III',4:'IV',5:'V',6:'VI',7:'VII',8:'VIII',9:'IX',10:'X'};
+const ROMAN_MAP = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X' };
 const ROMAN_REVERSE = {};
-Object.entries(ROMAN_MAP).forEach(([k,v]) => { ROMAN_REVERSE[v.toLowerCase()] = parseInt(k); });
+Object.entries(ROMAN_MAP).forEach(([k, v]) => { ROMAN_REVERSE[v.toLowerCase()] = parseInt(k); });
 
 function extractUnitNumberFromName(n) {
   if (!n) return null;
@@ -65,16 +66,13 @@ function detectQuestionType(q) {
 }
 
 // ═══════════════════════════════════════════════════
-// DETECT LANGUAGE — FIXED: Analyzes CONTENT, not field names
+// DETECT LANGUAGE — Analyzes CONTENT, not field names
 // ═══════════════════════════════════════════════════
 function detectLanguage(data) {
   const samples = [];
-
   const questions = data.questions || data.questionTopicMap || [];
 
-  // Collect actual text content from all possible fields
   for (const q of questions.slice(0, 20)) {
-    // Collect from ALL text fields (regardless of suffix Hi/En)
     const textFields = [
       q.question, q.questionText, q.questionTextHi, q.questionTextEn,
       q.assertion, q.assertionHi, q.assertionEn,
@@ -90,10 +88,11 @@ function detectLanguage(data) {
       }
     }
 
-    // Check array fields
-    const arrayFields = [q.options, q.optionsHi, q.optionsEn,
-                         q.statements, q.statementsHi, q.statementsEn,
-                         q.listA, q.listAHi, q.items, q.itemsHi];
+    const arrayFields = [
+      q.options, q.optionsHi, q.optionsEn,
+      q.statements, q.statementsHi, q.statementsEn,
+      q.listA, q.listAHi, q.items, q.itemsHi
+    ];
     for (const arr of arrayFields) {
       if (Array.isArray(arr)) {
         for (const item of arr) {
@@ -104,7 +103,6 @@ function detectLanguage(data) {
       }
     }
 
-    // Check sub-questions
     if (Array.isArray(q.questions)) {
       for (const sq of q.questions.slice(0, 3)) {
         const sqFields = [sq.question, sq.questionText, sq.questionTextHi, sq.questionTextEn];
@@ -123,16 +121,14 @@ function detectLanguage(data) {
       }
     }
 
-    if (samples.length >= 30) break; // Enough samples
+    if (samples.length >= 30) break;
   }
 
-  // If no text content found at all, fall back to metadata
   if (samples.length === 0) {
     if (data.language === 'en') return 'en';
-    return 'hi'; // Default
+    return 'hi';
   }
 
-  // Analyze content: count how many samples contain Hindi characters
   let hindiCount = 0;
   for (const s of samples) {
     if (HINDI_PATTERN.test(s)) hindiCount++;
@@ -141,7 +137,6 @@ function detectLanguage(data) {
   const hindiRatio = hindiCount / samples.length;
   const detectedLang = hindiRatio > 0.3 ? 'hi' : 'en';
 
-  // Log if metadata disagrees with content
   if (data.language && data.language !== detectedLang) {
     console.log(`[detectLanguage] Metadata says "${data.language}" but content analysis says "${detectedLang}" (${hindiCount}/${samples.length} Hindi). Using CONTENT result.`);
   }
@@ -149,13 +144,83 @@ function detectLanguage(data) {
   return detectedLang;
 }
 
-// ═══════════════════════════════════════════════════
-// CONTENT FIELD VERIFICATION — NEW
-// Ensures text content is in the correct Hi/En field
-// Called at the end of normalizeQuestion()
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// CONTENT FIELD VERIFICATION — Enhanced with Pre-Cleaning
+// 1. Pre-cleans stuck Hindi+English words in ALL text fields
+// 2. Swaps content to correct Hi/En field based on actual content
+// ═══════════════════════════════════════════════════════════════
 function verifyContentFields(base) {
-  // Text field pairs: [hiField, enField]
+  // ★ Pre-clean stuck words in ALL fields before verification
+  const preCleanField = (obj, field) => {
+    if (obj[field] && typeof obj[field] === 'string' && obj[field].trim()) {
+      let text = obj[field];
+
+      // Fix Hindi+ENGLISH+Hindi stuck patterns
+      text = text.replace(/([\u0900-\u097F])([A-Z]{2,})([\u0900-\u097F])/g, '$1 $2 $3');
+      text = text.replace(/([A-Z]{2,})([\u0900-\u097F])/g, '$1 $2');
+      text = text.replace(/([\u0900-\u097F])([A-Z]{2,})/g, '$1 $2');
+
+      // Fix word(number)word stuck patterns
+      text = text.replace(/([\u0900-\u097F\w])\((\d+)\)([\u0900-\u097F\w])/g, '$1 ($2) $3');
+      text = text.replace(/([\u0900-\u097F])\((\d+)\)/g, '$1 ($2)');
+      text = text.replace(/\((\d+)\)([\u0900-\u097F])/g, '($1) $2');
+
+      // Fix Hindi punctuation+English stuck
+      text = text.replace(/([\u0964\u0965])([A-Za-z])/g, '$1 $2');
+
+      // Fix number+Hindi stuck
+      text = text.replace(/(\d)([\u0900-\u097F])/g, '$1 $2');
+      text = text.replace(/([\u0900-\u097F])(\d)/g, '$1 $2');
+
+      // Normalize spaces
+      text = text.replace(/\s{2,}/g, ' ').trim();
+
+      obj[field] = text;
+    }
+  };
+
+  const preCleanArray = (obj, field) => {
+    if (Array.isArray(obj[field])) {
+      for (let i = 0; i < obj[field].length; i++) {
+        if (obj[field][i] && typeof obj[field][i] === 'string') {
+          const item = { val: obj[field][i] };
+          preCleanField(item, 'val');
+          obj[field][i] = item.val;
+        }
+      }
+    }
+  };
+
+  // Pre-clean all text fields
+  const allTextFields = [
+    'questionText', 'questionTextHi', 'questionTextEn',
+    'explanation', 'explanationHi', 'explanationEn',
+    'assertion', 'assertionHi', 'assertionEn',
+    'reason', 'reasonHi', 'reasonEn',
+    'passage', 'passageHi', 'passageEn',
+    'caseletText', 'caseletTextHi', 'caseletTextEn',
+    'diTitle', 'diTitleHi', 'diTitleEn',
+    'instruction', 'instructionHi'
+  ];
+
+  for (const f of allTextFields) {
+    preCleanField(base, f);
+  }
+
+  // Pre-clean all array fields
+  const allArrayFields = [
+    'options', 'optionsHi', 'optionsEn',
+    'statements', 'statementsHi', 'statementsEn',
+    'listA', 'listAHi', 'listAEn',
+    'listB', 'listBHi', 'listBEn',
+    'items', 'itemsHi', 'itemsEn'
+  ];
+
+  for (const f of allArrayFields) {
+    preCleanArray(base, f);
+  }
+
+  // ═══ Swap logic: ensure content is in correct Hi/En field ═══
   const textPairs = [
     ['questionTextHi', 'questionTextEn'],
     ['explanationHi', 'explanationEn'],
@@ -173,15 +238,15 @@ function verifyContentFields(base) {
 
     // Hi field has non-Hindi content AND En is empty → swap
     if (hiVal && typeof hiVal === 'string' && hiVal.trim() &&
-        !HINDI_PATTERN.test(hiVal) &&
-        (!enVal || !String(enVal).trim())) {
+      !HINDI_PATTERN.test(hiVal) &&
+      (!enVal || !String(enVal).trim())) {
       base[enField] = hiVal;
       base[hiField] = '';
     }
     // En field has Hindi content AND Hi is empty → swap
     else if (enVal && typeof enVal === 'string' && enVal.trim() &&
-             HINDI_PATTERN.test(enVal) &&
-             (!hiVal || !String(hiVal).trim())) {
+      HINDI_PATTERN.test(enVal) &&
+      (!hiVal || !String(hiVal).trim())) {
       base[hiField] = enVal;
       base[enField] = '';
     }
@@ -201,8 +266,7 @@ function verifyContentFields(base) {
     const enArr = base[enField];
 
     if (Array.isArray(hiArr) && hiArr.length > 0 &&
-        (!Array.isArray(enArr) || enArr.length === 0)) {
-      // Check if "Hindi" array actually has Hindi content
+      (!Array.isArray(enArr) || enArr.length === 0)) {
       const hasHindi = hiArr.some(item => typeof item === 'string' && HINDI_PATTERN.test(item));
       if (!hasHindi) {
         base[enField] = [...hiArr];
@@ -210,7 +274,7 @@ function verifyContentFields(base) {
       }
     }
     else if (Array.isArray(enArr) && enArr.length > 0 &&
-             (!Array.isArray(hiArr) || hiArr.length === 0)) {
+      (!Array.isArray(hiArr) || hiArr.length === 0)) {
       const hasHindi = enArr.some(item => typeof item === 'string' && HINDI_PATTERN.test(item));
       if (hasHindi) {
         base[hiField] = [...enArr];
@@ -219,25 +283,42 @@ function verifyContentFields(base) {
     }
   }
 
-  // Sub-questions
+  // Sub-questions: pre-clean + swap
   if (Array.isArray(base.subQuestions)) {
     for (const sq of base.subQuestions) {
-      // Text fields in sub-questions
+      // Pre-clean sub-question fields
+      preCleanField(sq, 'questionText');
+      preCleanField(sq, 'questionTextHi');
+      preCleanField(sq, 'questionTextEn');
+      preCleanField(sq, 'explanation');
+      preCleanField(sq, 'explanationHi');
+      preCleanField(sq, 'explanationEn');
+      preCleanArray(sq, 'options');
+      preCleanArray(sq, 'optionsHi');
+      preCleanArray(sq, 'optionsEn');
+
+      // Swap text fields
       for (const [hiField, enField] of [['questionTextHi', 'questionTextEn'], ['explanationHi', 'explanationEn']]) {
         const hiVal = sq[hiField];
         const enVal = sq[enField];
-        if (hiVal && typeof hiVal === 'string' && hiVal.trim() && !HINDI_PATTERN.test(hiVal) && (!enVal || !String(enVal).trim())) {
+        if (hiVal && typeof hiVal === 'string' && hiVal.trim() &&
+          !HINDI_PATTERN.test(hiVal) &&
+          (!enVal || !String(enVal).trim())) {
           sq[enField] = hiVal;
           sq[hiField] = '';
-        } else if (enVal && typeof enVal === 'string' && enVal.trim() && HINDI_PATTERN.test(enVal) && (!hiVal || !String(hiVal).trim())) {
+        } else if (enVal && typeof enVal === 'string' && enVal.trim() &&
+          HINDI_PATTERN.test(enVal) &&
+          (!hiVal || !String(hiVal).trim())) {
           sq[hiField] = enVal;
           sq[enField] = '';
         }
       }
-      // Options in sub-questions
+
+      // Swap options
       const sqOptHi = sq.optionsHi;
       const sqOptEn = sq.optionsEn;
-      if (Array.isArray(sqOptHi) && sqOptHi.length > 0 && (!Array.isArray(sqOptEn) || sqOptEn.length === 0)) {
+      if (Array.isArray(sqOptHi) && sqOptHi.length > 0 &&
+        (!Array.isArray(sqOptEn) || sqOptEn.length === 0)) {
         const hasHindi = sqOptHi.some(item => typeof item === 'string' && HINDI_PATTERN.test(item));
         if (!hasHindi) {
           sq.optionsEn = [...sqOptHi];
@@ -257,9 +338,9 @@ function validateImportData(data) {
     return { isValid: false, errors: ['Invalid: must be JSON object'], warnings: [] };
 
   if (!data.year || !/^\d{4}$/.test(String(data.year))) errors.push('year required (4-digit)');
-  const vs = ['june','december','november','september','march','other'];
+  const vs = ['june', 'december', 'november', 'september', 'march', 'other'];
   if (!data.session || !vs.includes(data.session.toLowerCase())) errors.push(`session required: ${vs.join(', ')}`);
-  if (!data.paper || !['paper1','paper2'].includes(data.paper)) errors.push('paper: "paper1" or "paper2"');
+  if (!data.paper || !['paper1', 'paper2'].includes(data.paper)) errors.push('paper: "paper1" or "paper2"');
 
   const questions = data.questions || data.questionTopicMap || [];
   if (!Array.isArray(questions) || questions.length === 0) {
@@ -275,15 +356,15 @@ function validateImportData(data) {
     typeCount[t] = (typeCount[t] || 0) + 1;
 
     if (q.question || q.questionText || q.questionTextHi || q.options?.length ||
-        q.assertion || q.assertionHi || q.passage || q.passageHi ||
-        q.tableData || q.chartData || q.caseletText || q.caseletTextHi ||
-        q.statements?.length || q.listA?.length || q.items?.length ||
-        q.questions?.length) {
+      q.assertion || q.assertionHi || q.passage || q.passageHi ||
+      q.tableData || q.chartData || q.caseletText || q.caseletTextHi ||
+      q.statements?.length || q.listA?.length || q.items?.length ||
+      q.questions?.length) {
       withContent++;
     }
 
     if (t === 'mcq' || t === 'assertion_reason' || t === 'match_following' ||
-        t === 'sequence_order' || t === 'statement_based') {
+      t === 'sequence_order' || t === 'statement_based') {
       if (q.correct === undefined && q.correctAnswer === undefined) {
         warnings.push(`Q${q.qNo || idx + 1}: missing correct answer`);
       }
@@ -310,7 +391,7 @@ function validateImportData(data) {
 }
 
 // ═══════════════════════════════════════════════════
-// NORMALIZE QUESTION — with content verification at end
+// NORMALIZE QUESTION — with pre-clean + content verification
 // ═══════════════════════════════════════════════════
 function normalizeQuestion(q, defaultLang) {
   const type = detectQuestionType(q);
@@ -528,8 +609,8 @@ function normalizeQuestion(q, defaultLang) {
         questionTextHi: isHindi ? sqText : (q.questionTextHi || ''),
         questionTextEn: !isHindi ? sqText : (q.questionTextEn || ''),
         options: sqOpts,
-        optionsHi: isHindi ? sqOpts : (q.optionsHi || []),
-        optionsEn: !isHindi ? sqOpts : (q.optionsEn || []),
+        optionsHi: isHindi ? sqOpts : (sq.optionsHi || []),
+        optionsEn: !isHindi ? sqOpts : (sq.optionsEn || []),
         correctAnswer: q.correct ?? q.correctAnswer ?? null,
         explanation: sqExpl,
         explanationHi: isHindi ? sqExpl : (q.explanationHi || ''),
@@ -608,12 +689,12 @@ function normalizeQuestion(q, defaultLang) {
         questionTextHi: isHindi ? sqText : (q.questionTextHi || ''),
         questionTextEn: !isHindi ? sqText : (q.questionTextEn || ''),
         options: sqOpts,
-        optionsHi: isHindi ? sqOpts : (q.optionsHi || []),
-        optionsEn: !isHindi ? sqOpts : (q.optionsEn || []),
+        optionsHi: isHindi ? sqOpts : (sq.optionsHi || []),
+        optionsEn: !isHindi ? sqOpts : (sq.optionsEn || []),
         correctAnswer: q.correct ?? q.correctAnswer ?? null,
         explanation: sqExpl,
-        explanationHi: isHindi ? sqExpl : (q.explanationHi || ''),
-        explanationEn: !isHindi ? sqExpl : (q.explanationEn || '')
+        explanationHi: isHindi ? sqExpl : (sq.explanationHi || ''),
+        explanationEn: !isHindi ? sqExpl : (sq.explanationEn || '')
       });
     }
 
@@ -746,9 +827,8 @@ function normalizeQuestion(q, defaultLang) {
   }
 
   // ═══════════════════════════════════════════════════
-  // CONTENT VERIFICATION — Ensures fields match actual content language
-  // This catches cases where detectLanguage got it wrong OR
-  // user put English text in *Hi fields (or vice versa)
+  // CONTENT VERIFICATION + PRE-CLEANING
+  // Pre-cleans stuck words, then ensures fields match actual content language
   // ═══════════════════════════════════════════════════
   verifyContentFields(base);
 
@@ -770,8 +850,8 @@ function normalizeImportData(data) {
   return {
     year: String(data.year).trim(),
     session: data.session.toLowerCase().trim(),
-    shift: (['shift1','shift2','none'].includes((data.shift||'none').toLowerCase().trim()))
-      ? (data.shift||'none').toLowerCase().trim() : 'none',
+    shift: (['shift1', 'shift2', 'none'].includes((data.shift || 'none').toLowerCase().trim()))
+      ? (data.shift || 'none').toLowerCase().trim() : 'none',
     paper: data.paper,
     subject: data.subject || (data.paper === 'paper2' ? 'History' : 'General'),
     language: detectedLang,
@@ -789,7 +869,7 @@ function normalizeImportData(data) {
     })),
     unitWeightage: (data.unitWeightage || []).map(u => ({
       unitId: u.unitId || '', unitName: u.unitName || '', unitNameHi: u.unitNameHi || '',
-      questionCount: u.questionCount || 0, marks: u.marks || (u.questionCount||0)*2,
+      questionCount: u.questionCount || 0, marks: u.marks || (u.questionCount || 0) * 2,
       percentage: u.percentage || 0, priority: u.priority || '',
       difficulty: u.difficulty || 'Medium', roiScore: Math.min(5, Math.max(1, u.roiScore || 3))
     })),
@@ -827,66 +907,73 @@ function normalizeImportData(data) {
 function calculateTrend(yc) {
   if (!yc || yc.length < 2) return 'stable';
   const nz = yc.filter(c => c > 0);
-  if (!nz.length) return 'stable'; if (nz.length === 1) return 'emerged';
-  const m = Math.floor(yc.length/2);
-  const f = yc.slice(0,m).reduce((s,c)=>s+c,0), se = yc.slice(m).reduce((s,c)=>s+c,0);
-  if (se > f*1.3) return 'increasing'; if (se < f*0.7) return 'decreasing'; return 'stable';
+  if (!nz.length) return 'stable';
+  if (nz.length === 1) return 'emerged';
+  const m = Math.floor(yc.length / 2);
+  const f = yc.slice(0, m).reduce((s, c) => s + c, 0);
+  const se = yc.slice(m).reduce((s, c) => s + c, 0);
+  if (se > f * 1.3) return 'increasing';
+  if (se < f * 0.7) return 'decreasing';
+  return 'stable';
 }
 
 function avgDifficulty(d) {
   if (!d?.length) return 'medium';
-  const sc = {easy:1, medium:2, hard:3};
-  const a = d.reduce((s,x) => s + (sc[x] || 2), 0) / d.length;
+  const sc = { easy: 1, medium: 2, hard: 3 };
+  const a = d.reduce((s, x) => s + (sc[x] || 2), 0) / d.length;
   return a <= 1.5 ? 'easy' : a >= 2.5 ? 'hard' : 'medium';
 }
 
 function calcImportanceScore(t, y, ty) {
   if (!ty) return 0;
-  return Math.round(Math.min(100, (t/(ty*5))*100) * 0.6 + ((y/ty)*100) * 0.4);
+  return Math.round(Math.min(100, (t / (ty * 5)) * 100) * 0.6 + ((y / ty) * 100) * 0.4);
 }
 
 async function getUserPerformanceByUnit(paper) {
   try {
     const TA = mongoose.model('TestAttempt'), Q = mongoose.model('Question');
-    const atts = await TA.find({status:'completed'}).select('answers').lean();
+    const atts = await TA.find({ status: 'completed' }).select('answers').lean();
     if (!atts.length) return [];
     const am = {};
-    atts.forEach(a => (a.answers||[]).forEach(an => {
-      const id = an.questionId?.toString(); if (!id) return;
-      if (!am[id]) am[id] = {total:0, correct:0, wrong:0, skipped:0};
+    atts.forEach(a => (a.answers || []).forEach(an => {
+      const id = an.questionId?.toString();
+      if (!id) return;
+      if (!am[id]) am[id] = { total: 0, correct: 0, wrong: 0, skipped: 0 };
       am[id].total++;
       if (an.selectedAnswer === -1) am[id].skipped++;
       else if (an.isCorrect) am[id].correct++;
       else am[id].wrong++;
     }));
-    const ids = Object.keys(am); if (!ids.length) return [];
-    const pf = {}; if (paper) pf.paper = paper;
-    const qs = await Q.find({_id:{$in:ids}, isActive:{$ne:false}, ...pf}).select('unit chapter topic').lean();
+    const ids = Object.keys(am);
+    if (!ids.length) return [];
+    const pf = {};
+    if (paper) pf.paper = paper;
+    const qs = await Q.find({ _id: { $in: ids }, isActive: { $ne: false }, ...pf }).select('unit chapter topic').lean();
     const pm = {};
     qs.forEach(q => {
       const un = extractUnitNumberFromName(q.unit);
       const uid = un ? unitNumberToId(un) : (q.unit || 'unknown');
-      const k = `${uid}|${q.chapter||''}`;
-      if (!pm[k]) pm[k] = {unitId:uid, unitName:q.unit||'', chapter:q.chapter||'', topics:new Set(), total:0, correct:0, wrong:0, skipped:0};
+      const k = `${uid}|${q.chapter || ''}`;
+      if (!pm[k]) pm[k] = { unitId: uid, unitName: q.unit || '', chapter: q.chapter || '', topics: new Set(), total: 0, correct: 0, wrong: 0, skipped: 0 };
       if (q.topic) pm[k].topics.add(q.topic);
       const s = am[q._id.toString()];
       if (s) { pm[k].total += s.total; pm[k].correct += s.correct; pm[k].wrong += s.wrong; pm[k].skipped += s.skipped; }
     });
-    return Object.values(pm).map(p => ({...p, topics:Array.from(p.topics), accuracy:p.total>0?Math.round((p.correct/p.total)*100):0}));
-  } catch(e) { console.error('[pyqAnalyzer]', e.message); return []; }
+    return Object.values(pm).map(p => ({ ...p, topics: Array.from(p.topics), accuracy: p.total > 0 ? Math.round((p.correct / p.total) * 100) : 0 }));
+  } catch (e) { console.error('[pyqAnalyzer]', e.message); return []; }
 }
 
 function findUserPerformanceMatch(uid, ch, arr) {
   if (!arr?.length) return null;
   const dm = arr.find(u => u.unitId === uid && u.chapter && ch &&
-    (u.chapter.toLowerCase().includes(ch.toLowerCase().substring(0,15)) ||
-     ch.toLowerCase().includes(u.chapter.toLowerCase().substring(0,15))));
+    (u.chapter.toLowerCase().includes(ch.toLowerCase().substring(0, 15)) ||
+      ch.toLowerCase().includes(u.chapter.toLowerCase().substring(0, 15))));
   if (dm) return dm;
   const um = arr.filter(u => u.unitId === uid);
   if (um.length) {
-    const a = {total:0, correct:0, wrong:0, skipped:0};
-    um.forEach(m => { a.total+=m.total; a.correct+=m.correct; a.wrong+=m.wrong; a.skipped+=m.skipped; });
-    return {...a, accuracy: a.total>0 ? Math.round((a.correct/a.total)*100) : 0};
+    const a = { total: 0, correct: 0, wrong: 0, skipped: 0 };
+    um.forEach(m => { a.total += m.total; a.correct += m.correct; a.wrong += m.wrong; a.skipped += m.skipped; });
+    return { ...a, accuracy: a.total > 0 ? Math.round((a.correct / a.total) * 100) : 0 };
   }
   return null;
 }
@@ -905,8 +992,8 @@ function getRecommendation(st) {
 function calcOverallReadiness(g) {
   if (!g.length) return 0;
   let ws = 0, tw = 0;
-  g.forEach(x => { const w = x.pyqImportance/100; ws += x.yourAccuracy*w; tw += w; });
-  return tw > 0 ? Math.round(ws/tw) : 0;
+  g.forEach(x => { const w = x.pyqImportance / 100; ws += x.yourAccuracy * w; tw += w; });
+  return tw > 0 ? Math.round(ws / tw) : 0;
 }
 
 module.exports = {

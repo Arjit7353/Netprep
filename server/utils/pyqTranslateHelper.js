@@ -1,10 +1,11 @@
 // server/utils/pyqTranslateHelper.js
 // ═══════════════════════════════════════════════════════════════
-//  PYQ Translation Helper v3.1 — SPEED OPTIMIZED + NO TIMEOUT
+//  PYQ Translation Helper v4.0 — WITH PRE/POST CLEANING
+//  - Pre-translation text cleaning (stuck words separation)
+//  - Post-translation spacing normalization
+//  - Mixed language detection & flagging
 //  - Fast field swap (single pass)
 //  - Parallel translation with higher concurrency
-//  - Streaming progress
-//  - Timeout-safe design
 // ═══════════════════════════════════════════════════════════════
 
 const translateHelper = require('./translateHelper');
@@ -13,17 +14,161 @@ const HINDI_RE = /[\u0900-\u097F]/;
 
 class PYQTranslateHelper {
   constructor() {
-    this.stats = { totalFields: 0, translated: 0, skipped: 0, failed: 0, direction: '', fieldsSwapped: 0, timeMs: 0 };
+    this.stats = { totalFields: 0, translated: 0, skipped: 0, failed: 0, direction: '', fieldsSwapped: 0, timeMs: 0, preCleaned: 0, spacingFixed: 0 };
   }
 
   resetStats() {
-    this.stats = { totalFields: 0, translated: 0, skipped: 0, failed: 0, direction: '', fieldsSwapped: 0, timeMs: 0 };
+    this.stats = { totalFields: 0, translated: 0, skipped: 0, failed: 0, direction: '', fieldsSwapped: 0, timeMs: 0, preCleaned: 0, spacingFixed: 0 };
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  PRE-CLEAN all text fields before translation
+  //  Fixes stuck words like "सेINCORRECTलेखक"
+  // ═══════════════════════════════════════════════════
+  _preCleanAllFields(qtm) {
+    let cleaned = 0;
+
+    const cleanText = (obj, field) => {
+      if (obj[field] && typeof obj[field] === 'string' && obj[field].trim()) {
+        const before = obj[field];
+        obj[field] = translateHelper.preCleanText(obj[field]);
+        if (obj[field] !== before) cleaned++;
+      }
+    };
+
+    const cleanArray = (obj, field) => {
+      if (Array.isArray(obj[field])) {
+        for (let i = 0; i < obj[field].length; i++) {
+          if (obj[field][i] && typeof obj[field][i] === 'string') {
+            const before = obj[field][i];
+            obj[field][i] = translateHelper.preCleanText(obj[field][i]);
+            if (obj[field][i] !== before) cleaned++;
+          }
+        }
+      }
+    };
+
+    const textFields = [
+      'questionText', 'questionTextHi', 'questionTextEn',
+      'explanation', 'explanationHi', 'explanationEn',
+      'assertion', 'assertionHi', 'assertionEn',
+      'reason', 'reasonHi', 'reasonEn',
+      'passage', 'passageHi', 'passageEn',
+      'caseletText', 'caseletTextHi', 'caseletTextEn',
+      'diTitle', 'diTitleHi', 'diTitleEn',
+      'instruction', 'instructionHi'
+    ];
+
+    const arrayFields = [
+      'options', 'optionsHi', 'optionsEn',
+      'statements', 'statementsHi', 'statementsEn',
+      'listA', 'listAHi', 'listAEn',
+      'listB', 'listBHi', 'listBEn',
+      'items', 'itemsHi', 'itemsEn'
+    ];
+
+    for (let i = 0; i < qtm.length; i++) {
+      const q = qtm[i];
+
+      // Clean text fields
+      for (const f of textFields) {
+        cleanText(q, f);
+      }
+
+      // Clean array fields
+      for (const f of arrayFields) {
+        cleanArray(q, f);
+      }
+
+      // Clean sub-questions
+      if (q.subQuestions) {
+        for (let k = 0; k < q.subQuestions.length; k++) {
+          const sq = q.subQuestions[k];
+          cleanText(sq, 'questionText');
+          cleanText(sq, 'questionTextHi');
+          cleanText(sq, 'questionTextEn');
+          cleanText(sq, 'explanation');
+          cleanText(sq, 'explanationHi');
+          cleanText(sq, 'explanationEn');
+          cleanArray(sq, 'options');
+          cleanArray(sq, 'optionsHi');
+          cleanArray(sq, 'optionsEn');
+        }
+      }
+    }
+
+    return cleaned;
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  POST-PROCESS: Normalize spacing in all translated fields
+  // ═══════════════════════════════════════════════════
+  _postProcessAllFields(qtm) {
+    let fixed = 0;
+
+    const normalizeText = (obj, field) => {
+      if (obj[field] && typeof obj[field] === 'string' && obj[field].trim()) {
+        const before = obj[field];
+        obj[field] = translateHelper.normalizeSpacing(obj[field]);
+        if (obj[field] !== before) fixed++;
+      }
+    };
+
+    const normalizeArray = (obj, field) => {
+      if (Array.isArray(obj[field])) {
+        for (let i = 0; i < obj[field].length; i++) {
+          if (obj[field][i] && typeof obj[field][i] === 'string') {
+            const before = obj[field][i];
+            obj[field][i] = translateHelper.normalizeSpacing(obj[field][i]);
+            if (obj[field][i] !== before) fixed++;
+          }
+        }
+      }
+    };
+
+    const textFields = [
+      'questionTextHi', 'questionTextEn',
+      'explanationHi', 'explanationEn',
+      'assertionHi', 'assertionEn',
+      'reasonHi', 'reasonEn',
+      'passageHi', 'passageEn',
+      'caseletTextHi', 'caseletTextEn',
+      'diTitleHi', 'diTitleEn'
+    ];
+
+    const arrayFields = [
+      'optionsHi', 'optionsEn',
+      'statementsHi', 'statementsEn',
+      'listAHi', 'listAEn',
+      'listBHi', 'listBEn',
+      'itemsHi', 'itemsEn'
+    ];
+
+    for (let i = 0; i < qtm.length; i++) {
+      const q = qtm[i];
+
+      for (const f of textFields) normalizeText(q, f);
+      for (const f of arrayFields) normalizeArray(q, f);
+
+      if (q.subQuestions) {
+        for (let k = 0; k < q.subQuestions.length; k++) {
+          const sq = q.subQuestions[k];
+          normalizeText(sq, 'questionTextHi');
+          normalizeText(sq, 'questionTextEn');
+          normalizeText(sq, 'explanationHi');
+          normalizeText(sq, 'explanationEn');
+          normalizeArray(sq, 'optionsHi');
+          normalizeArray(sq, 'optionsEn');
+        }
+      }
+    }
+
+    return fixed;
   }
 
   // ═══════════════════════════════════════════════════
   //  FAST field swap — single pass, no redundant checks
   // ═══════════════════════════════════════════════════
-
   _swapText(obj, hi, en) {
     const hv = obj[hi], ev = obj[en];
     const hOk = hv && typeof hv === 'string' && hv.trim();
@@ -78,7 +223,6 @@ class PYQTranslateHelper {
   // ═══════════════════════════════════════════════════
   //  FAST direction detection — sample first 10 only
   // ═══════════════════════════════════════════════════
-
   _detectDirection(qtm) {
     let hi = 0, en = 0;
     const limit = Math.min(qtm.length, 10);
@@ -100,7 +244,6 @@ class PYQTranslateHelper {
   // ═══════════════════════════════════════════════════
   //  FAST text collector — single pass
   // ═══════════════════════════════════════════════════
-
   _collect(q, src) {
     const texts = [], meta = [];
     const isHi = src === 'hi';
@@ -173,7 +316,6 @@ class PYQTranslateHelper {
   // ═══════════════════════════════════════════════════
   //  FAST apply — direct assignment
   // ═══════════════════════════════════════════════════
-
   _apply(q, translated, metaArr) {
     const arrBuf = {};
     for (let i = 0; i < translated.length; i++) {
@@ -199,9 +341,8 @@ class PYQTranslateHelper {
   }
 
   // ═══════════════════════════════════════════════════
-  //  MAIN — Optimized pipeline with timeout safety
+  //  MAIN — Optimized pipeline with pre/post cleaning
   // ═══════════════════════════════════════════════════
-
   async translatePYQData(normalizedData) {
     this.resetStats();
     const t0 = Date.now();
@@ -210,6 +351,11 @@ class PYQTranslateHelper {
     if (qtm.length === 0) {
       return { data: normalizedData, stats: { ...this.stats, message: 'No questions' } };
     }
+
+    // ★ Step 0: PRE-CLEAN all text fields (fix stuck words)
+    const preCleaned = this._preCleanAllFields(qtm);
+    this.stats.preCleaned = preCleaned;
+    if (preCleaned > 0) console.log(`[PYQTranslate] Pre-cleaned ${preCleaned} stuck word issues in ${Date.now() - t0}ms`);
 
     // Step 1: Fix mismatched fields (fast — <5ms)
     const swaps = this._fixFields(qtm);
@@ -233,6 +379,11 @@ class PYQTranslateHelper {
     this.stats.totalFields = allTexts.length;
 
     if (allTexts.length === 0) {
+      // ★ Still run post-process for spacing on existing content
+      const spacingFixed = this._postProcessAllFields(qtm);
+      this.stats.spacingFixed = spacingFixed;
+      normalizedData.questionTopicMap = qtm;
+
       this.stats.timeMs = Date.now() - t0;
       return { data: normalizedData, stats: { ...this.stats, message: 'Already bilingual' } };
     }
@@ -254,9 +405,15 @@ class PYQTranslateHelper {
     for (const qm of allMeta) {
       this._apply(qtm[qm.qi], results.slice(qm.start, qm.start + qm.count), qm.meta);
     }
+
+    // ★ Step 6: POST-PROCESS all fields for spacing normalization
+    const spacingFixed = this._postProcessAllFields(qtm);
+    this.stats.spacingFixed = spacingFixed;
+    if (spacingFixed > 0) console.log(`[PYQTranslate] Post-process fixed ${spacingFixed} spacing issues`);
+
     normalizedData.questionTopicMap = qtm;
 
-    // Step 6: Translate topTopics (small — usually <10 items)
+    // Step 7: Translate topTopics (small — usually <10 items)
     if (Array.isArray(normalizedData.topTopics) && normalizedData.topTopics.length > 0) {
       const tt = [], tm = [];
       for (let i = 0; i < normalizedData.topTopics.length; i++) {
@@ -276,7 +433,7 @@ class PYQTranslateHelper {
     }
 
     this.stats.timeMs = Date.now() - t0;
-    console.log(`[PYQTranslate] Done: ${this.stats.translated}/${this.stats.totalFields} translated, ${this.stats.failed} failed, ${swaps} swapped, ${(this.stats.timeMs / 1000).toFixed(1)}s`);
+    console.log(`[PYQTranslate] Done: ${this.stats.translated}/${this.stats.totalFields} translated, ${this.stats.failed} failed, ${swaps} swapped, ${preCleaned} pre-cleaned, ${spacingFixed} spacing-fixed, ${(this.stats.timeMs / 1000).toFixed(1)}s`);
 
     return { data: normalizedData, stats: { ...this.stats } };
   }

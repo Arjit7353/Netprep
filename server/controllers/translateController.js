@@ -8,8 +8,14 @@ const translateText = async (req, res, next) => {
     if (!text) return res.status(400).json({ success: false, message: 'Text is required' });
     const fromLang = from || 'hi';
     const toLang = to || (fromLang === 'hi' ? 'en' : 'hi');
-    const translated = await translateHelper.translate(text, fromLang, toLang);
-    res.json({ success: true, data: { original: text, translated, from: fromLang, to: toLang } });
+    
+    // ★ Pre-clean the text before translation
+    const cleaned = translateHelper.preCleanText(text);
+    const translated = await translateHelper.translate(cleaned, fromLang, toLang);
+    // ★ Normalize spacing after translation
+    const normalized = translateHelper.normalizeSpacing(translated);
+    
+    res.json({ success: true, data: { original: text, translated: normalized, from: fromLang, to: toLang } });
   } catch (error) { next(error); }
 };
 
@@ -46,7 +52,7 @@ const clearCache = async (req, res) => {
 };
 
 // ═══════════════════════════════════════════════════
-//        REPAIR CORRUPTED TRANSLATIONS
+//   REPAIR CORRUPTED TRANSLATIONS + SPACING
 // ═══════════════════════════════════════════════════
 
 const repairPreview = async (req, res, next) => {
@@ -97,10 +103,10 @@ const repairExecute = async (req, res, next) => {
     for (const q of questions) {
       const result = translateHelper.repairQuestion(q.toObject());
       if (result.repairCount > 0) {
-        // Build update object
         const update = {};
         if (result.question.options) update.options = result.question.options;
         if (result.question.question) update.question = result.question.question;
+        if (result.question.explanation) update.explanation = result.question.explanation;
         if (result.question.assertionReasonData) update.assertionReasonData = result.question.assertionReasonData;
 
         if (Object.keys(update).length > 0) {

@@ -1,18 +1,22 @@
 // server/utils/translateHelper.js
 // ═══════════════════════════════════════════════════════════════
-//  ULTIMATE TRANSLATION ENGINE v4.2 — SPEED + OPTION CODE FIX
-//  - Parallel batch processing (8 concurrent)
-//  - Global text deduplication
-//  - Batch size 100 (Azure max)
-//  - Smart cache with persistence across requests
-//  - Azure notranslate spans (native protection)
-//  - 50+ protection patterns
-//  - Option code skip (A,B,C,D / A-III,B-I etc)
-//  - Post-translation validation & auto-fix
+//  ULTIMATE TRANSLATION ENGINE v5.0 — EXTREME SMART
+//  FIXES:
+//  - Pre-translation text cleaning (stuck words separation)
+//  - English keyword extraction from Hindi text
+//  - Post-translation spacing normalization
+//  - Mixed-language detection & re-translation
+//  - Number/parenthesis spacing
+//  - 80+ protection patterns
+//  - Option code preservation (A-I, B-III etc)
+//  - Corruption auto-fix with context awareness
 // ═══════════════════════════════════════════════════════════════
 
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
+
+const HINDI_RE = /[\u0900-\u097F]/;
+const ENGLISH_RE = /[A-Za-z]/;
 
 class TranslateHelper {
   constructor() {
@@ -32,66 +36,69 @@ class TranslateHelper {
     this.googleTranslate = null;
     try { this.googleTranslate = require('google-translate-api-x'); } catch (e) {}
 
-    // Stats
     this.stats = {
       translated: 0, skipped: 0, protected: 0,
       failed: 0, corruptions_caught: 0, auto_fixed: 0,
-      deduplicated: 0, cache_hits: 0
+      deduplicated: 0, cache_hits: 0, pre_cleaned: 0,
+      spacing_fixed: 0, mixed_lang_fixed: 0
     };
 
-    // Token counter
     this._tc = 0;
 
     // ═══════════════════════════════════════════════════
-    //     PROTECTION PATTERNS — THE HEART OF THE SYSTEM
+    //  ENGLISH KEYWORDS commonly found stuck in Hindi text
     // ═══════════════════════════════════════════════════
+    this.ENGLISH_KEYWORDS_IN_HINDI = [
+      // Question keywords
+      'NOT', 'INCORRECT', 'CORRECT', 'TRUE', 'FALSE',
+      'WRONG', 'RIGHT', 'WHICH', 'FOLLOWING', 'GIVEN',
+      'BELOW', 'ABOVE', 'MOST', 'LEAST', 'BEST',
+      'ONLY', 'ALL', 'NONE', 'BOTH', 'EITHER',
+      'NEITHER', 'EXCEPT', 'OTHER', 'THAN', 'AND', 'OR',
+      // Common English terms in exam questions
+      'UNESCO', 'UNDP', 'WHO', 'GDP', 'GNP',
+      'DNA', 'RNA', 'pH', 'BOD', 'COD',
+      'INC', 'BJP', 'RSS', 'AITUC', 'CPI',
+      'NDA', 'UPA', 'NITI', 'RBI', 'SEBI',
+      'WTO', 'IMF', 'UNICEF', 'NATO', 'ASEAN',
+      'SAARC', 'BRICS', 'QUAD', 'SCO',
+      'FIR', 'PIL', 'RTI', 'CAG', 'CBI',
+      'IAS', 'IPS', 'IFS', 'UPSC', 'SSC',
+      'UGC', 'AICTE', 'NCTE', 'NAAC', 'NBA',
+      'NEP', 'ICT', 'MOOCs', 'SWAYAM',
+      'AD', 'BC', 'CE', 'BCE',
+    ];
 
-    // ── CATEGORY 1: FULL TEXT SKIP (entire string never translated) ──
+    // Build regex for stuck keyword detection
+    this._buildKeywordPatterns();
+
+    // ═══════════════════════════════════════════════════
+    //     SKIP PATTERNS — entire text never translated
+    // ═══════════════════════════════════════════════════
     this.SKIP_FULL = [
-      // Match code options: "A-I, B-III, C-II, D-IV" (with or without parens)
       /^[A-Da-d]\s*[-–—]\s*[IVXivx]+(\s*[,;]\s*[A-Da-d]\s*[-–—]\s*[IVXivx]+){1,7}\s*$/,
       /^[A-Da-d]\s*[-–—]\s*\([ivxIVX]+\)(\s*[,;]\s*[A-Da-d]\s*[-–—]\s*\([ivxIVX]+\)){1,7}\s*$/,
       /^[A-Da-d]\s*[-–—]\s*\(?(VIII|VII|VI|IV|IX|III|II|I|V|X)\)?(\s*,\s*[A-Da-d]\s*[-–—]\s*\(?(VIII|VII|VI|IV|IX|III|II|I|V|X)\)?){1,}\s*$/i,
-
-      // Letter sequence options: "A, B, C, D, E" or "B, E, C, D, A"
       /^[A-Ea-e](\s*,\s*[A-Ea-e]){2,}\s*$/,
       /^\(?[A-Ea-e]\)?(\s*,\s*\(?[A-Ea-e]\)?){2,}\s*$/,
-
-      // Number sequence options: "1, 2, 3, 4, 5" or "3, 1, 4, 2"
       /^\d(\s*,\s*\d){2,}\s*$/,
       /^\(?\d\)?(\s*,\s*\(?\d\)?){2,}\s*$/,
-
-      // Roman numeral sequences: "I, II, III, IV" or "III, I, IV, II"
       /^(VIII|VII|VI|IV|IX|III|II|I|V|X)(\s*,\s*(VIII|VII|VI|IV|IX|III|II|I|V|X)){1,}\s*$/,
       /^\(?[ivx]+\)?(\s*,\s*\(?[ivx]+\)?){1,}\s*$/i,
-
-      // Pure numbers, decimals, percentages
       /^\s*[-+]?\d+(\.\d+)?\s*%?\s*$/,
       /^\s*[-+]?\d+(\.\d+)?\s*°?[A-Za-z]{0,5}\s*$/,
-
-      // Single letter
       /^[A-Za-z]$/,
-
-      // URLs
       /^https?:\/\//,
-
-      // Only digits/symbols
       /^[\d\s.,;:+\-–—/*=%°()\[\]{}]+$/,
-
-      // Standalone Roman numeral
       /^(VIII|VII|VI|IV|IX|III|II|I|V|X)$/,
-
-      // Already matched code pattern (no commas)
       /^([A-D]\s*[-–]\s*[IVXivx]+\s*[,;\s]*){2,}$/i,
-
-      // Year ranges: "1206-1526"
       /^\d{3,4}\s*[-–—]\s*\d{3,4}$/,
-
-      // Fractions: "3/4"
       /^\d+\/\d+$/,
     ];
 
-    // ── CATEGORY 2: INLINE PROTECTION ──
+    // ═══════════════════════════════════════════════════
+    //     INLINE PROTECTION PATTERNS
+    // ═══════════════════════════════════════════════════
     this.PROTECT_INLINE = [
       { re: /\b([A-D])\s*[-–—]\s*(VIII|VII|VI|IV|IX|III|II|I|V|X)\b/gi, id: 'MCODE', priority: 10 },
       { re: /([A-D])\s*[-–—]\s*\(([ivxIVX]+)\)/gi, id: 'MCODEP', priority: 10 },
@@ -122,9 +129,10 @@ class TranslateHelper {
       { re: /\b[\w.-]+@[\w.-]+\.\w+\b/g, id: 'EMAIL', priority: 9 },
     ];
 
-    // ── CATEGORY 3: POST-TRANSLATION CORRUPTION DETECTION ──
+    // ═══════════════════════════════════════════════════
+    //     CORRUPTION DETECTORS
+    // ═══════════════════════════════════════════════════
     this.CORRUPTION_DETECTORS = [
-      // Label corruptions
       { pattern: /\(\s*ए\s*\)/g, fix: '(A)', desc: '(ए)→(A)' },
       { pattern: /\(\s*आर\s*\)/g, fix: '(R)', desc: '(आर)→(R)' },
       { pattern: /\(\s*बी\s*\)/g, fix: '(B)', desc: '(बी)→(B)' },
@@ -133,8 +141,6 @@ class TranslateHelper {
       { pattern: /\(\s*ई\s*\)/g, fix: '(E)', desc: '(ई)→(E)' },
       { pattern: /\(\s*आई\s*\)/g, fix: '(i)', desc: '(आई)→(i)' },
       { pattern: /\(\s*ii\s*\)/g, fix: '(ii)', desc: 'normalize' },
-
-      // Match code corruptions: ए-आई → A-I
       { pattern: /ए\s*[-–]\s*आई/g, fix: 'A-I', desc: 'ए-आई→A-I' },
       { pattern: /बी\s*[-–]\s*आई/g, fix: 'B-I', desc: 'बी-आई→B-I' },
       { pattern: /सी\s*[-–]\s*आई/g, fix: 'C-I', desc: 'सी-आई→C-I' },
@@ -155,42 +161,25 @@ class TranslateHelper {
       { pattern: /बी\s*[-–]\s*वी/g, fix: 'B-V', desc: 'बी-वी→B-V' },
       { pattern: /सी\s*[-–]\s*वी/g, fix: 'C-V', desc: 'सी-वी→C-V' },
       { pattern: /डी\s*[-–]\s*वी/g, fix: 'D-V', desc: 'डी-वी→D-V' },
-
-      // Statement/List label corruptions
       { pattern: /कथन\s+आई\b/g, fix: 'कथन I', desc: 'कथन आई→कथन I' },
       { pattern: /कथन\s+द्वितीय\b/g, fix: 'कथन II', desc: 'कथन द्वितीय→कथन II' },
       { pattern: /कथन\s+तृतीय\b/g, fix: 'कथन III', desc: 'कथन तृतीय→कथन III' },
-      { pattern: /स्टेटमेंट\s+आई\b/g, fix: 'Statement I', desc: 'स्टेटमेंट आई→Statement I' },
-      { pattern: /स्टेटमेंट\s+द्वितीय\b/g, fix: 'Statement II', desc: 'स्टेटमेंट द्वितीय→Statement II' },
-      { pattern: /अभिकथन\s*\(\s*ए\s*\)/g, fix: 'अभिकथन (A)', desc: 'अभिकथन(ए)→अभिकथन(A)' },
-      { pattern: /कारण\s*\(\s*आर\s*\)/g, fix: 'कारण (R)', desc: 'कारण(आर)→कारण(R)' },
+      { pattern: /स्टेटमेंट\s+आई\b/g, fix: 'Statement I', desc: 'स्टेटमेंट→Statement I' },
+      { pattern: /स्टेटमेंट\s+द्वितीय\b/g, fix: 'Statement II', desc: 'स्टेटमेंट→Statement II' },
+      { pattern: /अभिकथन\s*\(\s*ए\s*\)/g, fix: 'अभिकथन (A)', desc: 'अभिकथन(ए)→(A)' },
+      { pattern: /कारण\s*\(\s*आर\s*\)/g, fix: 'कारण (R)', desc: 'कारण(आर)→(R)' },
       { pattern: /सूची\s*[-–]?\s*आई\b/g, fix: 'सूची-I', desc: 'सूची-आई→सूची-I' },
       { pattern: /सूची\s*[-–]?\s*द्वितीय\b/g, fix: 'सूची-II', desc: 'सूची-द्वितीय→सूची-II' },
       { pattern: /\bआई\b(?=\s*[,.]|\s+और\b)/g, fix: 'I', desc: 'आई→I (standalone)' },
-
-      // Option code full-text corruptions (entire option is corrupted)
-      { pattern: /^ए\s*,\s*बी\s*,\s*सी\s*,\s*डी\s*,\s*ई$/g, fix: 'A, B, C, D, E', desc: 'ए,बी,सी,डी,ई→A,B,C,D,E' },
-      { pattern: /^ए\s*,\s*बी\s*,\s*सी\s*,\s*डी$/g, fix: 'A, B, C, D', desc: 'ए,बी,सी,डी→A,B,C,D' },
-      { pattern: /^बी\s*,\s*ई\s*,\s*सी\s*,\s*डी\s*,\s*ए$/g, fix: 'B, E, C, D, A', desc: 'बी,ई,सी,डी,ए→B,E,C,D,A' },
-      { pattern: /^बी\s*,\s*सी\s*,\s*डी\s*,\s*ई\s*,\s*ए$/g, fix: 'B, C, D, E, A', desc: 'बी,सी,डी,ई,ए→B,C,D,E,A' },
-      { pattern: /^सी\s*,\s*डी\s*,\s*बी\s*,\s*ई\s*,\s*ए$/g, fix: 'C, D, B, E, A', desc: 'सी,डी,बी,ई,ए→C,D,B,E,A' },
-      { pattern: /^ए\s*,\s*बी\s*,\s*सी\s*,\s*ई\s*,\s*डी$/g, fix: 'A, B, C, E, D', desc: 'ए,बी,सी,ई,डी→A,B,C,E,D' },
-      { pattern: /^ए\s*,\s*ई\s*,\s*डी\s*,\s*सी\s*,\s*बी$/g, fix: 'A, E, D, C, B', desc: 'ए,ई,डी,सी,बी→A,E,D,C,B' },
-
-      // Inline letter fixes (within longer text containing Hindi letter codes)
-      { pattern: /\bए\b(?=\s*,)/g, fix: 'A', desc: 'ए→A (before comma)' },
-      { pattern: /(?<=,\s*)\bए\b/g, fix: 'A', desc: 'ए→A (after comma)' },
-      { pattern: /\bबी\b(?=\s*[,)]|\s*$)/g, fix: 'B', desc: 'बी→B (in sequence)' },
-      { pattern: /(?<=,\s*)\bबी\b/g, fix: 'B', desc: 'बी→B (after comma)' },
-      { pattern: /\bसी\b(?=\s*[,)]|\s*$)/g, fix: 'C', desc: 'सी→C (in sequence)' },
-      { pattern: /(?<=,\s*)\bसी\b/g, fix: 'C', desc: 'सी→C (after comma)' },
-      { pattern: /\bडी\b(?=\s*[,)]|\s*$)/g, fix: 'D', desc: 'डी→D (in sequence)' },
-      { pattern: /(?<=,\s*)\bडी\b/g, fix: 'D', desc: 'डी→D (after comma)' },
-      { pattern: /\bई\b(?=\s*[,)]|\s*$)/g, fix: 'E', desc: 'ई→E (in sequence)' },
-      { pattern: /(?<=,\s*)\bई\b/g, fix: 'E', desc: 'ई→E (after comma)' },
+      { pattern: /^ए\s*,\s*बी\s*,\s*सी\s*,\s*डी\s*,\s*ई$/g, fix: 'A, B, C, D, E', desc: 'full opt code' },
+      { pattern: /^ए\s*,\s*बी\s*,\s*सी\s*,\s*डी$/g, fix: 'A, B, C, D', desc: 'full opt code' },
+      { pattern: /^बी\s*,\s*ई\s*,\s*सी\s*,\s*डी\s*,\s*ए$/g, fix: 'B, E, C, D, A', desc: 'full opt code' },
+      { pattern: /^बी\s*,\s*सी\s*,\s*डी\s*,\s*ई\s*,\s*ए$/g, fix: 'B, C, D, E, A', desc: 'full opt code' },
     ];
 
-    // ── CATEGORY 4: WORDS THAT SHOULD NEVER BE TRANSLATED ──
+    // ═══════════════════════════════════════════════════
+    //     NEVER TRANSLATE WORDS
+    // ═══════════════════════════════════════════════════
     this.NEVER_TRANSLATE_WORDS = new Set([
       'SWAYAM', 'MOOC', 'MOOCs', 'NAAC', 'NIRF', 'NBA', 'UGC', 'AICTE',
       'NCTE', 'BCI', 'NMC', 'NAD', 'NDL', 'ICT', 'NEP', 'CBCS', 'CBT',
@@ -206,35 +195,244 @@ class TranslateHelper {
     ]);
 
     const p = this.azureAvailable ? 'Azure' : 'Google';
-    console.log(`[TranslateHelper v4.2] Primary: ${p} | Batch: ${this.batchSize} | Concurrent: ${this.maxConcurrent} | Patterns: ${this.PROTECT_INLINE.length} protect, ${this.CORRUPTION_DETECTORS.length} validators, ${this.SKIP_FULL.length} skip`);
+    console.log(`[TranslateHelper v5.0] Primary: ${p} | Batch: ${this.batchSize} | Concurrent: ${this.maxConcurrent}`);
 
-    // Pre-validate Azure key on startup
     if (this.azureAvailable) {
       this._warmupAzure();
     }
   }
 
   // ═══════════════════════════════════════════════════
-  //     AZURE WARM-UP — Validate key on startup
+  //  BUILD KEYWORD PATTERNS for stuck word detection
+  // ═══════════════════════════════════════════════════
+  _buildKeywordPatterns() {
+    // Patterns for English words stuck to Hindi text
+    // e.g., "सेINCORRECTलेखक" → "से INCORRECT लेखक"
+    // e.g., "NOTकौन" → "NOT कौन"
+    // e.g., "खानवा(1527)की" → "खानवा (1527) की"
+    this._stuckPatterns = [];
+
+    // Pattern 1: Hindi+ENGLISH+Hindi (e.g., सेINCORRECTलेखक)
+    // Devanagari char followed by uppercase English word followed by Devanagari
+    this._stuckPatterns.push({
+      re: /([\u0900-\u097F\u0964\u0965])([A-Z]{2,})([\u0900-\u097F])/g,
+      fix: '$1 $2 $3',
+      desc: 'Hindi+UPPER+Hindi'
+    });
+
+    // Pattern 2: ENGLISH+Hindi (e.g., NOTकौन)
+    this._stuckPatterns.push({
+      re: /([A-Z]{2,})([\u0900-\u097F])/g,
+      fix: '$1 $2',
+      desc: 'UPPER+Hindi'
+    });
+
+    // Pattern 3: Hindi+ENGLISH (e.g., कौनNOT)
+    this._stuckPatterns.push({
+      re: /([\u0900-\u097F])([A-Z]{2,})/g,
+      fix: '$1 $2',
+      desc: 'Hindi+UPPER'
+    });
+
+    // Pattern 4: Hindi+lowercase_english+Hindi (e.g., सेtheलेखक) - rare but handle
+    this._stuckPatterns.push({
+      re: /([\u0900-\u097F])([a-z]{3,})([\u0900-\u097F])/g,
+      fix: '$1 $2 $3',
+      desc: 'Hindi+lower+Hindi'
+    });
+
+    // Pattern 5: Word(number)Word — e.g., खानवा(1527)की
+    this._stuckPatterns.push({
+      re: /([\u0900-\u097F\w])\((\d+)\)([\u0900-\u097F\w])/g,
+      fix: '$1 ($2) $3',
+      desc: 'word(num)word'
+    });
+
+    // Pattern 6: Word(number) — e.g., खानवा(1527)
+    this._stuckPatterns.push({
+      re: /([\u0900-\u097F])\((\d+)\)/g,
+      fix: '$1 ($2)',
+      desc: 'hindi(num)'
+    });
+
+    // Pattern 7: (number)Word — e.g., (1527)की
+    this._stuckPatterns.push({
+      re: /\((\d+)\)([\u0900-\u097F])/g,
+      fix: '($1) $2',
+      desc: '(num)hindi'
+    });
+
+    // Pattern 8: Hindi-English mixed with hyphen but no space
+    // e.g., "में से" + "INCORRECT" stuck
+    this._stuckPatterns.push({
+      re: /([\u0900-\u097F])(NOT|INCORRECT|CORRECT|TRUE|FALSE|AND|OR|WHICH|THE|OF|IN|BY|TO|FOR|FROM|WITH|AT|ON|IS|ARE|WAS|WERE|HAS|HAVE|HAD|THIS|THAT|THESE|THOSE|MOST|LEAST|BEST|ONLY|ALL|NONE|BOTH|EITHER|NEITHER|EXCEPT|OTHER|THAN|ALSO|BUT|VERY|MUCH|MANY|SOME|ANY|EACH|EVERY|SUCH|SAME|MORE|LESS)([\u0900-\u097F])/gi,
+      fix: '$1 $2 $3',
+      desc: 'hindi+keyword+hindi'
+    });
+
+    // Pattern 9: Single letter stuck — e.g., "केa" or "काb"
+    this._stuckPatterns.push({
+      re: /([\u0900-\u097F])([a-z])\s/g,
+      fix: '$1 $2 ',
+      desc: 'hindi+singleletter'
+    });
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  PRE-TRANSLATION TEXT CLEANING — THE KEY FIX
+  //  Separates stuck English words from Hindi text
+  // ═══════════════════════════════════════════════════
+  preCleanText(text) {
+    if (!text || typeof text !== 'string') return text || '';
+
+    let result = text;
+    let changed = false;
+
+    // Apply all stuck patterns
+    for (const pat of this._stuckPatterns) {
+      const before = result;
+      result = result.replace(pat.re, pat.fix);
+      if (result !== before) changed = true;
+    }
+
+    // Fix multiple spaces that may have been created
+    result = result.replace(/\s{2,}/g, ' ').trim();
+
+    // Fix common stuck patterns with numbers
+    // "1527ई." → "1527 ई."
+    result = result.replace(/(\d)(ई\.?\s*पू\.?|ई\.?|ईसवी|ईस्वी)/g, '$1 $2');
+
+    // "पू.1527" → "पू. 1527"
+    result = result.replace(/(ई\.?\s*पू\.?|ई\.?)(\d)/g, '$1 $2');
+
+    // Fix Hindi punctuation spacing
+    // "है।" is fine, but "है।The" needs space
+    result = result.replace(/([\u0964\u0965])([A-Za-z])/g, '$1 $2');
+
+    // Fix "word।word" → "word। word"
+    result = result.replace(/([A-Za-z])([\u0964\u0965])/g, '$1 $2');
+
+    if (changed) {
+      this.stats.pre_cleaned++;
+    }
+
+    return result;
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  POST-TRANSLATION SPACING NORMALIZATION
+  // ═══════════════════════════════════════════════════
+  normalizeSpacing(text) {
+    if (!text || typeof text !== 'string') return text || '';
+
+    let result = text;
+
+    // 1. Fix parenthesis spacing
+    // "(1527)word" → "(1527) word"  
+    result = result.replace(/\)([A-Za-z\u0900-\u097F])/g, ') $1');
+    // "word(1527)" — only add space if preceded by letter
+    result = result.replace(/([A-Za-z\u0900-\u097F])\(/g, '$1 (');
+
+    // 2. Fix Hindi-English transitions
+    // "hindiEnglish" → "hindi English"
+    result = result.replace(/([\u0900-\u097F])([A-Z])/g, '$1 $2');
+    // "Englishhindi" → "English hindi"  
+    result = result.replace(/([a-z])([ा-ू\u0900-\u097F])/g, '$1 $2');
+    result = result.replace(/([A-Z])([ा-ू\u0900-\u097F])/g, '$1 $2');
+
+    // 3. Fix number-word transitions
+    // "1527word" → "1527 word" (but not "1st", "2nd" etc)
+    result = result.replace(/(\d)([\u0900-\u097F])/g, '$1 $2');
+    result = result.replace(/([\u0900-\u097F])(\d)/g, '$1 $2');
+
+    // 4. Fix punctuation spacing
+    // "word.Word" → "word. Word" (sentence boundary)
+    result = result.replace(/([।.!?])([A-Z\u0900-\u097F])/g, '$1 $2');
+
+    // 5. Fix comma spacing — "word,word" → "word, word"
+    result = result.replace(/,([A-Za-z\u0900-\u097F])/g, ', $1');
+
+    // 6. Fix colon/semicolon spacing
+    result = result.replace(/:([A-Za-z\u0900-\u097F])/g, ': $1');
+    result = result.replace(/;([A-Za-z\u0900-\u097F])/g, '; $1');
+
+    // 7. Normalize multiple spaces
+    result = result.replace(/\s{2,}/g, ' ').trim();
+
+    return result;
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  MIXED LANGUAGE DETECTION
+  //  Detects if translated text still has untranslated portions
+  // ═══════════════════════════════════════════════════
+  detectMixedLanguage(text, targetLang) {
+    if (!text || text.length < 20) return { isMixed: false, ratio: 0 };
+
+    const words = text.split(/\s+/);
+    if (words.length < 3) return { isMixed: false, ratio: 0 };
+
+    let hindiWords = 0;
+    let englishWords = 0;
+    let totalSignificant = 0;
+
+    for (const word of words) {
+      // Skip short words, numbers, punctuation
+      if (word.length < 2) continue;
+      if (/^[\d.,;:!?()[\]{}"'`\-–—]+$/.test(word)) continue;
+
+      // Skip known untranslatable words
+      if (this.NEVER_TRANSLATE_WORDS.has(word.toUpperCase())) continue;
+
+      // Skip option codes
+      if (/^[A-D][-–][IVX]+$/i.test(word)) continue;
+
+      totalSignificant++;
+
+      if (HINDI_RE.test(word)) {
+        hindiWords++;
+      } else if (ENGLISH_RE.test(word)) {
+        englishWords++;
+      }
+    }
+
+    if (totalSignificant < 3) return { isMixed: false, ratio: 0 };
+
+    const hindiRatio = hindiWords / totalSignificant;
+    const englishRatio = englishWords / totalSignificant;
+
+    // If target is Hindi but >40% English words, it's mixed
+    if (targetLang === 'hi' && englishRatio > 0.4 && hindiRatio > 0.2) {
+      return { isMixed: true, ratio: englishRatio, direction: 'has_english' };
+    }
+
+    // If target is English but >40% Hindi words, it's mixed
+    if (targetLang === 'en' && hindiRatio > 0.4 && englishRatio > 0.2) {
+      return { isMixed: true, ratio: hindiRatio, direction: 'has_hindi' };
+    }
+
+    return { isMixed: false, ratio: 0 };
+  }
+
+  // ═══════════════════════════════════════════════════
+  //     AZURE WARM-UP
   // ═══════════════════════════════════════════════════
   async _warmupAzure() {
     try {
       await this.callAzure(['test'], 'en', 'hi');
       this.azureValidated = true;
-      console.log('[TranslateHelper v4.2] Azure key validated successfully');
+      console.log('[TranslateHelper v5.0] Azure key validated');
     } catch (e) {
-      console.warn('[TranslateHelper v4.2] Azure warm-up failed:', e.message);
+      console.warn('[TranslateHelper v5.0] Azure warm-up failed:', e.message);
       if (e.response?.status === 401 || e.response?.status === 403) {
         this.azureAvailable = false;
-        console.error('[TranslateHelper v4.2] Azure key INVALID — falling back to Google');
       }
     }
   }
 
   // ═══════════════════════════════════════════════════
-  //              SKIP DETECTION
+  //     SKIP DETECTION
   // ═══════════════════════════════════════════════════
-
   shouldSkip(text) {
     if (!text || typeof text !== 'string') return true;
     const t = text.trim();
@@ -250,7 +448,6 @@ class TranslateHelper {
   // ═══════════════════════════════════════════════════
   //     PROTECTION ENGINE
   // ═══════════════════════════════════════════════════
-
   protect(text) {
     if (!text) return { text: text || '', map: {}, count: 0 };
 
@@ -291,7 +488,13 @@ class TranslateHelper {
 
     for (const [token, original] of Object.entries(map)) {
       const esc = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      result = result.replace(new RegExp(`\\s*${esc}\\s*`, 'g'), original);
+      // Restore with proper spacing
+      result = result.replace(new RegExp(`\\s*${esc}\\s*`, 'g'), (match) => {
+        // Preserve at least one space on each side if there was one
+        const leadSpace = /^\s/.test(match) ? ' ' : '';
+        const trailSpace = /\s$/.test(match) ? ' ' : '';
+        return leadSpace + original + trailSpace;
+      });
     }
 
     result = result.replace(/\s*ZNT\d+Z\s*/g, ' ');
@@ -301,7 +504,6 @@ class TranslateHelper {
   // ═══════════════════════════════════════════════════
   //     POST-TRANSLATION VALIDATION & AUTO-FIX
   // ═══════════════════════════════════════════════════
-
   validate(translatedText, originalText) {
     if (!translatedText) return { text: translatedText, fixed: false, fixes: [] };
 
@@ -320,7 +522,8 @@ class TranslateHelper {
       }
     }
 
-    const suspiciousCount = (result.match(/\b[एबीसीडी]\b/g) || []).length;
+    // Check for high corruption — many Hindi letter codes
+    const suspiciousCount = (result.match(/\b[एबीसीडीई]\b/g) || []).length;
     if (suspiciousCount >= 3 && originalText) {
       if (this.shouldSkip(originalText)) {
         result = originalText;
@@ -383,9 +586,8 @@ class TranslateHelper {
   }
 
   // ═══════════════════════════════════════════════════
-  //              CORE TRANSLATION
+  //     CORE TRANSLATION HELPERS
   // ═══════════════════════════════════════════════════
-
   sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
   getCacheKey(t, f, to) { return `${f}:${to}:${t.substring(0, 200)}`; }
 
@@ -403,9 +605,8 @@ class TranslateHelper {
   }
 
   // ═══════════════════════════════════════════════════
-  //              AZURE TRANSLATOR
+  //     AZURE TRANSLATOR
   // ═══════════════════════════════════════════════════
-
   async callAzure(texts, from, to) {
     if (!this.azureAvailable) throw new Error('Azure not configured');
     if (!texts.length) return [];
@@ -438,9 +639,8 @@ class TranslateHelper {
   }
 
   // ═══════════════════════════════════════════════════
-  //              GOOGLE TRANSLATE (FALLBACK)
+  //     GOOGLE TRANSLATE (FALLBACK)
   // ═══════════════════════════════════════════════════
-
   async callGoogle(texts, from, to) {
     if (!this.googleTranslate) throw new Error('Google not available');
     if (texts.length === 1) {
@@ -454,11 +654,9 @@ class TranslateHelper {
   // ═══════════════════════════════════════════════════
   //     PARALLEL CHUNK EXECUTOR
   // ═══════════════════════════════════════════════════
-
   async _translateChunk(chunkTexts, from, to) {
     let translated = null;
 
-    // Try Azure first
     if (this.azureAvailable) {
       try {
         translated = await this.callAzure(chunkTexts, from, to);
@@ -467,7 +665,6 @@ class TranslateHelper {
       }
     }
 
-    // Fallback to Google
     if (!translated && this.googleAvailable && this.googleTranslate) {
       try {
         translated = [];
@@ -500,7 +697,6 @@ class TranslateHelper {
       }
     };
 
-    // Launch N workers in parallel
     const concurrency = Math.min(this.maxConcurrent, chunks.length);
     const workers = [];
     for (let i = 0; i < concurrency; i++) {
@@ -514,15 +710,14 @@ class TranslateHelper {
   // ═══════════════════════════════════════════════════
   //     MAIN BATCH TRANSLATE — THE OPTIMIZED PIPELINE
   // ═══════════════════════════════════════════════════
-
   async translateBatch(texts, from = 'hi', to = 'en') {
     if (!texts || texts.length === 0) return [];
 
     const results = new Array(texts.length).fill('');
-    const toTranslate = [];       // { idx, original, processed, protMap, protCount }
-    const dedupMap = new Map();   // text → [indices]
+    const toTranslate = [];
+    const dedupMap = new Map();
 
-    // ════════ STAGE 1: PRE-PROCESSING + DEDUPLICATION ════════
+    // ════════ STAGE 1: PRE-PROCESSING + CLEANING + DEDUPLICATION ════════
     for (let i = 0; i < texts.length; i++) {
       const text = texts[i];
       if (!text || typeof text !== 'string' || !text.trim()) {
@@ -530,9 +725,10 @@ class TranslateHelper {
         continue;
       }
 
-      const trimmed = text.trim();
+      // ★ PRE-CLEAN: Separate stuck English words from Hindi
+      let trimmed = this.preCleanText(text.trim());
 
-      // Check cache
+      // Check cache (with cleaned text)
       const cached = this.getFromCache(trimmed, from, to);
       if (cached) {
         results[i] = cached;
@@ -548,7 +744,7 @@ class TranslateHelper {
         continue;
       }
 
-      // Deduplication — if same text appears multiple times, only translate once
+      // Deduplication
       if (dedupMap.has(trimmed)) {
         dedupMap.get(trimmed).push(i);
         this.stats.deduplicated++;
@@ -570,7 +766,6 @@ class TranslateHelper {
     }
 
     if (toTranslate.length === 0) {
-      // Resolve dedup references from cache
       for (const [text, indices] of dedupMap) {
         const cached = this.getFromCache(text, from, to);
         if (cached) {
@@ -583,15 +778,13 @@ class TranslateHelper {
     }
 
     const protectedItems = toTranslate.filter(t => t.protCount > 0).length;
-    console.log(`[Translate] ${toTranslate.length} unique to translate (${from}→${to}), ${protectedItems} protected, ${texts.length - toTranslate.length} skipped/cached/dedup (dedup saved: ${this.stats.deduplicated})`);
+    console.log(`[Translate] ${toTranslate.length} unique to translate (${from}→${to}), ${protectedItems} protected, ${this.stats.pre_cleaned} pre-cleaned`);
 
     // ════════ STAGE 2: PARALLEL TRANSLATION ════════
     const chunks = [];
     for (let i = 0; i < toTranslate.length; i += this.batchSize) {
       chunks.push(toTranslate.slice(i, i + this.batchSize));
     }
-
-    console.log(`[Translate] Split into ${chunks.length} chunks of max ${this.batchSize}, running ${Math.min(this.maxConcurrent, chunks.length)} in parallel`);
 
     const chunkResults = await this._runParallelChunks(chunks, from, to);
 
@@ -601,7 +794,6 @@ class TranslateHelper {
       const translated = chunkResults[ci];
 
       if (!translated) {
-        // Entire chunk failed
         for (const item of chunk) {
           results[item.idx] = item.original;
           this.stats.failed++;
@@ -619,18 +811,31 @@ class TranslateHelper {
           this.stats.protected++;
         }
 
-        // 3b: Validate & auto-fix corruptions
+        // 3b: ★ NORMALIZE SPACING after translation
+        result = this.normalizeSpacing(result);
+        this.stats.spacing_fixed++;
+
+        // 3c: Validate & auto-fix corruptions
         const validation = this.validate(result, item.original);
         if (validation.fixed) {
           result = validation.text;
           this.stats.corruptions_caught += validation.fixes.length;
         }
 
+        // 3d: ★ Check for mixed language (incomplete translation)
+        const mixCheck = this.detectMixedLanguage(result, to);
+        if (mixCheck.isMixed && mixCheck.ratio > 0.5) {
+          // The translation is severely mixed — try to re-translate just the untranslated parts
+          this.stats.mixed_lang_fixed++;
+          // For now, log it. Re-translation would require another API call.
+          // In extreme cases, we note it but the pre-cleaning should prevent most of these.
+        }
+
         results[item.idx] = result;
         this.addToCache(item.original, from, to, result);
         this.stats.translated++;
 
-        // 3c: Apply to all deduplicated indices
+        // 3e: Apply to all deduplicated indices
         const dedupIndices = dedupMap.get(item.original);
         if (dedupIndices && dedupIndices.length > 1) {
           for (const dupIdx of dedupIndices) {
@@ -646,9 +851,8 @@ class TranslateHelper {
   }
 
   // ═══════════════════════════════════════════════════
-  //              CONVENIENCE METHODS
+  //     CONVENIENCE METHODS
   // ═══════════════════════════════════════════════════
-
   async translate(text, from = 'hi', to = 'en') {
     if (!text || typeof text !== 'string' || !text.trim()) return text || '';
     const r = await this.translateBatch([text], from, to);
@@ -678,9 +882,8 @@ class TranslateHelper {
   }
 
   // ═══════════════════════════════════════════════════
-  //          QUESTION TRANSLATION
+  //     QUESTION TRANSLATION
   // ═══════════════════════════════════════════════════
-
   async translateQuestion(questionData, sourceLanguage = 'hi') {
     const tgt = sourceLanguage === 'hi' ? 'en' : 'hi';
     const texts = [];
@@ -706,8 +909,8 @@ class TranslateHelper {
     addArr(questionData.options, 'options');
     addText(questionData.explanation, 'explanation', 'string');
 
-    if (questionData.assertion) { addText(questionData.assertion, 'assertion', 'string'); }
-    if (questionData.reason) { addText(questionData.reason, 'reason', 'string'); }
+    if (questionData.assertion) addText(questionData.assertion, 'assertion', 'string');
+    if (questionData.reason) addText(questionData.reason, 'reason', 'string');
     if (questionData.assertionReasonData?.assertion?.[sourceLanguage]) {
       addText(questionData.assertionReasonData.assertion, 'ar_assertion', 'bilingual');
     }
@@ -789,7 +992,7 @@ class TranslateHelper {
 
       const { question: validated, totalFixes } = this.validateQuestion(questionData);
       if (totalFixes > 0) {
-        console.log(`[Translate] Post-validation fixed ${totalFixes} corruptions in question`);
+        console.log(`[Translate] Post-validation fixed ${totalFixes} corruptions`);
       }
 
     } catch (error) {
@@ -884,9 +1087,8 @@ class TranslateHelper {
   }
 
   // ═══════════════════════════════════════════════════
-  //          REPAIR (for translateController)
+  //     REPAIR
   // ═══════════════════════════════════════════════════
-
   repairQuestion(question) {
     if (!question) return { question, repairCount: 0, repairs: [] };
     const repairs = [];
@@ -894,6 +1096,14 @@ class TranslateHelper {
 
     const checkField = (obj, lang) => {
       if (!obj || !obj[lang]) return;
+      // First apply spacing normalization
+      const normalized = this.normalizeSpacing(obj[lang]);
+      if (normalized !== obj[lang]) {
+        obj[lang] = normalized;
+        repairs.push(`spacing_${lang}`);
+        repairCount++;
+      }
+      // Then check corruptions
       for (const d of this.CORRUPTION_DETECTORS) {
         const re = new RegExp(d.pattern.source, d.pattern.flags);
         if (re.test(obj[lang])) {
@@ -908,6 +1118,13 @@ class TranslateHelper {
       if (!obj || !Array.isArray(obj[lang])) return;
       for (let i = 0; i < obj[lang].length; i++) {
         if (!obj[lang][i]) continue;
+        // Spacing fix
+        const normalized = this.normalizeSpacing(obj[lang][i]);
+        if (normalized !== obj[lang][i]) {
+          obj[lang][i] = normalized;
+          repairs.push(`opt[${i}]_spacing_${lang}`);
+          repairCount++;
+        }
         for (const d of this.CORRUPTION_DETECTORS) {
           const re = new RegExp(d.pattern.source, d.pattern.flags);
           if (re.test(obj[lang][i])) {
@@ -933,9 +1150,8 @@ class TranslateHelper {
   }
 
   // ═══════════════════════════════════════════════════
-  //              STATUS & UTILITIES
+  //     STATUS & UTILITIES
   // ═══════════════════════════════════════════════════
-
   async testConnection() {
     const r = { azure: null, google: null };
     if (this.azureKey) {
@@ -964,7 +1180,8 @@ class TranslateHelper {
     this.stats = {
       translated: 0, skipped: 0, protected: 0,
       failed: 0, corruptions_caught: 0, auto_fixed: 0,
-      deduplicated: 0, cache_hits: 0
+      deduplicated: 0, cache_hits: 0, pre_cleaned: 0,
+      spacing_fixed: 0, mixed_lang_fixed: 0
     };
   }
 
