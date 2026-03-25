@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef } from 'react';
 import { 
   Filter, 
   X, 
@@ -15,27 +15,24 @@ import {
   PAPER_LABELS 
 } from '../../utils/constants';
 
-const QuestionFilter = ({
+const QuestionFilter = forwardRef(({
   filters,
   onFilterChange,
   onReset,
   syllabus,
   language = 'hi',
   showAdvanced = false
-}) => {
+}, ref) => {
   const [isExpanded, setIsExpanded] = useState(showAdvanced);
   const [localFilters, setLocalFilters] = useState(filters || {});
 
-  // Update local filters when props change
   useEffect(() => {
     setLocalFilters(filters || {});
   }, [filters]);
 
-  // Handle filter change
   const handleChange = (key, value) => {
     const newFilters = { ...localFilters, [key]: value };
     
-    // Reset dependent filters
     if (key === 'paper') {
       newFilters.unit = '';
       newFilters.chapter = '';
@@ -51,12 +48,10 @@ const QuestionFilter = ({
     onFilterChange(newFilters);
   };
 
-  // Get units based on selected paper
   const getUnits = () => {
     if (!syllabus || !localFilters.paper) return [];
     const paperSyllabus = syllabus[localFilters.paper];
     if (!paperSyllabus?.units) return [];
-    
     return paperSyllabus.units.map(unit => ({
       value: unit.name,
       label: unit.name,
@@ -64,13 +59,11 @@ const QuestionFilter = ({
     }));
   };
 
-  // Get chapters based on selected unit
   const getChapters = () => {
     if (!syllabus || !localFilters.paper || !localFilters.unit) return [];
     const paperSyllabus = syllabus[localFilters.paper];
     const unit = paperSyllabus?.units?.find(u => u.name === localFilters.unit);
     if (!unit?.chapters) return [];
-    
     return unit.chapters.map(ch => ({
       value: ch.name,
       label: ch.name,
@@ -78,14 +71,12 @@ const QuestionFilter = ({
     }));
   };
 
-  // Get topics based on selected chapter
   const getTopics = () => {
     if (!syllabus || !localFilters.paper || !localFilters.unit || !localFilters.chapter) return [];
     const paperSyllabus = syllabus[localFilters.paper];
     const unit = paperSyllabus?.units?.find(u => u.name === localFilters.unit);
     const chapter = unit?.chapters?.find(c => c.name === localFilters.chapter);
     if (!chapter?.topics) return [];
-    
     return chapter.topics.map(t => ({
       value: t.name,
       label: t.name,
@@ -93,28 +84,24 @@ const QuestionFilter = ({
     }));
   };
 
-  // Question type options
   const questionTypeOptions = Object.entries(QUESTION_TYPE_LABELS).map(([value, labels]) => ({
     value,
     label: labels.en,
     labelHi: labels.hi
   }));
 
-  // Difficulty options
   const difficultyOptions = Object.entries(DIFFICULTY_LABELS).map(([value, labels]) => ({
     value,
     label: labels.en,
     labelHi: labels.hi
   }));
 
-  // Paper options
   const paperOptions = Object.entries(PAPER_LABELS).map(([value, labels]) => ({
     value,
     label: labels.en,
     labelHi: labels.hi
   }));
 
-  // Count active filters
   const activeFilterCount = Object.values(localFilters).filter(v => v && v !== '').length;
 
   const handleReset = () => {
@@ -123,16 +110,16 @@ const QuestionFilter = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
+    <div className="bg-white dark:bg-secondary-800 rounded-xl border border-gray-200 dark:border-secondary-700 p-4 transition-colors">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Filter className="w-5 h-5 text-gray-500" />
-          <h3 className="font-medium text-gray-900">
+          <Filter className="w-5 h-5 text-gray-500 dark:text-secondary-400" />
+          <h3 className="font-medium text-gray-900 dark:text-white">
             {language === 'hi' ? 'फ़िल्टर' : 'Filters'}
           </h3>
           {activeFilterCount > 0 && (
-            <span className="px-2 py-0.5 text-xs font-medium bg-primary-100 text-primary-700 rounded-full">
+            <span className="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">
               {activeFilterCount}
             </span>
           )}
@@ -167,13 +154,18 @@ const QuestionFilter = ({
 
       {/* Search */}
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-secondary-500" />
         <input
+          ref={ref}
           type="text"
           value={localFilters.search || ''}
           onChange={(e) => handleChange('search', e.target.value)}
           placeholder={language === 'hi' ? 'प्रश्न खोजें...' : 'Search questions...'}
-          className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+          className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 dark:border-secondary-600 rounded-lg 
+                     bg-white dark:bg-secondary-900 text-gray-900 dark:text-white 
+                     placeholder-gray-400 dark:placeholder-secondary-500
+                     focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 
+                     dark:focus:border-primary-400 dark:focus:ring-primary-400 transition-colors"
         />
       </div>
 
@@ -225,7 +217,7 @@ const QuestionFilter = ({
 
       {/* Advanced Filters */}
       {isExpanded && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-secondary-700">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Dropdown
               label={language === 'hi' ? 'अध्याय' : 'Chapter'}
@@ -253,31 +245,35 @@ const QuestionFilter = ({
 
             {/* Date Range */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-secondary-300 mb-1">
                 {language === 'hi' ? 'से तारीख' : 'From Date'}
               </label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-secondary-500" />
                 <input
                   type="date"
                   value={localFilters.startDate || ''}
                   onChange={(e) => handleChange('startDate', e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
+                  className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 dark:border-secondary-600 rounded-lg 
+                             bg-white dark:bg-secondary-900 text-gray-900 dark:text-white 
+                             focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 transition-colors"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-secondary-300 mb-1">
                 {language === 'hi' ? 'तक तारीख' : 'To Date'}
               </label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-secondary-500" />
                 <input
                   type="date"
                   value={localFilters.endDate || ''}
                   onChange={(e) => handleChange('endDate', e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
+                  className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 dark:border-secondary-600 rounded-lg 
+                             bg-white dark:bg-secondary-900 text-gray-900 dark:text-white 
+                             focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 transition-colors"
                 />
               </div>
             </div>
@@ -286,7 +282,7 @@ const QuestionFilter = ({
           {/* Source & Year */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-secondary-300 mb-1">
                 {language === 'hi' ? 'स्रोत' : 'Source'}
               </label>
               <input
@@ -294,12 +290,15 @@ const QuestionFilter = ({
                 value={localFilters.source || ''}
                 onChange={(e) => handleChange('source', e.target.value)}
                 placeholder={language === 'hi' ? 'जैसे: PYQ-2023' : 'e.g., PYQ-2023'}
-                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-secondary-600 rounded-lg 
+                           bg-white dark:bg-secondary-900 text-gray-900 dark:text-white 
+                           placeholder-gray-400 dark:placeholder-secondary-500
+                           focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-secondary-300 mb-1">
                 {language === 'hi' ? 'वर्ष' : 'Year'}
               </label>
               <input
@@ -307,7 +306,10 @@ const QuestionFilter = ({
                 value={localFilters.year || ''}
                 onChange={(e) => handleChange('year', e.target.value)}
                 placeholder={language === 'hi' ? 'जैसे: 2023' : 'e.g., 2023'}
-                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500"
+                className="w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-secondary-600 rounded-lg 
+                           bg-white dark:bg-secondary-900 text-gray-900 dark:text-white 
+                           placeholder-gray-400 dark:placeholder-secondary-500
+                           focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 transition-colors"
               />
             </div>
           </div>
@@ -315,6 +317,8 @@ const QuestionFilter = ({
       )}
     </div>
   );
-};
+});
+
+QuestionFilter.displayName = 'QuestionFilter';
 
 export default QuestionFilter;

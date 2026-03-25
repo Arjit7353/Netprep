@@ -1,11 +1,4 @@
 // client/src/pages/QuestionBank.jsx
-// ════════════════════════════════════════════════════════
-// EXTREME ADVANCED v3.0
-// — Test usage tracking, Edit flow, PYQ tab
-// — Keyboard shortcuts, Bulk operations, Analytics
-// — Quality dashboard, Export, Advanced filters
-// ════════════════════════════════════════════════════════
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Plus, RefreshCw, BookOpen, BarChart2, Layers, Download, Upload,
@@ -48,16 +41,13 @@ const QuestionBank = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(TAB_ALL);
 
-  // Test usage tracking
   const [testUsageMap, setTestUsageMap] = useState({});
   const [testUsageLoading, setTestUsageLoading] = useState(false);
 
-  // Bulk operations
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [bulkEditData, setBulkEditData] = useState({ difficulty: '', tags: '' });
   const [bulkEditLoading, setBulkEditLoading] = useState(false);
 
-  // Passage / DI state
   const [passages, setPassages] = useState([]);
   const [passagesLoading, setPassagesLoading] = useState(false);
   const [passagesPagination, setPassagesPagination] = useState(null);
@@ -65,7 +55,6 @@ const QuestionBank = () => {
   const [diLoading, setDiLoading] = useState(false);
   const [diPagination, setDiPagination] = useState(null);
 
-  // PYQ state
   const [pyqQuestions, setPyqQuestions] = useState([]);
   const [pyqLoading, setPyqLoading] = useState(false);
   const [pyqPagination, setPyqPagination] = useState(null);
@@ -75,11 +64,6 @@ const QuestionBank = () => {
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
 
   const searchRef = useRef(null);
-
-  const t = useCallback((hi, en) => {
-    // We'll get language from Layout render prop, so store it
-    return hi; // default, overridden in render
-  }, []);
 
   // ═══ DATA FETCHING ═══
   useEffect(() => {
@@ -100,7 +84,6 @@ const QuestionBank = () => {
 
   useEffect(() => { fetchStats(); }, []);
 
-  // ═══ LOAD TEST USAGE for visible questions ═══
   useEffect(() => {
     if (questions.length > 0 && activeTab === TAB_ALL) {
       loadTestUsage(questions.map(q => q._id));
@@ -154,7 +137,6 @@ const QuestionBank = () => {
       if (res.success) {
         setPyqQuestions(res.data || []);
         setPyqPagination(res.pagination);
-        // Load test usage for PYQ
         if (res.data?.length > 0) {
           loadTestUsage(res.data.map(q => q._id));
         }
@@ -227,7 +209,6 @@ const QuestionBank = () => {
     }
   };
 
-  // ═══ BULK EDIT ═══
   const handleBulkEdit = async () => {
     if (selectedIds.length === 0) return;
     setBulkEditLoading(true);
@@ -259,7 +240,6 @@ const QuestionBank = () => {
     fetchStats();
   };
 
-  // ═══ EXPORT ═══
   const handleExport = () => {
     const data = activeTab === TAB_PYQ ? pyqQuestions : questions;
     if (data.length === 0) return;
@@ -277,7 +257,7 @@ const QuestionBank = () => {
   // ═══ KEYBOARD SHORTCUTS ═══
   useEffect(() => {
     const handler = (e) => {
-      const isInput = ['INPUT', 'TEXTAREA'].includes(e.target.tagName);
+      const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
       if (e.key === '/' && !isInput) { e.preventDefault(); searchRef.current?.focus(); }
       if (e.key === 'n' && !isInput && !showForm) { e.preventDefault(); setEditingQuestion(null); setShowForm(true); }
       if (e.key === 'r' && !isInput && !showForm) { e.preventDefault(); handleRefresh(); }
@@ -299,10 +279,29 @@ const QuestionBank = () => {
     { id: TAB_DI, label: { hi: 'डेटा व्याख्या', en: 'Data Interpretation' }, icon: BarChart2, count: stats?.diCount }
   ];
 
+  // Stats config for dark mode
+  const statsConfig = [
+    { key: 'total', icon: Layers, gradient: 'from-blue-500 to-blue-600', bg: 'bg-blue-50 dark:bg-blue-950/30', border: 'border-blue-200 dark:border-blue-800' },
+    { key: 'passage', icon: BookOpen, gradient: 'from-amber-500 to-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/30', border: 'border-amber-200 dark:border-amber-800' },
+    { key: 'di', icon: BarChart2, gradient: 'from-purple-500 to-purple-600', bg: 'bg-purple-50 dark:bg-purple-950/30', border: 'border-purple-200 dark:border-purple-800' },
+    { key: 'week', icon: Zap, gradient: 'from-green-500 to-green-600', bg: 'bg-green-50 dark:bg-green-950/30', border: 'border-green-200 dark:border-green-800' },
+    { key: 'mcq', icon: CheckCircle2, gradient: 'from-indigo-500 to-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-950/30', border: 'border-indigo-200 dark:border-indigo-800' },
+    { key: 'pyq', icon: Star, gradient: 'from-orange-500 to-orange-600', bg: 'bg-orange-50 dark:bg-orange-950/30', border: 'border-orange-200 dark:border-orange-800' }
+  ];
+
   return (
     <Layout>
       {({ language }) => {
         const tl = (h, e) => language === 'hi' ? h : e;
+
+        const statsData = stats ? [
+          { label: tl('कुल प्रश्न', 'Total Questions'), value: stats.total || 0, ...statsConfig[0] },
+          { label: tl('गद्यांश सेट', 'Passage Sets'), value: stats.passageCount || 0, ...statsConfig[1] },
+          { label: tl('DI सेट', 'DI Sets'), value: stats.diCount || 0, ...statsConfig[2] },
+          { label: tl('इस सप्ताह', 'This Week'), value: stats.recentAdditions || 0, ...statsConfig[3] },
+          { label: tl('MCQ', 'MCQ'), value: stats.byType?.mcq || 0, ...statsConfig[4] },
+          { label: tl('PYQ', 'PYQ'), value: stats.byType?.pyq || '—', ...statsConfig[5] }
+        ] : [];
 
         return (
           <div className="space-y-6">
@@ -320,9 +319,12 @@ const QuestionBank = () => {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setShowKeyboardHelp(true)}
-                  className="p-2.5 bg-gray-100 dark:bg-secondary-700 rounded-xl hover:bg-gray-200 transition-colors" title="Keyboard shortcuts (?)">
-                  <Keyboard className="w-4 h-4 text-gray-500" />
+                <button 
+                  onClick={() => setShowKeyboardHelp(true)}
+                  className="p-2.5 bg-gray-100 dark:bg-secondary-700 rounded-xl hover:bg-gray-200 dark:hover:bg-secondary-600 transition-colors" 
+                  title="Keyboard shortcuts (?)"
+                >
+                  <Keyboard className="w-4 h-4 text-gray-500 dark:text-secondary-400" />
                 </button>
                 <Button variant="outline" size="sm" icon={Download} onClick={handleExport}>
                   {tl('निर्यात', 'Export')}
@@ -339,26 +341,22 @@ const QuestionBank = () => {
             {/* ═══ STATS BAR ═══ */}
             {stats && (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                {[
-                  { label: tl('कुल प्रश्न', 'Total Questions'), value: stats.total || 0, icon: Layers, gradient: 'from-blue-500 to-blue-600', bg: 'bg-blue-50 border-blue-200' },
-                  { label: tl('गद्यांश सेट', 'Passage Sets'), value: stats.passageCount || 0, icon: BookOpen, gradient: 'from-amber-500 to-amber-600', bg: 'bg-amber-50 border-amber-200' },
-                  { label: tl('DI सेट', 'DI Sets'), value: stats.diCount || 0, icon: BarChart2, gradient: 'from-purple-500 to-purple-600', bg: 'bg-purple-50 border-purple-200' },
-                  { label: tl('इस सप्ताह', 'This Week'), value: stats.recentAdditions || 0, icon: Zap, gradient: 'from-green-500 to-green-600', bg: 'bg-green-50 border-green-200' },
-                  { label: tl('MCQ', 'MCQ'), value: stats.byType?.mcq || 0, icon: CheckCircle2, gradient: 'from-indigo-500 to-indigo-600', bg: 'bg-indigo-50 border-indigo-200' },
-                  { label: tl('PYQ', 'PYQ'), value: stats.byType?.pyq || '—', icon: Star, gradient: 'from-orange-500 to-orange-600', bg: 'bg-orange-50 border-orange-200' }
-                ].map((s, i) => (
-                  <div key={i} className={`rounded-2xl border p-3 ${s.bg} dark:bg-secondary-800 dark:border-secondary-700 transition-all hover:shadow-md`}>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${s.gradient} flex items-center justify-center shadow-md`}>
-                        <s.icon className="w-4 h-4 text-white" />
-                      </div>
-                      <div>
-                        <div className="text-xl font-black text-gray-900 dark:text-white tabular-nums">{s.value}</div>
-                        <div className="text-[10px] text-gray-500 font-semibold uppercase">{s.label}</div>
+                {statsData.map((s, i) => {
+                  const Icon = s.icon;
+                  return (
+                    <div key={i} className={`rounded-2xl border p-3 ${s.bg} ${s.border} transition-all hover:shadow-md`}>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${s.gradient} flex items-center justify-center shadow-md`}>
+                          <Icon className="w-4 h-4 text-white" />
+                        </div>
+                        <div>
+                          <div className="text-xl font-black text-gray-900 dark:text-white tabular-nums">{s.value}</div>
+                          <div className="text-[10px] text-gray-500 dark:text-secondary-400 font-semibold uppercase">{s.label}</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
@@ -369,22 +367,30 @@ const QuestionBank = () => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
                   return (
-                    <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                    <button 
+                      key={tab.id} 
+                      onClick={() => setActiveTab(tab.id)}
                       className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-[3px] transition-all whitespace-nowrap
                         ${isActive
-                          ? 'border-primary-600 text-primary-600 dark:text-primary-400 bg-primary-50/50 dark:bg-primary-900/10'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-secondary-400 hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-secondary-800'
-                        }`}>
+                          ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400 bg-primary-50/50 dark:bg-primary-900/10'
+                          : 'border-transparent text-gray-500 dark:text-secondary-400 hover:text-gray-700 dark:hover:text-secondary-300 hover:border-gray-300 dark:hover:border-secondary-600 hover:bg-gray-50 dark:hover:bg-secondary-800'
+                        }`}
+                    >
                       <Icon className={`w-4 h-4 ${tab.highlight && isActive ? 'fill-current' : ''}`} />
                       {language === 'hi' ? tab.label.hi : tab.label.en}
                       {tab.count !== undefined && tab.count !== null && (
                         <span className={`px-1.5 py-0.5 text-[10px] font-black rounded-full tabular-nums
-                          ${isActive ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300' : 'bg-gray-100 text-gray-600 dark:bg-secondary-700 dark:text-secondary-300'}`}>
+                          ${isActive 
+                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300' 
+                            : 'bg-gray-100 text-gray-600 dark:bg-secondary-700 dark:text-secondary-300'
+                          }`}>
                           {tab.count}
                         </span>
                       )}
                       {tab.highlight && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-black rounded-full bg-amber-100 text-amber-700">PYQ</span>
+                        <span className="px-1.5 py-0.5 text-[9px] font-black rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                          PYQ
+                        </span>
                       )}
                     </button>
                   );
@@ -395,8 +401,8 @@ const QuestionBank = () => {
             {/* ═══ BULK ACTIONS BAR ═══ */}
             {selectedIds.length > 0 && (
               <div className="flex items-center gap-3 p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-xl animate-fadeIn">
-                <CheckCircle2 className="w-5 h-5 text-primary-600" />
-                <span className="text-sm font-bold text-primary-700">
+                <CheckCircle2 className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                <span className="text-sm font-bold text-primary-700 dark:text-primary-300">
                   {selectedIds.length} {tl('चयनित', 'selected')}
                 </span>
                 <div className="flex-1" />
@@ -504,21 +510,32 @@ const QuestionBank = () => {
               size="md"
               footer={
                 <>
-                  <Button variant="secondary" onClick={() => setShowBulkEditModal(false)}>{tl('रद्द', 'Cancel')}</Button>
-                  <Button variant="primary" onClick={handleBulkEdit} loading={bulkEditLoading}>{tl('अपडेट करें', 'Update')}</Button>
+                  <Button variant="secondary" onClick={() => setShowBulkEditModal(false)}>
+                    {tl('रद्द', 'Cancel')}
+                  </Button>
+                  <Button variant="primary" onClick={handleBulkEdit} loading={bulkEditLoading}>
+                    {tl('अपडेट करें', 'Update')}
+                  </Button>
                 </>
               }
             >
               <div className="space-y-4">
-                <div className="p-3 bg-primary-50 rounded-lg border border-primary-200">
-                  <p className="text-sm font-bold text-primary-700">
+                <div className="p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-800">
+                  <p className="text-sm font-bold text-primary-700 dark:text-primary-300">
                     {selectedIds.length} {tl('प्रश्नों को अपडेट किया जाएगा', 'questions will be updated')}
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-gray-700 mb-1 block">{tl('कठिनाई', 'Difficulty')}</label>
-                  <select value={bulkEditData.difficulty} onChange={e => setBulkEditData(p => ({ ...p, difficulty: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl bg-white text-sm">
+                  <label className="text-sm font-bold text-gray-700 dark:text-secondary-300 mb-1 block">
+                    {tl('कठिनाई', 'Difficulty')}
+                  </label>
+                  <select 
+                    value={bulkEditData.difficulty} 
+                    onChange={e => setBulkEditData(p => ({ ...p, difficulty: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-secondary-600 rounded-xl 
+                               bg-white dark:bg-secondary-900 text-gray-900 dark:text-white text-sm
+                               focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 transition-colors"
+                  >
                     <option value="">{tl('बदलें नहीं', 'No change')}</option>
                     <option value="easy">{tl('आसान', 'Easy')}</option>
                     <option value="medium">{tl('मध्यम', 'Medium')}</option>
@@ -526,17 +543,30 @@ const QuestionBank = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-bold text-gray-700 mb-1 block">{tl('टैग जोड़ें (कॉमा)', 'Add Tags (comma)')}</label>
-                  <input type="text" value={bulkEditData.tags} onChange={e => setBulkEditData(p => ({ ...p, tags: e.target.value }))}
+                  <label className="text-sm font-bold text-gray-700 dark:text-secondary-300 mb-1 block">
+                    {tl('टैग जोड़ें (कॉमा)', 'Add Tags (comma)')}
+                  </label>
+                  <input 
+                    type="text" 
+                    value={bulkEditData.tags} 
+                    onChange={e => setBulkEditData(p => ({ ...p, tags: e.target.value }))}
                     placeholder={tl('टैग1, टैग2', 'tag1, tag2')}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-xl bg-white text-sm" />
+                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-secondary-600 rounded-xl 
+                               bg-white dark:bg-secondary-900 text-gray-900 dark:text-white text-sm
+                               placeholder-gray-400 dark:placeholder-secondary-500
+                               focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 transition-colors" 
+                  />
                 </div>
               </div>
             </Modal>
 
             {/* ═══ KEYBOARD SHORTCUTS MODAL ═══ */}
-            <Modal isOpen={showKeyboardHelp} onClose={() => setShowKeyboardHelp(false)}
-              title={tl('कीबोर्ड शॉर्टकट', 'Keyboard Shortcuts')} size="sm">
+            <Modal 
+              isOpen={showKeyboardHelp} 
+              onClose={() => setShowKeyboardHelp(false)}
+              title={tl('कीबोर्ड शॉर्टकट', 'Keyboard Shortcuts')} 
+              size="sm"
+            >
               <div className="space-y-2">
                 {[
                   { key: '/', desc: tl('खोज फोकस', 'Focus search') },
@@ -546,8 +576,10 @@ const QuestionBank = () => {
                   { key: 'Esc', desc: tl('मोडल बंद', 'Close modal') },
                 ].map((sc, i) => (
                   <div key={i} className="flex items-center justify-between py-2">
-                    <span className="text-sm text-gray-600">{sc.desc}</span>
-                    <kbd className="px-2.5 py-1 bg-gray-100 border border-gray-300 rounded-lg text-xs font-mono font-bold text-gray-700">{sc.key}</kbd>
+                    <span className="text-sm text-gray-600 dark:text-secondary-400">{sc.desc}</span>
+                    <kbd className="px-2.5 py-1 bg-gray-100 dark:bg-secondary-700 border border-gray-300 dark:border-secondary-600 rounded-lg text-xs font-mono font-bold text-gray-700 dark:text-secondary-300">
+                      {sc.key}
+                    </kbd>
                   </div>
                 ))}
               </div>
