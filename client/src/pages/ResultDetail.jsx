@@ -7,7 +7,7 @@ import {
   Trophy, Target, Clock, CheckCircle, XCircle, MinusCircle,
   TrendingUp, BookOpen, ArrowLeft, ChevronRight, Eye,
   Sparkles, Share2, Printer, BarChart3, Brain, Timer,
-  Hash, Award, Flame, Download
+  Hash, Award, Flame, Download, RotateCcw
 } from 'lucide-react';
 import Button from '../components/common/Button';
 import attemptService from '../services/attemptService';
