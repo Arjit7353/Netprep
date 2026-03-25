@@ -73,29 +73,35 @@ const ResultComparison = ({ attempts = [], currentAttempt, language = 'hi' }) =>
         ))}
       </div>
 
-      {/* Improvement Insight */}
-      {trend && (
-        <div className={`flex items-start gap-3 p-4 rounded-2xl border ${
-          trend.score.diff > 0 ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' :
-          trend.score.diff < 0 ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' :
-          'bg-gray-50 dark:bg-secondary-700 border-gray-200 dark:border-secondary-600'
-        }`}>
-          {trend.score.diff > 0 ? <Flame className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" /> :
-           trend.score.diff < 0 ? <TrendingDown className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" /> :
-           <Minus className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />}
-          <p className={`text-sm font-medium ${
-            trend.score.diff > 0 ? 'text-emerald-800 dark:text-emerald-300' :
-            trend.score.diff < 0 ? 'text-red-800 dark:text-red-300' : 'text-gray-600'
-          }`}>
-            {trend.score.diff > 0
-              ? (language === 'hi' ? `📈 पिछले प्रयास से ${trend.score.diff} अंक बढ़े! बढ़िया सुधार!` : `📈 Improved by ${trend.score.diff} points! Great progress!`)
-              : trend.score.diff < 0
-                ? (language === 'hi' ? `📉 पिछले प्रयास से ${Math.abs(trend.score.diff)} अंक कम। अभ्यास जारी रखें।` : `📉 Decreased by ${Math.abs(trend.score.diff)} points. Keep practicing.`)
-                : (language === 'hi' ? '➡️ पिछले प्रयास जैसा ही स्कोर।' : '➡️ Same score as last attempt.')}
-          </p>
-        </div>
-      )}
+      // ═══ In ResultComparison.jsx, replace the Improvement Insight block ═══
 
+{/* Improvement Insight — Lucide icons only */}
+{trend && (
+  <div className={`flex items-start gap-3 p-4 rounded-2xl border ${
+    trend.score.diff > 0 ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' :
+    trend.score.diff < 0 ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' :
+    'bg-gray-50 dark:bg-secondary-700 border-gray-200 dark:border-secondary-600'
+  }`}>
+    {trend.score.diff > 0 ? <TrendingUp className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" /> :
+     trend.score.diff < 0 ? <TrendingDown className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" /> :
+     <Minus className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />}
+    <p className={`text-sm font-medium ${
+      trend.score.diff > 0 ? 'text-emerald-800 dark:text-emerald-300' :
+      trend.score.diff < 0 ? 'text-red-800 dark:text-red-300' : 'text-gray-600'
+    }`}>
+      {trend.score.diff > 0
+        ? (language === 'hi' ? `पिछले प्रयास से ${trend.score.diff} अंक बढ़े! बढ़िया सुधार!` : `Improved by ${trend.score.diff} points! Great progress!`)
+        : trend.score.diff < 0
+          ? (language === 'hi' ? `पिछले प्रयास से ${Math.abs(trend.score.diff)} अंक कम। अभ्यास जारी रखें।` : `Decreased by ${Math.abs(trend.score.diff)} points. Keep practicing.`)
+          : (language === 'hi' ? 'पिछले प्रयास जैसा ही स्कोर।' : 'Same score as last attempt.')}
+    </p>
+  </div>
+)}
+
+// ═══ In comparison table, replace star emoji ═══
+// Find: {r.score === bestScore && <span className="ml-1 text-amber-500">⭐</span>}
+// Replace with:
+{r.score === bestScore && <Star className="inline w-3.5 h-3.5 ml-1 text-amber-500 fill-amber-500" />}
       {/* Performance Trend Line */}
       <div className="bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-5 shadow-sm">
         <h4 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">

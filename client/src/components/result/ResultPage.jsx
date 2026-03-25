@@ -89,25 +89,27 @@ const Counter = ({ end, suffix = '', prefix = '' }) => {
   return <>{prefix}{c}{suffix}</>;
 };
 
-/* ═══════════ GRADE BADGE ═══════════ */
+// ═══ Replace GradeBadge in ResultPage.jsx ═══
+
 const GradeBadge = ({ percentage, language }) => {
   const cfg = percentage >= 90
-    ? { grade: 'A+', color: 'from-emerald-500 to-green-600', text: language === 'hi' ? 'उत्कृष्ट!' : 'Outstanding!', emoji: '🏆' }
+    ? { grade: 'A+', color: 'from-emerald-500 to-green-600', text: language === 'hi' ? 'उत्कृष्ट!' : 'Outstanding!', icon: Trophy }
     : percentage >= 80
-      ? { grade: 'A', color: 'from-green-500 to-emerald-600', text: language === 'hi' ? 'बहुत अच्छा!' : 'Excellent!', emoji: '🌟' }
+      ? { grade: 'A', color: 'from-green-500 to-emerald-600', text: language === 'hi' ? 'बहुत अच्छा!' : 'Excellent!', icon: Award }
       : percentage >= 70
-        ? { grade: 'B+', color: 'from-blue-500 to-cyan-600', text: language === 'hi' ? 'अच्छा!' : 'Good!', emoji: '👍' }
+        ? { grade: 'B+', color: 'from-blue-500 to-cyan-600', text: language === 'hi' ? 'अच्छा!' : 'Good!', icon: TrendingUp }
         : percentage >= 60
-          ? { grade: 'B', color: 'from-cyan-500 to-blue-600', text: language === 'hi' ? 'औसत से ऊपर' : 'Above Average', emoji: '✅' }
+          ? { grade: 'B', color: 'from-cyan-500 to-blue-600', text: language === 'hi' ? 'औसत से ऊपर' : 'Above Average', icon: Target }
           : percentage >= 50
-            ? { grade: 'C', color: 'from-yellow-500 to-amber-600', text: language === 'hi' ? 'औसत' : 'Average', emoji: '📊' }
+            ? { grade: 'C', color: 'from-yellow-500 to-amber-600', text: language === 'hi' ? 'औसत' : 'Average', icon: Activity }
             : percentage >= 35
-              ? { grade: 'D', color: 'from-orange-500 to-red-500', text: language === 'hi' ? 'सुधार करें' : 'Needs Work', emoji: '📈' }
-              : { grade: 'F', color: 'from-red-500 to-rose-600', text: language === 'hi' ? 'अभ्यास करें' : 'Practice More', emoji: '💪' };
+              ? { grade: 'D', color: 'from-orange-500 to-red-500', text: language === 'hi' ? 'सुधार करें' : 'Needs Work', icon: AlertTriangle }
+              : { grade: 'F', color: 'from-red-500 to-rose-600', text: language === 'hi' ? 'अभ्यास करें' : 'Practice More', icon: Flame };
 
+  const IconComp = cfg.icon;
   return (
     <div className={`inline-flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-gradient-to-r ${cfg.color} text-white shadow-lg animate-bounce-in`}>
-      <span className="text-lg">{cfg.emoji}</span>
+      <IconComp className="w-5 h-5" />
       <span className="text-2xl font-black">{cfg.grade}</span>
       <div className="h-6 w-px bg-white/30" />
       <span className="text-sm font-semibold">{cfg.text}</span>
@@ -135,28 +137,98 @@ const StatCard = ({ icon: Icon, label, value, color, gradient, delay = 0 }) => (
     </div>
   </div>
 );
+// ═══ Replace LanguageToggle in ResultPage.jsx ═══
 
-/* ═══════════ LANGUAGE TOGGLE ═══════════ */
 const LanguageToggle = ({ language, onChange }) => {
-  const toggle = () => {
-    const next = language === 'hi' ? 'en' : 'hi';
-    onChange(next);
+  const handleToggle = () => {
+    const newLang = language === 'hi' ? 'en' : 'hi';
+    // Call parent handler
+    if (onChange) onChange(newLang);
+    // Also persist and broadcast
     try {
-      localStorage.setItem('netprep_lang', next);
-      window.dispatchEvent(new CustomEvent('netprep-lang-change', { detail: next }));
+      localStorage.setItem('netprep_lang', newLang);
+      window.dispatchEvent(new CustomEvent('netprep-lang-change', { detail: newLang }));
     } catch {}
   };
 
   return (
-    <button onClick={toggle}
-      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 transition-all text-white text-sm font-medium active:scale-95"
-      title={language === 'hi' ? 'Switch to English' : 'हिंदी में बदलें'}>
+    <button
+      onClick={handleToggle}
+      className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 transition-all text-white text-sm font-bold active:scale-95"
+      title={language === 'hi' ? 'Switch to English' : 'हिंदी में बदलें'}
+    >
       <Languages className="w-4 h-4" />
-      <span className="font-bold">{language === 'hi' ? 'EN' : 'हि'}</span>
+      <span>{language === 'hi' ? 'EN' : 'हि'}</span>
     </button>
   );
 };
 
+// ═══ In ResultPage main component, replace handleLanguageChange: ═══
+
+const handleLanguageChange = useCallback((newLang) => {
+  if (newLang !== 'hi' && newLang !== 'en') return;
+  // Call parent
+  if (onLanguageChange) onLanguageChange(newLang);
+  // Persist
+  try {
+    localStorage.setItem('netprep_lang', newLang);
+    window.dispatchEvent(new CustomEvent('netprep-lang-change', { detail: newLang }));
+  } catch {}
+}, [onLanguageChange]);
+
+// ═══ Replace Insights component — remove all emoji, Lucide only ═══
+
+const Insights = ({ attempt, answers, questions, language }) => {
+  const insights = useMemo(() => {
+    if (!answers?.length) return [];
+    const list = [];
+    const acc = attempt?.accuracy || 0;
+    const correct = attempt?.correctCount || 0;
+    const wrong = attempt?.wrongCount || 0;
+    const skipped = attempt?.skippedCount || 0;
+    const total = answers.length;
+
+    if (acc >= 80) list.push({ t: 'success', i: Star, m: language === 'hi' ? `शानदार! ${acc}% सटीकता। उत्कृष्ट प्रदर्शन!` : `Brilliant! ${acc}% accuracy. Outstanding!` });
+    else if (acc >= 50) list.push({ t: 'info', i: TrendingUp, m: language === 'hi' ? `अच्छा प्रयास! ${acc}% सटीकता। सुधार की गुंजाइश है।` : `Good effort! ${acc}% accuracy. Room to improve.` });
+    else list.push({ t: 'warn', i: TrendingDown, m: language === 'hi' ? `${acc}% सटीकता। मूल अवधारणाओं पर ध्यान दें।` : `${acc}% accuracy. Focus on basics.` });
+
+    if (skipped > total * 0.3) list.push({ t: 'warn', i: SkipForward, m: language === 'hi' ? `${skipped} प्रश्न छोड़ दिए (${Math.round(skipped / total * 100)}%)। सभी attempt करें।` : `${skipped} skipped (${Math.round(skipped / total * 100)}%). Try all questions.` });
+    if (wrong > correct && wrong > 0) list.push({ t: 'error', i: AlertTriangle, m: language === 'hi' ? `गलत (${wrong}) > सही (${correct})। Negative marking से सावधान।` : `Wrong (${wrong}) > Correct (${correct}). Watch negative marking.` });
+
+    const avgT = answers.reduce((s, a) => s + (a.timeTaken || 0), 0) / total;
+    if (avgT > 0 && avgT < 30) list.push({ t: 'info', i: Zap, m: language === 'hi' ? `औसत ${Math.round(avgT)}s/प्रश्न - बहुत तेज! ध्यान से पढ़ें।` : `Avg ${Math.round(avgT)}s/Q - Very fast! Read carefully.` });
+    else if (avgT > 120) list.push({ t: 'warn', i: Timer, m: language === 'hi' ? `औसत ${Math.round(avgT)}s/प्रश्न - गति बढ़ाएं।` : `Avg ${Math.round(avgT)}s/Q - Improve speed.` });
+
+    if (correct === total) list.push({ t: 'success', i: Medal, m: language === 'hi' ? `परफेक्ट स्कोर! सभी ${total} प्रश्न सही!` : `Perfect! All ${total} questions correct!` });
+
+    return list;
+  }, [attempt, answers, language]);
+
+  const styles = {
+    success: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300',
+    info: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300',
+    warn: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300',
+    error: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300',
+  };
+
+  if (!insights.length) return null;
+
+  return (
+    <div className="space-y-3">
+      <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <Brain className="w-5 h-5 text-primary-500" />
+        {language === 'hi' ? 'स्मार्ट विश्लेषण' : 'Smart Insights'}
+      </h4>
+      {insights.map((ins, i) => (
+        <div key={i} className={`flex items-start gap-3 p-4 rounded-2xl border ${styles[ins.t]} animate-fade-in`}
+          style={{ animationDelay: `${i * 100}ms` }}>
+          <ins.i className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <p className="text-sm font-medium leading-relaxed">{ins.m}</p>
+        </div>
+      ))}
+    </div>
+  );
+};
 /* ═══════════ QUESTION GRID ═══════════ */
 const QuestionGrid = ({ answers, onQuestionClick, language }) => {
   const getStyle = (a) => {
@@ -312,64 +384,6 @@ const TimeAnalysis = ({ answers, language }) => {
   );
 };
 
-/* ═══════════ INSIGHTS ═══════════ */
-const Insights = ({ attempt, answers, questions, language }) => {
-  const insights = useMemo(() => {
-    if (!answers?.length) return [];
-    const list = [];
-    const acc = attempt?.accuracy || 0;
-    const correct = attempt?.correctCount || 0;
-    const wrong = attempt?.wrongCount || 0;
-    const skipped = attempt?.skippedCount || 0;
-    const total = answers.length;
-
-    // Accuracy insight
-    if (acc >= 80) list.push({ t: 'success', i: Star, m: language === 'hi' ? `🏆 शानदार! ${acc}% सटीकता। उत्कृष्ट प्रदर्शन!` : `🏆 Brilliant! ${acc}% accuracy. Outstanding!` });
-    else if (acc >= 50) list.push({ t: 'info', i: TrendingUp, m: language === 'hi' ? `👍 अच्छा प्रयास! ${acc}% सटीकता। सुधार की गुंजाइश है।` : `👍 Good effort! ${acc}% accuracy. Room to improve.` });
-    else list.push({ t: 'warn', i: TrendingDown, m: language === 'hi' ? `📈 ${acc}% सटीकता। मूल अवधारणाओं पर ध्यान दें।` : `📈 ${acc}% accuracy. Focus on basics.` });
-
-    // Skip insight
-    if (skipped > total * 0.3) list.push({ t: 'warn', i: SkipForward, m: language === 'hi' ? `⚠️ ${skipped} प्रश्न छोड़ दिए (${Math.round(skipped / total * 100)}%)। सभी attempt करें।` : `⚠️ ${skipped} skipped (${Math.round(skipped / total * 100)}%). Try all questions.` });
-
-    // Wrong > Correct
-    if (wrong > correct && wrong > 0) list.push({ t: 'error', i: AlertTriangle, m: language === 'hi' ? `🚨 गलत (${wrong}) > सही (${correct})। Negative marking से सावधान।` : `🚨 Wrong (${wrong}) > Correct (${correct}). Watch negative marking.` });
-
-    // Time insight
-    const avgT = answers.reduce((s, a) => s + (a.timeTaken || 0), 0) / total;
-    if (avgT > 0 && avgT < 30) list.push({ t: 'info', i: Zap, m: language === 'hi' ? `⚡ औसत ${Math.round(avgT)}s/प्रश्न - बहुत तेज! ध्यान से पढ़ें।` : `⚡ Avg ${Math.round(avgT)}s/Q - Very fast! Read carefully.` });
-    else if (avgT > 120) list.push({ t: 'warn', i: Timer, m: language === 'hi' ? `⏰ औसत ${Math.round(avgT)}s/प्रश्न - गति बढ़ाएं।` : `⏰ Avg ${Math.round(avgT)}s/Q - Improve speed.` });
-
-    // Perfect score
-    if (correct === total) list.push({ t: 'success', i: Medal, m: language === 'hi' ? `🥇 परफेक्ट स्कोर! सभी ${total} प्रश्न सही!` : `🥇 Perfect! All ${total} questions correct!` });
-
-    return list;
-  }, [attempt, answers, language]);
-
-  const styles = {
-    success: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300',
-    info: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300',
-    warn: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300',
-    error: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300',
-  };
-
-  if (!insights.length) return null;
-
-  return (
-    <div className="space-y-3">
-      <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-        <Brain className="w-5 h-5 text-primary-500" />
-        {language === 'hi' ? 'स्मार्ट विश्लेषण' : 'Smart Insights'}
-      </h4>
-      {insights.map((ins, i) => (
-        <div key={i} className={`flex items-start gap-3 p-4 rounded-2xl border ${styles[ins.t]} animate-fade-in`}
-          style={{ animationDelay: `${i * 100}ms` }}>
-          <ins.i className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <p className="text-sm font-medium leading-relaxed">{ins.m}</p>
-        </div>
-      ))}
-    </div>
-  );
-};
 
 /* ════════════════════════════════════════════════════════════
                      MAIN RESULT PAGE

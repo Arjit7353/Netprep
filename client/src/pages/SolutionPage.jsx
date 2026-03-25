@@ -5,7 +5,7 @@ import {
   Clock, BookOpen, Tag, Menu, X, Filter, AlertTriangle, Languages,
   Hash, Zap, Bookmark, Lightbulb, ChevronDown, ChevronUp,
   SkipForward, Share2, Maximize2, Minimize2, List,
-  ArrowRight, Eye, Copy, Check
+  ArrowRight, Eye, Copy, Check, Target
 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -126,7 +126,6 @@ const SolutionPage = ({ language: propLang = 'en' }) => {
       setAnimDir(dir || (i > currentIdx ? 'right' : 'left'));
       setCurrentIdx(i);
       scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-      // Show confetti for correct answers
       const q = filteredQ[i];
       if (q?.isCorrect) { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 800); }
     }
@@ -155,7 +154,6 @@ const SolutionPage = ({ language: propLang = 'en' }) => {
     setCopiedQ(true); setTimeout(() => setCopiedQ(false), 2000);
   }, [currentQ, language]);
 
-  // Keyboard
   useEffect(() => {
     const h = (e) => {
       if (e.key === 'ArrowLeft') goPrev();
@@ -414,7 +412,6 @@ const SolutionPage = ({ language: propLang = 'en' }) => {
 const PaletteContent = ({ allQ, filteredQ, currentIdx, filter, onJump, counts, language, bookmarked }) => {
   const currentQNum = filteredQ[currentIdx]?.questionNumber;
   const accuracy = counts.all > 0 ? Math.round((counts.correct / counts.all) * 100) : 0;
-  const accColor = accuracy >= 70 ? 'text-emerald-600' : accuracy >= 40 ? 'text-amber-600' : 'text-red-600';
 
   return (
     <div className="p-4 space-y-5">
@@ -466,28 +463,32 @@ const PaletteContent = ({ allQ, filteredQ, currentIdx, filter, onJump, counts, l
           <List className="w-3.5 h-3.5 text-primary-500" />{language === 'hi' ? 'सारांश' : 'Summary'}
         </h4>
         {[
-          { label: language === 'hi' ? 'कुल' : 'Total', val: counts.all, color: 'text-gray-900 dark:text-white', icon: '📋' },
-          { label: language === 'hi' ? 'सही' : 'Correct', val: counts.correct, color: 'text-emerald-600', icon: '✅' },
-          { label: language === 'hi' ? 'गलत' : 'Wrong', val: counts.wrong, color: 'text-red-600', icon: '❌' },
-          { label: language === 'hi' ? 'छोड़ा' : 'Skipped', val: counts.skipped, color: 'text-gray-500', icon: '⏭️' },
+          { label: language === 'hi' ? 'कुल' : 'Total', val: counts.all, color: 'text-gray-900 dark:text-white', icon: Hash },
+          { label: language === 'hi' ? 'सही' : 'Correct', val: counts.correct, color: 'text-emerald-600', icon: CheckCircle },
+          { label: language === 'hi' ? 'गलत' : 'Wrong', val: counts.wrong, color: 'text-red-600', icon: XCircle },
+          { label: language === 'hi' ? 'छोड़ा' : 'Skipped', val: counts.skipped, color: 'text-gray-500', icon: SkipForward },
         ].map((r, i) => (
           <div key={i} className="flex justify-between items-center text-sm">
             <span className="flex items-center gap-1.5 text-gray-600 dark:text-secondary-400 font-medium">
-              <span className="text-xs">{r.icon}</span>{r.label}
+              <r.icon className="w-3.5 h-3.5" />{r.label}
             </span>
             <span className={`font-black ${r.color} text-base`}>{r.val}</span>
           </div>
         ))}
-        <div className="pt-3 mt-3 border-t border-gray-200 dark:border-secondary-600">
-          <div className="flex justify-between items-center">
-            <span className="text-primary-600 dark:text-primary-400 font-bold text-sm">{language === 'hi' ? 'सटीकता' : 'Accuracy'}</span>
-            <span className={`font-black text-xl ${accColor}`}>{accuracy}%</span>
+        {counts.all > 0 && (
+          <div className="pt-3 mt-3 border-t border-gray-200 dark:border-secondary-600">
+            <div className="flex justify-between items-center">
+              <span className="flex items-center gap-1.5 text-primary-600 dark:text-primary-400 font-bold text-sm">
+                <Target className="w-3.5 h-3.5" />{language === 'hi' ? 'सटीकता' : 'Accuracy'}
+              </span>
+              <span className={`font-black text-xl ${accuracy >= 70 ? 'text-emerald-600' : accuracy >= 40 ? 'text-amber-600' : 'text-red-600'}`}>{accuracy}%</span>
+            </div>
+            <div className="h-2 bg-gray-200 dark:bg-secondary-600 rounded-full overflow-hidden mt-2">
+              <div className={`h-full rounded-full transition-all duration-1000 ${accuracy >= 70 ? 'bg-emerald-500' : accuracy >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                style={{ width: `${accuracy}%` }} />
+            </div>
           </div>
-          <div className="h-2 bg-gray-200 dark:bg-secondary-600 rounded-full overflow-hidden mt-2">
-            <div className={`h-full rounded-full transition-all duration-1000 ${accuracy >= 70 ? 'bg-emerald-500' : accuracy >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
-              style={{ width: `${accuracy}%` }} />
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -628,55 +629,199 @@ const QuestionContent = ({ qData, language }) => {
 
   if (qType === 'passage_based' && qData.passageId) {
     const pc = bText(qData.passageId.content, language);
-    return (<div className="space-y-4">
-      {pc && <div className="p-4 bg-amber-50/80 dark:bg-amber-900/15 border-l-4 border-amber-400 rounded-r-xl max-h-60 overflow-y-auto scrollbar-thin"><div className="flex items-center gap-2 mb-2 text-amber-800 dark:text-amber-400 font-bold text-xs uppercase tracking-wider"><BookOpen className="w-3.5 h-3.5"/>{language === 'hi' ? 'गद्यांश' : 'PASSAGE'}</div><p className="text-sm text-gray-800 dark:text-secondary-200 leading-relaxed whitespace-pre-line">{pc}</p></div>}
-      <p className="text-gray-900 dark:text-white font-semibold text-base sm:text-lg leading-relaxed">{qt}</p>
-    </div>);
+    return (
+      <div className="space-y-4">
+        {pc && (
+          <div className="p-4 bg-amber-50/80 dark:bg-amber-900/15 border-l-4 border-amber-400 rounded-r-xl max-h-60 overflow-y-auto scrollbar-thin">
+            <div className="flex items-center gap-2 mb-2 text-amber-800 dark:text-amber-400 font-bold text-xs uppercase tracking-wider">
+              <BookOpen className="w-3.5 h-3.5"/>{language === 'hi' ? 'गद्यांश' : 'PASSAGE'}
+            </div>
+            <p className="text-sm text-gray-800 dark:text-secondary-200 leading-relaxed whitespace-pre-line">{pc}</p>
+          </div>
+        )}
+        <p className="text-gray-900 dark:text-white font-semibold text-base sm:text-lg leading-relaxed">{qt}</p>
+      </div>
+    );
   }
+
   if (qType === 'assertion_reason') {
-    const assertion = bText(qData.assertionReasonData?.assertion, language), reason = bText(qData.assertionReasonData?.reason, language);
-    return (<div className="space-y-4">
-      {qt && <p className="text-gray-700 dark:text-secondary-300 font-medium text-sm">{qt}</p>}
-      <div className="flex gap-3 p-4 bg-blue-50/80 dark:bg-blue-900/10 rounded-xl border border-blue-100/50 dark:border-blue-800/20"><span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-md">A</span><div><p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-1 uppercase">{language === 'hi' ? 'अभिकथन' : 'Assertion'}</p><p className="text-sm text-gray-800 dark:text-secondary-200">{assertion}</p></div></div>
-      <div className="flex gap-3 p-4 bg-purple-50/80 dark:bg-purple-900/10 rounded-xl border border-purple-100/50 dark:border-purple-800/20"><span className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold shadow-md">R</span><div><p className="text-xs font-bold text-purple-700 dark:text-purple-400 mb-1 uppercase">{language === 'hi' ? 'कारण' : 'Reason'}</p><p className="text-sm text-gray-800 dark:text-secondary-200">{reason}</p></div></div>
-    </div>);
+    const assertion = bText(qData.assertionReasonData?.assertion, language);
+    const reason = bText(qData.assertionReasonData?.reason, language);
+    return (
+      <div className="space-y-4">
+        {qt && <p className="text-gray-700 dark:text-secondary-300 font-medium text-sm">{qt}</p>}
+        <div className="flex gap-3 p-4 bg-blue-50/80 dark:bg-blue-900/10 rounded-xl border border-blue-100/50 dark:border-blue-800/20">
+          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold shadow-md">A</span>
+          <div>
+            <p className="text-xs font-bold text-blue-700 dark:text-blue-400 mb-1 uppercase">{language === 'hi' ? 'अभिकथन' : 'Assertion'}</p>
+            <p className="text-sm text-gray-800 dark:text-secondary-200">{assertion}</p>
+          </div>
+        </div>
+        <div className="flex gap-3 p-4 bg-purple-50/80 dark:bg-purple-900/10 rounded-xl border border-purple-100/50 dark:border-purple-800/20">
+          <span className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold shadow-md">R</span>
+          <div>
+            <p className="text-xs font-bold text-purple-700 dark:text-purple-400 mb-1 uppercase">{language === 'hi' ? 'कारण' : 'Reason'}</p>
+            <p className="text-sm text-gray-800 dark:text-secondary-200">{reason}</p>
+          </div>
+        </div>
+      </div>
+    );
   }
+
   if (qType === 'match_following') {
-    const la = bArr(qData.matchData?.listA, language), lb = bArr(qData.matchData?.listB, language);
-    return (<div className="space-y-4"><p className="text-gray-900 dark:text-white font-semibold text-base">{qt || (language === 'hi' ? 'सुमेलित कीजिए:' : 'Match:')}</p>
-      <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-secondary-600 shadow-sm"><div className="grid grid-cols-2 bg-gray-100 dark:bg-secondary-700 border-b"><div className="px-4 py-2.5 font-bold text-sm border-r">{language === 'hi' ? 'सूची-I' : 'List-I'}</div><div className="px-4 py-2.5 font-bold text-sm">{language === 'hi' ? 'सूची-II' : 'List-II'}</div></div>
-      {la.map((a, i) => (<div key={i} className={`grid grid-cols-2 border-b last:border-0 ${i%2 ? 'bg-gray-50/50 dark:bg-secondary-750/30' : ''}`}><div className="px-4 py-3 text-sm border-r"><span className="font-bold text-primary-600 mr-1.5">({optLabel(i)})</span>{a}</div><div className="px-4 py-3 text-sm"><span className="font-bold text-primary-600 mr-1.5">{roman(i)}</span>{lb[i]||''}</div></div>))}</div>
-      {qData.matchData?.correctMatch && <div className="flex items-center gap-2 p-3 bg-emerald-50/80 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl text-sm"><CheckCircle className="w-4 h-4 text-emerald-600"/><span className="font-bold text-emerald-800 dark:text-emerald-300">{language === 'hi' ? 'सही:' : 'Correct:'}</span><span className="text-emerald-700 dark:text-emerald-400 font-medium">{qData.matchData.correctMatch.map((m, i) => `${optLabel(i)}-${roman(m)}`).join(', ')}</span></div>}
-    </div>);
+    const la = bArr(qData.matchData?.listA, language);
+    const lb = bArr(qData.matchData?.listB, language);
+    return (
+      <div className="space-y-4">
+        <p className="text-gray-900 dark:text-white font-semibold text-base">{qt || (language === 'hi' ? 'सुमेलित कीजिए:' : 'Match:')}</p>
+        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-secondary-600 shadow-sm">
+          <div className="grid grid-cols-2 bg-gray-100 dark:bg-secondary-700 border-b">
+            <div className="px-4 py-2.5 font-bold text-sm border-r">{language === 'hi' ? 'सूची-I' : 'List-I'}</div>
+            <div className="px-4 py-2.5 font-bold text-sm">{language === 'hi' ? 'सूची-II' : 'List-II'}</div>
+          </div>
+          {la.map((a, i) => (
+            <div key={i} className={`grid grid-cols-2 border-b last:border-0 ${i % 2 ? 'bg-gray-50/50 dark:bg-secondary-750/30' : ''}`}>
+              <div className="px-4 py-3 text-sm border-r"><span className="font-bold text-primary-600 mr-1.5">({optLabel(i)})</span>{a}</div>
+              <div className="px-4 py-3 text-sm"><span className="font-bold text-primary-600 mr-1.5">{roman(i)}</span>{lb[i] || ''}</div>
+            </div>
+          ))}
+        </div>
+        {qData.matchData?.correctMatch && (
+          <div className="flex items-center gap-2 p-3 bg-emerald-50/80 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl text-sm">
+            <CheckCircle className="w-4 h-4 text-emerald-600"/>
+            <span className="font-bold text-emerald-800 dark:text-emerald-300">{language === 'hi' ? 'सही:' : 'Correct:'}</span>
+            <span className="text-emerald-700 dark:text-emerald-400 font-medium">{qData.matchData.correctMatch.map((m, i) => `${optLabel(i)}-${roman(m)}`).join(', ')}</span>
+          </div>
+        )}
+      </div>
+    );
   }
+
   if (qType === 'statement_based') {
     const stmts = bArr(qData.statementData?.statements, language);
-    return (<div className="space-y-4"><p className="text-gray-900 dark:text-white font-semibold text-base">{qt || (language === 'hi' ? 'कथनों पर विचार:' : 'Consider:')}</p>
-      <div className="space-y-2">{stmts.map((s, i) => (<div key={i} className="flex items-start gap-3 p-3 bg-gray-50/80 dark:bg-secondary-700/40 rounded-xl border border-gray-100 dark:border-secondary-700/50"><span className="flex-shrink-0 w-6 h-6 rounded-lg bg-white dark:bg-secondary-600 flex items-center justify-center text-xs font-bold shadow-sm border border-gray-200 dark:border-secondary-500">{i+1}</span><span className="text-sm text-gray-800 dark:text-secondary-200 leading-relaxed pt-0.5">{s}</span></div>))}</div></div>);
+    return (
+      <div className="space-y-4">
+        <p className="text-gray-900 dark:text-white font-semibold text-base">{qt || (language === 'hi' ? 'कथनों पर विचार:' : 'Consider:')}</p>
+        <div className="space-y-2">
+          {stmts.map((s, i) => (
+            <div key={i} className="flex items-start gap-3 p-3 bg-gray-50/80 dark:bg-secondary-700/40 rounded-xl border border-gray-100 dark:border-secondary-700/50">
+              <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-white dark:bg-secondary-600 flex items-center justify-center text-xs font-bold shadow-sm border border-gray-200 dark:border-secondary-500">{i + 1}</span>
+              <span className="text-sm text-gray-800 dark:text-secondary-200 leading-relaxed pt-0.5">{s}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
+
   if (qType === 'sequence_order') {
     const items = bArr(qData.sequenceData?.items, language);
-    return (<div className="space-y-4"><p className="text-gray-900 dark:text-white font-semibold text-base">{qt || (language === 'hi' ? 'क्रम व्यवस्थित:' : 'Arrange:')}</p>
-      <div className="space-y-2">{items.map((it, i) => (<div key={i} className="flex items-center gap-3 p-3 bg-gray-50/80 dark:bg-secondary-700/40 rounded-xl border border-gray-100 dark:border-secondary-700/50"><span className="flex-shrink-0 w-6 h-6 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-700 dark:text-primary-400">{optLabel(i)}</span><span className="text-sm text-gray-800 dark:text-secondary-200">{it}</span></div>))}</div></div>);
-  }
-  // DI types
-  if (['di_table','di_bar_chart','di_pie_chart','di_line_graph','di_caselet','di_mixed'].includes(qType) && qData.diDataId) {
-    const di = qData.diDataId;
-    return (<div className="space-y-4">
-      {bText(di.title, language) && <h4 className="font-bold text-gray-900 dark:text-white text-center">{bText(di.title, language)}</h4>}
-      {bText(di.instruction, language) && <p className="text-sm text-gray-600 dark:text-secondary-400 italic text-center">{bText(di.instruction, language)}</p>}
-      <div className="bg-white dark:bg-secondary-800 border border-gray-200 dark:border-secondary-700 rounded-xl p-4 overflow-x-auto shadow-inner">
-        {qType === 'di_table' && <table className="w-full border-collapse text-sm"><thead><tr className="bg-gray-100 dark:bg-secondary-700">{bArr(di.tableData?.headers, language).map((h, i) => <th key={i} className="border border-gray-200 dark:border-secondary-600 px-3 py-2 font-bold text-left">{h}</th>)}</tr></thead><tbody>{(di.tableData?.rows||[]).map((row, ri) => <tr key={ri} className={ri%2?'bg-gray-50/70 dark:bg-secondary-750/30':''}>{row.map((c, ci) => <td key={ci} className="border border-gray-200 dark:border-secondary-600 px-3 py-2">{c??'-'}</td>)}</tr>)}</tbody></table>}
-        {['di_bar_chart','di_line_graph','di_pie_chart'].includes(qType) && <div className="h-64 w-full min-w-[300px]"><ResponsiveContainer width="100%" height="100%">
-          {qType === 'di_bar_chart' ? <BarChart data={bArr(di.chartData?.labels, language).map((l, i) => { const it = {name:l}; (di.chartData?.datasets||[]).forEach((ds, d) => {it[bText(ds.label, language)||`S${d+1}`]=ds.data[i]||0;}); return it; })}><CartesianGrid strokeDasharray="3 3" className="opacity-20"/><XAxis dataKey="name" tick={{fontSize:11}}/><YAxis tick={{fontSize:11}}/><Tooltip contentStyle={{borderRadius:'12px',border:'none',boxShadow:'0 8px 30px rgba(0,0,0,0.12)'}}/><Legend/>{(di.chartData?.datasets||[]).map((ds, i) => <Bar key={i} dataKey={bText(ds.label, language)||`S${i+1}`} fill={ds.color||COLORS[i%COLORS.length]} radius={[4,4,0,0]}/>)}</BarChart>
-          : qType === 'di_line_graph' ? <LineChart data={bArr(di.chartData?.labels, language).map((l, i) => { const it = {name:l}; (di.chartData?.datasets||[]).forEach((ds, d) => {it[bText(ds.label, language)||`S${d+1}`]=ds.data[i]||0;}); return it; })}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name" tick={{fontSize:11}}/><YAxis tick={{fontSize:11}}/><Tooltip contentStyle={{borderRadius:'12px'}}/><Legend/>{(di.chartData?.datasets||[]).map((ds, i) => <Line key={i} type="monotone" dataKey={bText(ds.label, language)||`S${i+1}`} stroke={ds.color||COLORS[i%COLORS.length]} strokeWidth={2} dot={{r:3}}/>)}</LineChart>
-          : <PieChart><Pie data={bArr(di.chartData?.labels, language).map((l, i) => ({name:l, value:di.chartData?.datasets?.[0]?.data?.[i]||0}))} cx="50%" cy="50%" outerRadius={80} dataKey="value" label>{bArr(di.chartData?.labels, language).map((_, i) => <Cell key={i} fill={(di.chartData?.datasets?.[0]?.colors||COLORS)[i%COLORS.length]}/>)}</Pie><Tooltip/><Legend/></PieChart>}
-        </ResponsiveContainer></div>}
-        {qType === 'di_caselet' && bText(di.caseletText, language) && <p className="text-sm text-gray-800 dark:text-secondary-200 leading-relaxed whitespace-pre-line">{bText(di.caseletText, language)}</p>}
+    return (
+      <div className="space-y-4">
+        <p className="text-gray-900 dark:text-white font-semibold text-base">{qt || (language === 'hi' ? 'क्रम व्यवस्थित:' : 'Arrange:')}</p>
+        <div className="space-y-2">
+          {items.map((it, i) => (
+            <div key={i} className="flex items-center gap-3 p-3 bg-gray-50/80 dark:bg-secondary-700/40 rounded-xl border border-gray-100 dark:border-secondary-700/50">
+              <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-700 dark:text-primary-400">{optLabel(i)}</span>
+              <span className="text-sm text-gray-800 dark:text-secondary-200">{it}</span>
+            </div>
+          ))}
+        </div>
       </div>
-      <p className="text-gray-900 dark:text-white font-semibold text-base sm:text-lg leading-relaxed mt-4">{qt}</p>
-    </div>);
+    );
   }
+
+  // DI types
+  if (['di_table', 'di_bar_chart', 'di_pie_chart', 'di_line_graph', 'di_caselet', 'di_mixed'].includes(qType) && qData.diDataId) {
+    const di = qData.diDataId;
+    return (
+      <div className="space-y-4">
+        {bText(di.title, language) && <h4 className="font-bold text-gray-900 dark:text-white text-center">{bText(di.title, language)}</h4>}
+        {bText(di.instruction, language) && <p className="text-sm text-gray-600 dark:text-secondary-400 italic text-center">{bText(di.instruction, language)}</p>}
+        <div className="bg-white dark:bg-secondary-800 border border-gray-200 dark:border-secondary-700 rounded-xl p-4 overflow-x-auto shadow-inner">
+          {qType === 'di_table' && (
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="bg-gray-100 dark:bg-secondary-700">
+                  {bArr(di.tableData?.headers, language).map((h, i) => (
+                    <th key={i} className="border border-gray-200 dark:border-secondary-600 px-3 py-2 font-bold text-left">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(di.tableData?.rows || []).map((row, ri) => (
+                  <tr key={ri} className={ri % 2 ? 'bg-gray-50/70 dark:bg-secondary-750/30' : ''}>
+                    {row.map((c, ci) => (
+                      <td key={ci} className="border border-gray-200 dark:border-secondary-600 px-3 py-2">{c ?? '-'}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {['di_bar_chart', 'di_line_graph', 'di_pie_chart'].includes(qType) && (
+            <div className="h-64 w-full min-w-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                {qType === 'di_bar_chart' ? (
+                  <BarChart data={bArr(di.chartData?.labels, language).map((l, i) => {
+                    const it = { name: l };
+                    (di.chartData?.datasets || []).forEach((ds, d) => {
+                      it[bText(ds.label, language) || `S${d + 1}`] = ds.data[i] || 0;
+                    });
+                    return it;
+                  })}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-20"/>
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }}/>
+                    <YAxis tick={{ fontSize: 11 }}/>
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }}/>
+                    <Legend/>
+                    {(di.chartData?.datasets || []).map((ds, i) => (
+                      <Bar key={i} dataKey={bText(ds.label, language) || `S${i + 1}`} fill={ds.color || COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]}/>
+                    ))}
+                  </BarChart>
+                ) : qType === 'di_line_graph' ? (
+                  <LineChart data={bArr(di.chartData?.labels, language).map((l, i) => {
+                    const it = { name: l };
+                    (di.chartData?.datasets || []).forEach((ds, d) => {
+                      it[bText(ds.label, language) || `S${d + 1}`] = ds.data[i] || 0;
+                    });
+                    return it;
+                  })}>
+                    <CartesianGrid strokeDasharray="3 3"/>
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }}/>
+                    <YAxis tick={{ fontSize: 11 }}/>
+                    <Tooltip contentStyle={{ borderRadius: '12px' }}/>
+                    <Legend/>
+                    {(di.chartData?.datasets || []).map((ds, i) => (
+                      <Line key={i} type="monotone" dataKey={bText(ds.label, language) || `S${i + 1}`} stroke={ds.color || COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 3 }}/>
+                    ))}
+                  </LineChart>
+                ) : (
+                  <PieChart>
+                    <Pie data={bArr(di.chartData?.labels, language).map((l, i) => ({
+                      name: l,
+                      value: di.chartData?.datasets?.[0]?.data?.[i] || 0
+                    }))} cx="50%" cy="50%" outerRadius={80} dataKey="value" label>
+                      {bArr(di.chartData?.labels, language).map((_, i) => (
+                        <Cell key={i} fill={(di.chartData?.datasets?.[0]?.colors || COLORS)[i % COLORS.length]}/>
+                      ))}
+                    </Pie>
+                    <Tooltip/>
+                    <Legend/>
+                  </PieChart>
+                )}
+              </ResponsiveContainer>
+            </div>
+          )}
+          {qType === 'di_caselet' && bText(di.caseletText, language) && (
+            <p className="text-sm text-gray-800 dark:text-secondary-200 leading-relaxed whitespace-pre-line">{bText(di.caseletText, language)}</p>
+          )}
+        </div>
+        <p className="text-gray-900 dark:text-white font-semibold text-base sm:text-lg leading-relaxed mt-4">{qt}</p>
+      </div>
+    );
+  }
+
   return <p className="text-gray-900 dark:text-white font-semibold text-base sm:text-lg leading-relaxed">{qt}</p>;
 };
 
@@ -688,18 +833,32 @@ const OptionsDisplay = ({ qData, language, selectedAnswer, correctAnswer, compac
   return (
     <div className={`space-y-${compact ? '2' : '3'}`}>
       {options.map((opt, i) => {
-        const isC = i === correctAnswer, isSel = i === selectedAnswer, isW = isSel && !isC;
+        const isC = i === correctAnswer;
+        const isSel = i === selectedAnswer;
+        const isW = isSel && !isC;
         let cc = 'border-gray-200 dark:border-secondary-600 bg-white dark:bg-secondary-800 hover:bg-gray-50 dark:hover:bg-secondary-750';
-        let ic = <div className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-secondary-500 flex items-center justify-center"><span className="text-[10px] font-bold text-gray-400">{optLabel(i)}</span></div>;
+        let ic = (
+          <div className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-secondary-500 flex items-center justify-center">
+            <span className="text-[10px] font-bold text-gray-400">{optLabel(i)}</span>
+          </div>
+        );
         let tc = 'text-gray-700 dark:text-secondary-300';
 
         if (isC) {
           cc = 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/80 dark:bg-emerald-900/20 ring-1 ring-emerald-300/50 shadow-sm shadow-emerald-500/10';
-          ic = <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-md shadow-emerald-500/30"><CheckCircle className="w-4 h-4 text-white" /></div>;
+          ic = (
+            <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-md shadow-emerald-500/30">
+              <CheckCircle className="w-4 h-4 text-white" />
+            </div>
+          );
           tc = 'text-emerald-800 dark:text-emerald-200 font-medium';
         } else if (isW) {
           cc = 'border-red-300 dark:border-red-700 bg-red-50/80 dark:bg-red-900/20 ring-1 ring-red-300/50 shadow-sm shadow-red-500/10';
-          ic = <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-md shadow-red-500/30"><XCircle className="w-4 h-4 text-white" /></div>;
+          ic = (
+            <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shadow-md shadow-red-500/30">
+              <XCircle className="w-4 h-4 text-white" />
+            </div>
+          );
           tc = 'text-red-800 dark:text-red-200 font-medium';
         }
 

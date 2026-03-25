@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
-import { BookOpen, TrendingUp, TrendingDown, Target, Award, AlertTriangle, Zap } from 'lucide-react';
+import { BookOpen, TrendingUp, TrendingDown, Target, Award, AlertTriangle, Zap, Layers, Star } from 'lucide-react';
 
 const TopicAnalysis = ({ answers, questions, topicAnalysis, language = 'hi' }) => {
   const { unitData, chapterData, weakAreas, strongAreas } = useMemo(() => {
@@ -15,7 +15,6 @@ const TopicAnalysis = ({ answers, questions, topicAnalysis, language = 'hi' }) =
       const u = q.unit || (language === 'hi' ? 'अन्य' : 'Other');
       const c = q.chapter || q.topic || u;
       const skip = ans.selectedAnswer === -1 || ans.selectedAnswer === undefined || ans.selectedAnswer === null;
-
       [{ map: uMap, key: u }, { map: cMap, key: c }].forEach(({ map, key }) => {
         if (!map[key]) map[key] = { t: 0, c: 0, w: 0, s: 0, time: 0 };
         map[key].t++;
@@ -23,14 +22,12 @@ const TopicAnalysis = ({ answers, questions, topicAnalysis, language = 'hi' }) =
         if (skip) map[key].s++; else if (ans.isCorrect) map[key].c++; else map[key].w++;
       });
     });
-
     const toArr = (map) => Object.entries(map).map(([name, d]) => ({
       name: name.length > 25 ? name.substring(0, 25) + '...' : name,
       fullName: name, correct: d.c, wrong: d.w, skipped: d.s, total: d.t,
       accuracy: d.t > 0 ? Math.round(d.c / d.t * 100) : 0,
       avgTime: d.t > 0 ? Math.round(d.time / d.t) : 0
     })).sort((a, b) => b.total - a.total);
-
     const uArr = toArr(uMap), cArr = toArr(cMap);
     return {
       unitData: uArr, chapterData: cArr,
@@ -52,17 +49,15 @@ const TopicAnalysis = ({ answers, questions, topicAnalysis, language = 'hi' }) =
   );
 
   const overallAcc = unitData.length > 0
-    ? Math.round(unitData.reduce((s, u) => s + u.correct, 0) / unitData.reduce((s, u) => s + u.total, 0) * 100)
-    : 0;
+    ? Math.round(unitData.reduce((s, u) => s + u.correct, 0) / unitData.reduce((s, u) => s + u.total, 0) * 100) : 0;
 
   return (
     <div className="space-y-6">
-
       {/* Overview Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { icon: Target, value: `${overallAcc}%`, label: language === 'hi' ? 'कुल सटीकता' : 'Overall Accuracy', gradient: 'from-blue-500 to-indigo-600', color: 'text-blue-600' },
-          { icon: BookOpen, value: unitData.length, label: language === 'hi' ? 'इकाइयाँ' : 'Units', gradient: 'from-purple-500 to-violet-600', color: 'text-purple-600' },
+          { icon: Layers, value: unitData.length, label: language === 'hi' ? 'इकाइयाँ' : 'Units', gradient: 'from-purple-500 to-violet-600', color: 'text-purple-600' },
           { icon: TrendingUp, value: strongAreas.length, label: language === 'hi' ? 'मजबूत' : 'Strong', gradient: 'from-emerald-500 to-green-600', color: 'text-emerald-600' },
           { icon: AlertTriangle, value: weakAreas.length, label: language === 'hi' ? 'कमज़ोर' : 'Weak', gradient: 'from-red-500 to-rose-600', color: 'text-red-600' },
         ].map((s, i) => (
@@ -77,7 +72,7 @@ const TopicAnalysis = ({ answers, questions, topicAnalysis, language = 'hi' }) =
         ))}
       </div>
 
-      {/* Unit Performance Bar */}
+      {/* Unit Bar */}
       <div className="bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-5 shadow-sm">
         <h4 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <BookOpen className="w-5 h-5 text-primary-500" />
@@ -86,18 +81,17 @@ const TopicAnalysis = ({ answers, questions, topicAnalysis, language = 'hi' }) =
         <ResponsiveContainer width="100%" height={Math.max(250, unitData.length * 55)}>
           <BarChart data={unitData} layout="vertical" margin={{ left: 10 }}>
             <CartesianGrid strokeDasharray="3 3" className="opacity-20" horizontal={false} />
-            <XAxis type="number" />
-            <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
+            <XAxis type="number" /><YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
             <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }} />
             <Legend />
-            <Bar dataKey="correct" stackId="a" fill="#10B981" name={language === 'hi' ? 'सही' : 'Correct'} radius={[0, 0, 0, 0]} />
+            <Bar dataKey="correct" stackId="a" fill="#10B981" name={language === 'hi' ? 'सही' : 'Correct'} />
             <Bar dataKey="wrong" stackId="a" fill="#EF4444" name={language === 'hi' ? 'गलत' : 'Wrong'} />
             <Bar dataKey="skipped" stackId="a" fill="#9CA3AF" name={language === 'hi' ? 'छोड़ा' : 'Skipped'} radius={[0, 4, 4, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Radar Chart */}
+      {/* Radar */}
       {unitData.length >= 3 && (
         <div className="bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-5 shadow-sm">
           <h4 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -115,7 +109,7 @@ const TopicAnalysis = ({ answers, questions, topicAnalysis, language = 'hi' }) =
         </div>
       )}
 
-      {/* Detailed Table */}
+      {/* Table */}
       <div className="bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-5 shadow-sm overflow-x-auto">
         <h4 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <Zap className="w-5 h-5 text-primary-500" />
@@ -151,19 +145,19 @@ const TopicAnalysis = ({ answers, questions, topicAnalysis, language = 'hi' }) =
         </table>
       </div>
 
-      {/* Strong & Weak Areas */}
+      {/* Strong & Weak — Lucide icons only, NO emoji */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {strongAreas.length > 0 && (
           <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800 p-5">
             <h4 className="font-bold text-emerald-800 dark:text-emerald-400 flex items-center gap-2 mb-4">
               <TrendingUp className="w-5 h-5" />
-              {language === 'hi' ? '💪 मजबूत क्षेत्र' : '💪 Strong Areas'}
+              {language === 'hi' ? 'मजबूत क्षेत्र' : 'Strong Areas'}
             </h4>
             <div className="space-y-2">
               {strongAreas.map((a, i) => (
                 <div key={i} className="flex items-center justify-between p-3 bg-white/80 dark:bg-secondary-800/80 rounded-xl backdrop-blur-sm">
                   <div className="flex items-center gap-2">
-                    {i === 0 && <Award className="w-4 h-4 text-amber-500" />}
+                    {i === 0 && <Star className="w-4 h-4 text-amber-500" />}
                     <span className="text-sm text-gray-800 dark:text-secondary-200 font-medium">{a.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -179,7 +173,7 @@ const TopicAnalysis = ({ answers, questions, topicAnalysis, language = 'hi' }) =
           <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-2xl border border-red-200 dark:border-red-800 p-5">
             <h4 className="font-bold text-red-800 dark:text-red-400 flex items-center gap-2 mb-4">
               <TrendingDown className="w-5 h-5" />
-              {language === 'hi' ? '📈 सुधार करें' : '📈 Need Improvement'}
+              {language === 'hi' ? 'सुधार करें' : 'Need Improvement'}
             </h4>
             <div className="space-y-2">
               {weakAreas.map((a, i) => (
