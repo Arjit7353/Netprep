@@ -1730,7 +1730,264 @@ const bulkUpdatePYQQuestions = async (req, res, next) => {
     next(error);
   }
 };
+// ════════════════════════════════════════════════════════
+// NEW: Get test usage for multiple questions
+// POST /api/questions/test-usage
+// ════════════════════════════════════════════════════════
+const getTestUsage = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'ids array required' });
+    }
 
+    const Test = require('../models/Test');
+    const limitedIds = ids.slice(0, 200);
+
+    // Convert ObjectId strings for proper matching
+    const mongoose = require('mongoose');
+    const objectIds = [];
+    const stringIds = [];
+
+    limitedIds.forEach(id => {
+      if (typeof id === 'string' && id.startsWith('pyq_')) {
+        stringIds.push(id);
+      } else {
+        try {
+          objectIds.push(new mongoose.Types.ObjectId(id));
+          stringIds.push(id); // also search as string
+        } catch {
+          stringIds.push(id);
+        }
+      }
+    });
+
+    const searchIds = [...objectIds, ...stringIds];
+
+    const tests = await Test.find({
+      questions: { $in: searchIds },
+      status: { $ne: 'archived' }
+    }).select('_id title testType paper status totalQuestions createdAt questions hasPYQ sourceType').lean();
+
+    // Build map
+    const usageMap = {};
+    limitedIds.forEach(id => { usageMap[id] = []; });
+
+    tests.forEach(test => {
+      const testInfo = {
+        _id: test._id,
+        title: test.title,
+        testType: test.testType,
+        paper: test.paper,
+        status: test.status,
+        totalQuestions: test.totalQuestions,
+        createdAt: test.createdAt
+      };
+
+      (test.questions || []).forEach(qId => {
+        const idStr = String(qId);
+        if (usageMap[idStr] !== undefined) {
+          usageMap[idStr].push(testInfo);
+        }
+        // Also check ObjectId match
+        limitedIds.forEach(lid => {
+          if (String(lid) === idStr && usageMap[lid] !== undefined) {
+            if (!usageMap[lid].some(t => String(t._id) === String(test._id))) {
+              usageMap[lid].push(testInfo);
+            }
+          }
+        });
+      });
+    });
+
+    res.json({ success: true, data: usageMap });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ════════════════════════════════════════════════════════
+// NEW: Get question detail with full metadata + test usage
+// GET /api/questions/detail/:id
+// ════════════════════════════════════════════════════════
+const getQuestionDetail = async (req, res, next) => {
+  try {
+    const question = await Question.findById(req.params.id)
+      .populate('passageId')
+      .populate('diDataId')
+      .lean();
+
+    if (!question) {
+      return res.status(404).json({ success: false, message: 'Question not found' });
+    }
+
+    const Test = require('../models/Test');
+    const mongoose = require('mongoose');
+    let oid;
+    try { oid = new mongoose.Types.ObjectId(req.params.id); } catch { oid = null; }
+
+    const searchIds = oid ? [oid, req.params.id] : [req.params.id];
+
+    const tests = await Test.find({
+      questions: { $in: searchIds },
+      status: { $ne: 'archived' }
+    }).select('_id title testType paper status totalQuestions createdAt').lean();
+
+    // Calculate quality score
+    let qualityScore = 0;
+    if (question.question?.hi) qualityScore += 15;
+    if (question.question?.en) qualityScore += 15;
+    if (question.options?.hi?.length >= 4) qualityScore += 10;
+    if (question.options?.en?.length >= 4) qualityScore += 10;
+    if (question.correctAnswer !== null && question.correctAnswer !== undefined) qualityScore += 10;
+    if (question.explanation?.hi) qualityScore += 10;
+    if (question.explanation?.en) qualityScore += 10;
+    if (question.chapter) qualityScore += 5;
+    if (question.topic) qualityScore += 5;
+    if (question.tags?.length > 0) qualityScore += 5;
+    if (question.source) qualityScore += 5;
+    qualityScore = Math.min(100, qualityScore);
+
+    // Related questions (same chapter/topic)
+    const relatedFilter = {
+      _id: { $ne: question._id },
+      isActive: { $ne: false },
+      paper: question.paper
+    };
+    if (question.chapter) relatedFilter.chapter = question.chapter;
+    else if (question.unit) relatedFilter.unit = question.unit;
+
+    const relatedQuestions = await Question.find(relatedFilter)
+      .select('_id questionNumber question questionType difficulty')
+      .limit(5)
+      .lean();
+
+    res.json({
+      success: true,
+      data: {
+        ...question,
+        usedInTests: tests,
+        usedInTestCount: tests.length,
+        qualityScore,
+        relatedQuestions,
+        hasHindi: !!(question.question?.hi),
+        hasEnglish: !!(question.question?.en),
+        hasExplanation: !!(question.explanation?.hi || question.explanation?.en),
+        optionCount: Math.max(
+          question.options?.hi?.length || 0,
+          question.options?.en?.length || 0
+        )
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ════════════════════════════════════════════════════════
+// NEW: Bulk update questions
+// PUT /api/questions/bulk-update
+// ════════════════════════════════════════════════════════
+const bulkUpdateQuestions = async (req, res, next) => {
+  try {
+    const { ids, updates } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'ids array required' });
+    }
+    if (!updates || typeof updates !== 'object') {
+      return res.status(400).json({ success: false, message: 'updates object required' });
+    }
+
+    const allowedFields = ['difficulty', 'tags', 'unit', 'chapter', 'topic', 'source', 'year', 'isPYQ'];
+    const cleanUpdates = { updatedAt: new Date() };
+
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        if (field === 'difficulty') cleanUpdates.difficulty = normalizeDifficultyValue(updates[field]);
+        else if (field === 'tags' && Array.isArray(updates[field])) {
+          // Append tags
+          cleanUpdates.$addToSet = { tags: { $each: updates[field] } };
+        } else {
+          cleanUpdates[field] = updates[field];
+        }
+      }
+    }
+
+    const result = await Question.updateMany(
+      { _id: { $in: ids }, isActive: { $ne: false } },
+      cleanUpdates
+    );
+
+    res.json({
+      success: true,
+      message: `${result.modifiedCount} questions updated`,
+      data: { modified: result.modifiedCount }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ════════════════════════════════════════════════════════
+// NEW: Question analytics
+// GET /api/questions/analytics/:id
+// ════════════════════════════════════════════════════════
+const getQuestionAnalytics = async (req, res, next) => {
+  try {
+    const question = await Question.findById(req.params.id)
+      .select('timesAttempted timesCorrect difficulty questionType paper unit chapter createdAt updatedAt')
+      .lean();
+
+    if (!question) {
+      return res.status(404).json({ success: false, message: 'Question not found' });
+    }
+
+    const accuracy = question.timesAttempted > 0
+      ? Math.round((question.timesCorrect / question.timesAttempted) * 100)
+      : null;
+
+    const Test = require('../models/Test');
+    const mongoose = require('mongoose');
+    let oid;
+    try { oid = new mongoose.Types.ObjectId(req.params.id); } catch { oid = null; }
+    const searchIds = oid ? [oid, req.params.id] : [req.params.id];
+
+    const testCount = await Test.countDocuments({
+      questions: { $in: searchIds },
+      status: { $ne: 'archived' }
+    });
+
+    // Similar questions count
+    const similarCount = await Question.countDocuments({
+      _id: { $ne: question._id },
+      isActive: { $ne: false },
+      paper: question.paper,
+      chapter: question.chapter,
+      questionType: question.questionType
+    });
+
+    res.json({
+      success: true,
+      data: {
+        timesAttempted: question.timesAttempted || 0,
+        timesCorrect: question.timesCorrect || 0,
+        accuracy,
+        testCount,
+        similarCount,
+        age: Math.floor((Date.now() - new Date(question.createdAt).getTime()) / (1000 * 60 * 60 * 24)),
+        lastUpdated: question.updatedAt
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ═══ ADD TO module.exports: ═══
+// getTestUsage,
+// getQuestionDetail,
+// bulkUpdateQuestions,
+// getQuestionAnalytics,
 // ================================================================
 // EXPORTS
 // ================================================================
@@ -1757,5 +2014,9 @@ module.exports = {
   getPYQQuestionById,
   updatePYQQuestion,
   getPYQQuestionBank,
-  bulkUpdatePYQQuestions
+  bulkUpdatePYQQuestions,
+  getTestUsage,
+  getQuestionDetail,
+  bulkUpdateQuestions,
+  getQuestionAnalytics,
 };

@@ -1,5 +1,3 @@
-// client/src/services/testService.js
-
 import api, { apiHelper } from './api';
 
 const testService = {
@@ -57,7 +55,14 @@ const testService = {
 
   async getTestAttempts(id) {
     return apiHelper.get(`/tests/${id}/attempts`);
-  }
+  },
+
+  // ★ NEW: Re-translate all questions in a test
+  async reTranslateTest(id, options = {}) {
+    return apiHelper.post(`/tests/${id}/retranslate`, {
+      force: options.force !== false, // default true
+    });
+  },
 };
 
 export default testService;

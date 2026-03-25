@@ -908,11 +908,365 @@ const getTestAttempts = async (req, res, next) => {
     next(error);
   }
 };
+// ═══════════════════════════════════════════════════════
+//   RE-TRANSLATE TEST — All questions via Azure/Google
+//   POST /api/tests/:id/retranslate
+// ═══════════════════════════════════════════════════════
+const reTranslateTest = async (req, res, next) => {
+  try {
+    const testId = req.params.id;
+    const { force = true } = req.body; // force = re-translate even if both langs exist
+
+    const translateHelper = require('../utils/translateHelper');
+
+    const test = await Test.findById(testId);
+    if (!test) return res.status(404).json({ success: false, message: 'Test not found' });
+
+    const questionIds = test.questions || [];
+    if (questionIds.length === 0) {
+      return res.json({ success: true, message: 'No questions to translate', data: { translated: 0 } });
+    }
+
+    console.log(`[ReTranslate] Starting test "${test.title}" — ${questionIds.length} questions`);
+
+    // Separate regular IDs from PYQ IDs
+    const regularIds = [];
+    const pyqIds = [];
+
+    questionIds.forEach(qId => {
+      const idStr = typeof qId === 'string' ? qId : String(qId);
+      if (isPYQSyntheticId(idStr)) pyqIds.push(idStr);
+      else regularIds.push(qId);
+    });
+
+    let regularTranslated = 0;
+    let pyqTranslated = 0;
+    let totalFields = 0;
+    let errors = [];
+
+    // ═══════════════════════════════════════════════════
+    //  1. RE-TRANSLATE REGULAR QUESTIONS
+    // ═══════════════════════════════════════════════════
+    if (regularIds.length > 0) {
+      const questions = await Question.find({ _id: { $in: regularIds } });
+      console.log(`[ReTranslate] Processing ${questions.length} regular questions`);
+
+      for (const q of questions) {
+        try {
+          // Detect source language
+          const hasHi = q.question?.hi?.trim();
+          const hasEn = q.question?.en?.trim();
+
+          if (!hasHi && !hasEn) continue; // No content at all
+
+          const srcLang = hasHi ? 'hi' : 'en';
+          const tgtLang = srcLang === 'hi' ? 'en' : 'hi';
+
+          const textsToTranslate = [];
+          const meta = [];
+
+          // Collect ALL translatable fields
+          const addField = (obj, srcKey, tgtKey, label) => {
+            if (!obj) return;
+            const src = obj[srcKey];
+            if (src && typeof src === 'string' && src.trim()) {
+              if (force || !obj[tgtKey] || !obj[tgtKey].trim()) {
+                textsToTranslate.push(src);
+                meta.push({ obj, tgtKey, label });
+              }
+            }
+          };
+
+          const addArrayField = (obj, srcKey, tgtKey, label) => {
+            if (!obj) return;
+            const srcArr = obj[srcKey];
+            if (!Array.isArray(srcArr) || srcArr.length === 0) return;
+            if (!force && Array.isArray(obj[tgtKey]) && obj[tgtKey].length > 0 &&
+                obj[tgtKey].some(x => x && x.trim())) return;
+
+            // Mark start for array
+            const startIdx = textsToTranslate.length;
+            for (const item of srcArr) {
+              textsToTranslate.push(item || '');
+              meta.push({ obj, tgtKey, label, isArray: true, startIdx, totalLen: srcArr.length });
+            }
+          };
+
+          // Question text
+          addField(q.question, srcLang, tgtLang, 'question');
+          // Options
+          addArrayField(q.options, srcLang, tgtLang, 'options');
+          // Explanation
+          addField(q.explanation, srcLang, tgtLang, 'explanation');
+
+          // Assertion-Reason
+          if (q.assertionReasonData) {
+            addField(q.assertionReasonData.assertion, srcLang, tgtLang, 'assertion');
+            addField(q.assertionReasonData.reason, srcLang, tgtLang, 'reason');
+          }
+          // Match data
+          if (q.matchData) {
+            addArrayField(q.matchData.listA, srcLang, tgtLang, 'listA');
+            addArrayField(q.matchData.listB, srcLang, tgtLang, 'listB');
+          }
+          // Statement data
+          if (q.statementData) {
+            addArrayField(q.statementData.statements, srcLang, tgtLang, 'statements');
+          }
+          // Sequence data
+          if (q.sequenceData) {
+            addArrayField(q.sequenceData.items, srcLang, tgtLang, 'seqItems');
+          }
+
+          if (textsToTranslate.length === 0) continue;
+
+          // ★ Translate via Azure (primary) / Google (fallback)
+          const translated = await translateHelper.translateBatch(textsToTranslate, srcLang, tgtLang);
+
+          // Apply translations
+          const arrayBuffers = {};
+          for (let i = 0; i < meta.length; i++) {
+            const m = meta[i];
+            const tr = translated[i] || '';
+
+            if (m.isArray) {
+              if (!arrayBuffers[m.label]) arrayBuffers[m.label] = { obj: m.obj, tgtKey: m.tgtKey, arr: [] };
+              arrayBuffers[m.label].arr.push(tr);
+            } else {
+              m.obj[m.tgtKey] = tr;
+            }
+          }
+
+          // Apply array buffers
+          for (const buf of Object.values(arrayBuffers)) {
+            buf.obj[buf.tgtKey] = buf.arr;
+          }
+
+          totalFields += textsToTranslate.length;
+
+          // ★ Post-process: fix corruptions & keywords
+          const { question: validated } = translateHelper.validateQuestion(q.toObject());
+
+          // Apply validated fields back
+          if (validated.question) q.question = validated.question;
+          if (validated.options) q.options = validated.options;
+          if (validated.explanation) q.explanation = validated.explanation;
+          if (validated.assertionReasonData) q.assertionReasonData = validated.assertionReasonData;
+          if (validated.matchData) q.matchData = validated.matchData;
+          if (validated.statementData) q.statementData = validated.statementData;
+          if (validated.sequenceData) q.sequenceData = validated.sequenceData;
+
+          q.updatedAt = new Date();
+          await q.save();
+          regularTranslated++;
+
+        } catch (err) {
+          console.error(`[ReTranslate] Error Q#${q.questionNumber}:`, err.message);
+          errors.push({ id: q._id, error: err.message });
+        }
+      }
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  2. RE-TRANSLATE PYQ QUESTIONS
+    // ═══════════════════════════════════════════════════
+    if (pyqIds.length > 0) {
+      console.log(`[ReTranslate] Processing ${pyqIds.length} PYQ questions`);
+
+      // Group by docId
+      const docGroups = {};
+      for (const pyqId of pyqIds) {
+        const parsed = parsePYQId(pyqId);
+        if (!parsed) continue;
+        if (!docGroups[parsed.docId]) docGroups[parsed.docId] = [];
+        docGroups[parsed.docId].push(parsed.qNo);
+      }
+
+      for (const [docId, qNos] of Object.entries(docGroups)) {
+        try {
+          const pyqDoc = await PYQAnalysis.findById(docId);
+          if (!pyqDoc) continue;
+
+          let docChanged = false;
+
+          for (const qNo of qNos) {
+            const qIndex = (pyqDoc.questionTopicMap || []).findIndex(q => q.qNo === qNo);
+            if (qIndex === -1) continue;
+
+            const pq = pyqDoc.questionTopicMap[qIndex];
+
+            // Detect source language
+            const hasHi = (pq.questionTextHi || pq.assertionHi || '').trim();
+            const hasEn = (pq.questionTextEn || pq.assertionEn || '').trim();
+            if (!hasHi && !hasEn) continue;
+
+            const srcLang = hasHi ? 'hi' : 'en';
+            const tgtLang = srcLang === 'hi' ? 'en' : 'hi';
+            const srcSuffix = srcLang === 'hi' ? 'Hi' : 'En';
+            const tgtSuffix = tgtLang === 'hi' ? 'Hi' : 'En';
+
+            const textsToTranslate = [];
+            const meta = [];
+
+            // Text fields
+            const textPairs = [
+              ['questionText', 'questionText'],
+              ['explanation', 'explanation'],
+              ['assertion', 'assertion'],
+              ['reason', 'reason'],
+              ['passage', 'passage'],
+              ['caseletText', 'caseletText'],
+            ];
+
+            for (const [srcBase] of textPairs) {
+              const srcField = `${srcBase}${srcSuffix}`;
+              const tgtField = `${srcBase}${tgtSuffix}`;
+              if (pq[srcField] && pq[srcField].trim() && (force || !pq[tgtField] || !pq[tgtField].trim())) {
+                textsToTranslate.push(pq[srcField]);
+                meta.push({ field: tgtField, type: 'text' });
+              }
+            }
+
+            // Array fields
+            const arrayPairs = [
+              ['options', 'options'],
+              ['statements', 'statements'],
+              ['listA', 'listA'],
+              ['listB', 'listB'],
+              ['items', 'items'],
+            ];
+
+            for (const [srcBase] of arrayPairs) {
+              const srcField = `${srcBase}${srcSuffix}`;
+              const tgtField = `${srcBase}${tgtSuffix}`;
+              const srcArr = pq[srcField];
+              if (!Array.isArray(srcArr) || srcArr.length === 0) continue;
+              if (!force && Array.isArray(pq[tgtField]) && pq[tgtField].length > 0 &&
+                  pq[tgtField].some(x => x && String(x).trim())) continue;
+
+              for (let i = 0; i < srcArr.length; i++) {
+                textsToTranslate.push(srcArr[i] || '');
+                meta.push({ field: tgtField, type: 'array', index: i, totalLen: srcArr.length });
+              }
+            }
+
+            // Sub-questions
+            if (Array.isArray(pq.subQuestions)) {
+              for (let si = 0; si < pq.subQuestions.length; si++) {
+                const sq = pq.subQuestions[si];
+
+                const sqSrcField = `questionText${srcSuffix}`;
+                const sqTgtField = `questionText${tgtSuffix}`;
+                if (sq[sqSrcField] && sq[sqSrcField].trim() && (force || !sq[sqTgtField] || !sq[sqTgtField].trim())) {
+                  textsToTranslate.push(sq[sqSrcField]);
+                  meta.push({ field: `sub.${si}.${sqTgtField}`, type: 'text' });
+                }
+
+                const sqExpSrc = `explanation${srcSuffix}`;
+                const sqExpTgt = `explanation${tgtSuffix}`;
+                if (sq[sqExpSrc] && sq[sqExpSrc].trim() && (force || !sq[sqExpTgt] || !sq[sqExpTgt].trim())) {
+                  textsToTranslate.push(sq[sqExpSrc]);
+                  meta.push({ field: `sub.${si}.${sqExpTgt}`, type: 'text' });
+                }
+
+                const sqOptSrc = `options${srcSuffix}`;
+                const sqOptTgt = `options${tgtSuffix}`;
+                if (Array.isArray(sq[sqOptSrc]) && sq[sqOptSrc].length > 0 &&
+                    (force || !Array.isArray(sq[sqOptTgt]) || sq[sqOptTgt].length === 0)) {
+                  for (let oi = 0; oi < sq[sqOptSrc].length; oi++) {
+                    textsToTranslate.push(sq[sqOptSrc][oi] || '');
+                    meta.push({ field: `sub.${si}.${sqOptTgt}`, type: 'array', index: oi, totalLen: sq[sqOptSrc].length });
+                  }
+                }
+              }
+            }
+
+            if (textsToTranslate.length === 0) continue;
+
+            // ★ Translate
+            const translated = await translateHelper.translateBatch(textsToTranslate, srcLang, tgtLang);
+
+            // Apply
+            const arrayBuffers = {};
+            for (let i = 0; i < meta.length; i++) {
+              const m = meta[i];
+              let tr = translated[i] || '';
+
+              if (m.field.startsWith('sub.')) {
+                const parts = m.field.split('.');
+                const si = parseInt(parts[1]);
+                const sf = parts[2];
+                if (m.type === 'text') {
+                  if (pq.subQuestions[si]) pq.subQuestions[si][sf] = tr;
+                } else {
+                  const bufKey = m.field;
+                  if (!arrayBuffers[bufKey]) arrayBuffers[bufKey] = { si, sf, arr: new Array(m.totalLen).fill('') };
+                  arrayBuffers[bufKey].arr[m.index] = tr;
+                }
+              } else if (m.type === 'text') {
+                pq[m.field] = tr;
+              } else {
+                const bufKey = m.field;
+                if (!arrayBuffers[bufKey]) arrayBuffers[bufKey] = { field: m.field, arr: new Array(m.totalLen).fill('') };
+                arrayBuffers[bufKey].arr[m.index] = tr;
+              }
+            }
+
+            for (const buf of Object.values(arrayBuffers)) {
+              if (buf.si !== undefined) {
+                if (pq.subQuestions[buf.si]) pq.subQuestions[buf.si][buf.sf] = buf.arr;
+              } else {
+                pq[buf.field] = buf.arr;
+              }
+            }
+
+            totalFields += textsToTranslate.length;
+            pyqDoc.questionTopicMap[qIndex] = pq;
+            docChanged = true;
+            pyqTranslated++;
+          }
+
+          if (docChanged) {
+            pyqDoc.markModified('questionTopicMap');
+            pyqDoc.updatedAt = new Date();
+            await pyqDoc.save();
+            console.log(`[ReTranslate] Saved PYQ doc: ${pyqDoc.displayLabel}`);
+          }
+        } catch (err) {
+          console.error(`[ReTranslate] PYQ doc error:`, err.message);
+          errors.push({ docId, error: err.message });
+        }
+      }
+    }
+
+    const totalTranslated = regularTranslated + pyqTranslated;
+    console.log(`[ReTranslate] Done: ${totalTranslated} questions, ${totalFields} fields, ${errors.length} errors`);
+
+    res.json({
+      success: true,
+      message: `Re-translated ${totalTranslated} questions (${totalFields} fields)`,
+      data: {
+        testId,
+        testTitle: test.title,
+        totalQuestions: questionIds.length,
+        regularTranslated,
+        pyqTranslated,
+        totalFields,
+        errors: errors.length,
+        errorDetails: errors.slice(0, 10),
+        translationEngine: translateHelper.getStatus().primary
+      }
+    });
+  } catch (error) {
+    console.error('[ReTranslate] Fatal:', error.message);
+    next(error);
+  }
+};
 
 module.exports = {
   getTests, getFilterOptions, getTestStats, getTestTypes,
   getTestById, getTestWithQuestions,
   createTest, generateRandomTest,
   updateTest, updateTestStatus, deleteTest,
-  addQuestionsToTest, removeQuestionsFromTest, getTestAttempts
+  addQuestionsToTest, removeQuestionsFromTest, getTestAttempts,reTranslateTest
 };

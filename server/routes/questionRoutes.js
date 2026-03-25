@@ -76,5 +76,9 @@ router.post('/', questionController.createQuestion);
 router.get('/:id', questionController.getQuestionById);
 router.put('/:id', questionController.updateQuestion);
 router.delete('/:id', questionController.deleteQuestion);
+router.post('/test-usage', questionController.getTestUsage);
+router.get('/detail/:id', questionController.getQuestionDetail);
+router.put('/bulk-update', questionController.bulkUpdateQuestions);
+router.get('/analytics/:id', questionController.getQuestionAnalytics);
 
 module.exports = router;

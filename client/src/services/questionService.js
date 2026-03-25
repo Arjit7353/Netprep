@@ -366,7 +366,27 @@ const questionService = {
         return getText(question.question);
     }
   },
+// ═══ ADD TO questionService object ═══
 
+  // Test usage tracking
+  getTestUsage: async (ids) => {
+    return apiHelper.post('/questions/test-usage', { ids });
+  },
+
+  // Question detail with full metadata
+  getQuestionDetail: async (id) => {
+    return apiHelper.get(`/questions/detail/${id}`);
+  },
+
+  // Bulk update questions
+  bulkUpdateQuestions: async (ids, updates) => {
+    return apiHelper.put('/questions/bulk-update', { ids, updates });
+  },
+
+  // Question analytics
+  getQuestionAnalytics: async (id) => {
+    return apiHelper.get(`/questions/analytics/${id}`);
+  },
   getTypeColor: (type) => {
     const colors = {
       mcq: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200' },
@@ -438,5 +458,6 @@ const questionService = {
     return colors[status] || colors.unknown;
   },
 };
+
 
 export default questionService;

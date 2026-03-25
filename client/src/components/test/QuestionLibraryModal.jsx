@@ -1,27 +1,45 @@
 // client/src/components/test/QuestionLibraryModal.jsx
+// ════════════════════════════════════════════════════════════════
+// EXTREME ADVANCED v4.0 — Test usage, Analytics, Inline edit,
+// Smart suggestions, Export, Quality scores, Full type rendering
+// ════════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X, Search, Check, CheckCircle2, XCircle, ChevronLeft, ChevronRight,
-  FileText, Eye, Calendar, RefreshCw, Trash2, LayoutGrid, List, Globe,
+  FileText, Eye, Calendar, RefreshCw, Trash2, LayoutGrid, List,
   Languages, Sliders, BookOpen, Target, Layers, Star,
   CheckCheck, ArrowUpDown, RotateCcw, Sparkles, Tag,
-  Flame, Gauge, CircleDot, BarChart3, Bookmark,
-  Maximize2, Minimize2, PanelLeftClose, PanelLeft,
-  ChevronFirst, ChevronLast, Plus, Minus,
-  Zap, ChevronDown, ChevronUp, SlidersHorizontal,
-  Info, Hash, Clock, Award, MousePointerClick,
-  ArrowDown, ArrowUp, Filter, Expand, Shrink
+  Flame, Gauge, CircleDot, BarChart3, PanelLeftClose, PanelLeft,
+  Maximize2, Minimize2, ChevronFirst, ChevronLast, Plus, Minus,
+  Zap, ChevronDown, ChevronUp, SlidersHorizontal, Hash,
+  Clock, Award, Activity, Copy, Download, Edit2,
+  ClipboardList, AlertTriangle, Shield, Info, ExternalLink,
+  GripVertical, ArrowRight, Filter as FilterIcon
 } from 'lucide-react';
 import { QUESTION_TYPE_LABELS, DIFFICULTY_LABELS, PAPER_LABELS } from '../../utils/constants';
+import { getBilingualText, getBilingualArray, formatDate, getRelativeTime } from '../../utils/helpers';
 import { FilterChip, DateRangePicker, MiniMultiSelect, QuestionPreviewModal } from './library';
+import questionService from '../../services/questionService';
+import { useToast } from '../common/Toast';
 
 // ════════════════════════════════════════
 // HELPERS
 // ════════════════════════════════════════
 const getQText = (q, lang) => {
-  if (!q?.question) return '';
+  if (!q?.question) {
+    if (q?.assertionReasonData?.assertion) {
+      const a = q.assertionReasonData.assertion;
+      return a[lang] || a.hi || a.en || '';
+    }
+    if (q?.statementData?.statements) {
+      const s = q.statementData.statements;
+      const arr = s[lang] || s.hi || s.en || [];
+      return Array.isArray(arr) ? arr.slice(0, 2).join(' | ') : '';
+    }
+    return q?.topic || q?.chapter || '';
+  }
   if (typeof q.question === 'string') return q.question;
   return q.question[lang] || q.question.hi || q.question.en || '';
 };
@@ -32,150 +50,313 @@ const stripHtml = (html) => {
 };
 
 const DIFF = {
-  easy: {
-    label: { hi: 'आसान', en: 'Easy' },
-    bg: 'bg-emerald-100 dark:bg-emerald-900/30',
-    text: 'text-emerald-700 dark:text-emerald-300',
-    dot: 'bg-emerald-500',
-    pill: 'bg-emerald-600 text-white border-emerald-600',
-    pillOff: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 hover:bg-emerald-100'
-  },
-  medium: {
-    label: { hi: 'मध्यम', en: 'Medium' },
-    bg: 'bg-amber-100 dark:bg-amber-900/30',
-    text: 'text-amber-700 dark:text-amber-300',
-    dot: 'bg-amber-500',
-    pill: 'bg-amber-600 text-white border-amber-600',
-    pillOff: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 hover:bg-amber-100'
-  },
-  hard: {
-    label: { hi: 'कठिन', en: 'Hard' },
-    bg: 'bg-red-100 dark:bg-red-900/30',
-    text: 'text-red-700 dark:text-red-300',
-    dot: 'bg-red-500',
-    pill: 'bg-red-600 text-white border-red-600',
-    pillOff: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 hover:bg-red-100'
-  }
+  easy: { label: { hi: 'आसान', en: 'Easy' }, bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-300', dot: 'bg-emerald-500', pill: 'bg-emerald-600 text-white border-emerald-600', pillOff: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' },
+  medium: { label: { hi: 'मध्यम', en: 'Medium' }, bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500', pill: 'bg-amber-600 text-white border-amber-600', pillOff: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' },
+  hard: { label: { hi: 'कठिन', en: 'Hard' }, bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', dot: 'bg-red-500', pill: 'bg-red-600 text-white border-red-600', pillOff: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' }
+};
+
+// ═══ Quality Calculator ═══
+const calcQuality = (q) => {
+  if (!q) return { score: 0, issues: [] };
+  let s = 0;
+  const issues = [];
+  const hasHi = !!(q.question?.hi || q.assertionReasonData?.assertion?.hi);
+  const hasEn = !!(q.question?.en || q.assertionReasonData?.assertion?.en);
+  if (hasHi) s += 15; else issues.push('No Hindi');
+  if (hasEn) s += 15; else issues.push('No English');
+  const optH = q.options?.hi?.filter(o => o?.trim())?.length || 0;
+  const optE = q.options?.en?.filter(o => o?.trim())?.length || 0;
+  if (optH >= 4 || optE >= 4) s += 20; else if (optH >= 2 || optE >= 2) { s += 10; issues.push(`Only ${Math.max(optH, optE)} options`); } else issues.push('Missing options');
+  if (q.correctAnswer !== null && q.correctAnswer !== undefined) s += 10; else issues.push('No answer');
+  if (q.explanation?.hi || q.explanation?.en) s += 15; else issues.push('No explanation');
+  if (q.chapter) s += 5; else issues.push('No chapter');
+  if (q.topic) s += 5;
+  if (q.difficulty) s += 5;
+  if (q.tags?.length > 0) s += 2;
+  if (q.source) s += 3;
+  s += 5; // base
+  return { score: Math.min(100, s), issues };
+};
+
+// ═══ Quality Badge ═══
+const QualityBadge = ({ score }) => {
+  const c = score >= 80 ? 'text-emerald-600 bg-emerald-50' : score >= 60 ? 'text-blue-600 bg-blue-50' : score >= 40 ? 'text-amber-600 bg-amber-50' : 'text-red-600 bg-red-50';
+  return (
+    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black ${c}`} title={`Quality: ${score}%`}>
+      <svg className="w-3 h-3 -rotate-90" viewBox="0 0 20 20">
+        <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" strokeWidth="2.5" opacity="0.2" />
+        <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" strokeWidth="2.5"
+          strokeDasharray={`${score * 0.44} 999`} strokeLinecap="round" />
+      </svg>
+      {score}%
+    </span>
+  );
+};
+
+// ═══ Test Usage Mini Badge ═══
+const TestUsageMini = ({ count, onClick }) => {
+  if (!count || count === 0) return null;
+  return (
+    <button type="button" onClick={e => { e.stopPropagation(); onClick?.(); }}
+      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
+      title={`Used in ${count} test(s)`}>
+      <ClipboardList className="w-2.5 h-2.5" />{count}
+    </button>
+  );
 };
 
 // ════════════════════════════════════════
-// QUESTION CARD
+// ★ QUESTION CARD (Extreme Enhanced)
 // ════════════════════════════════════════
-const QuestionCard = React.memo(({ q, idx, globalIdx, isSelected, displayLang, language, onToggle, onPreview, viewMode }) => {
+const QuestionCard = React.memo(({
+  q, idx, globalIdx, isSelected, displayLang, language,
+  onToggle, onPreview, viewMode,
+  testUsage = [], onShowTestUsage
+}) => {
   const [expanded, setExpanded] = useState(false);
   const t = (h, e) => language === 'hi' ? h : e;
+
   const text = getQText(q, displayLang);
   const plain = stripHtml(text);
-  const isLong = plain.length > 220;
+  const isLong = plain.length > 200;
   const isHtml = text !== plain && text.includes('<');
   const dc = DIFF[q.difficulty] || DIFF.medium;
+  const quality = useMemo(() => calcQuality(q), [q]);
 
+  const hasHi = !!(q.question?.hi || q.assertionReasonData?.assertion?.hi);
+  const hasEn = !!(q.question?.en || q.assertionReasonData?.assertion?.en);
+  const hasExpl = !!(q.explanation?.hi || q.explanation?.en);
+
+  // Get options
+  const getOpts = () => {
+    if (!q.options) return [];
+    if (Array.isArray(q.options)) return q.options;
+    const arr = q.options[displayLang] || q.options.hi || q.options.en;
+    return Array.isArray(arr) ? arr : [];
+  };
+  const opts = getOpts();
+  const correctIdx = q.correctAnswer;
+
+  // Type-specific preview
+  const getTypePreview = () => {
+    if (plain) return null;
+    if (q.questionType === 'assertion_reason') {
+      const a = q.assertionReasonData?.assertion;
+      const aText = a?.[displayLang] || a?.hi || a?.en || '';
+      return aText ? (
+        <span className="text-[12px] text-gray-700">
+          <span className="text-[10px] font-bold text-blue-600 mr-1">A:</span>
+          {aText.substring(0, 80)}{aText.length > 80 ? '…' : ''}
+        </span>
+      ) : null;
+    }
+    if (q.questionType === 'statement_based') {
+      const s = q.statementData?.statements;
+      const arr = s?.[displayLang] || s?.hi || s?.en || [];
+      return arr.length > 0 ? (
+        <div className="text-[12px] text-gray-700 space-y-0.5">
+          {arr.slice(0, 2).map((st, si) => (
+            <span key={si} className="block">
+              <span className="text-[10px] font-bold text-amber-600 mr-1">{si + 1}.</span>
+              {(typeof st === 'string' ? st : '').substring(0, 55)}{st?.length > 55 ? '…' : ''}
+            </span>
+          ))}
+        </div>
+      ) : null;
+    }
+    if (q.questionType === 'match_following') {
+      const listA = q.matchData?.listA;
+      const arr = listA?.[displayLang] || listA?.hi || listA?.en || [];
+      return arr.length > 0 ? (
+        <span className="text-[12px] text-gray-700">
+          <span className="text-[10px] font-bold text-green-600 mr-1">{t('सुमेलन:', 'Match:')}</span>
+          {arr.slice(0, 2).join(' | ').substring(0, 70)}…
+        </span>
+      ) : null;
+    }
+    return null;
+  };
+
+  const typePreview = getTypePreview();
+
+  // ═══ GRID VIEW ═══
   if (viewMode === 'grid') {
     return (
       <div onClick={e => { e.stopPropagation(); onToggle(q); }}
         className={`relative p-3 rounded-2xl border-2 cursor-pointer group transition-all duration-200
-          ${isSelected
-            ? 'border-primary-500 bg-gradient-to-br from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/10 shadow-lg shadow-primary-500/10'
-            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary-300 hover:shadow-lg'}`}>
+          ${isSelected ? 'border-primary-500 bg-gradient-to-br from-primary-50 to-blue-50 shadow-lg' : 'border-gray-200 bg-white hover:border-primary-300 hover:shadow-lg'}`}>
         <div className={`absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center transition-all
-          ${isSelected ? 'bg-primary-600 shadow-lg ring-2 ring-primary-300/50' : 'bg-gray-100 dark:bg-gray-700 group-hover:bg-primary-100'}`}>
+          ${isSelected ? 'bg-primary-600 shadow-lg ring-2 ring-primary-300/50' : 'bg-gray-100 group-hover:bg-primary-100'}`}>
           {isSelected ? <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /> : <span className="text-[9px] font-bold text-gray-400">{globalIdx}</span>}
         </div>
         <div className="flex flex-wrap gap-1 mb-2 pr-8">
-          <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-md font-bold">{q.paper === 'paper1' ? 'P1' : 'P2'}</span>
+          <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 rounded-md font-bold">{q.paper === 'paper1' ? 'P1' : 'P2'}</span>
           <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${dc.bg} ${dc.text}`}>{(q.difficulty || 'M')[0].toUpperCase()}</span>
           {q.isPYQ && <span className="text-[9px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-md font-bold">PYQ</span>}
+          <QualityBadge score={quality.score} />
+          <TestUsageMini count={testUsage.length} onClick={() => onShowTestUsage?.(q, testUsage)} />
         </div>
-        <p className="text-[12px] text-gray-700 dark:text-gray-300 leading-relaxed break-words whitespace-pre-wrap mb-2 min-h-[48px]">
-          {plain.substring(0, 160)}{plain.length > 160 ? '…' : ''}
+        <p className="text-[11px] text-gray-700 leading-relaxed break-words mb-2 min-h-[40px]">
+          {plain.substring(0, 130)}{plain.length > 130 ? '…' : ''}
         </p>
-        <div className="flex items-center justify-between pt-1.5 border-t border-gray-100 dark:border-gray-700/50">
-          <span className="text-[9px] text-gray-400 tabular-nums">{q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : ''}</span>
-          <button type="button" onClick={e => { e.stopPropagation(); onPreview(q); }} className="p-1 hover:bg-primary-50 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-            <Eye className="w-3.5 h-3.5 text-gray-400 group-hover:text-primary-600" />
-          </button>
+        {opts.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-1.5">
+            {opts.slice(0, 4).map((opt, oi) => {
+              const oText = stripHtml(typeof opt === 'string' ? opt : '');
+              const correct = correctIdx === oi;
+              return (
+                <span key={oi} className={`text-[8px] px-1.5 py-0.5 rounded border truncate max-w-[80px]
+                  ${correct ? 'bg-emerald-50 border-emerald-300 text-emerald-700 font-bold' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                  {correct ? '✓' : String.fromCharCode(65 + oi)}: {oText.substring(0, 18)}
+                </span>
+              );
+            })}
+          </div>
+        )}
+        <div className="flex items-center justify-between pt-1.5 border-t border-gray-100">
+          <span className="text-[9px] text-gray-400 truncate max-w-[80px]">{q.chapter || q.unit || ''}</span>
+          <div className="flex items-center gap-1">
+            {hasExpl && <span className="text-[8px]" title="Has explanation">💡</span>}
+            <button type="button" onClick={e => { e.stopPropagation(); onPreview(q); }}
+              className="p-1 hover:bg-primary-50 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+              <Eye className="w-3 h-3 text-gray-400 group-hover:text-primary-600" />
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // LIST
+  // ═══ LIST VIEW ═══
   return (
     <div onClick={e => { e.stopPropagation(); onToggle(q); }}
       className={`p-3 rounded-2xl border-2 cursor-pointer group relative transition-all duration-200
         ${isSelected
-          ? 'border-primary-500 dark:border-primary-400 bg-gradient-to-r from-primary-50/80 to-blue-50/40 dark:from-primary-900/20 dark:to-blue-900/10 shadow-lg shadow-primary-500/10 ring-1 ring-primary-500/20'
-          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary-300 hover:shadow-lg'}`}>
+          ? 'border-primary-500 bg-gradient-to-r from-primary-50/80 to-blue-50/40 shadow-lg ring-1 ring-primary-500/20'
+          : 'border-gray-200 bg-white hover:border-primary-300 hover:shadow-lg'}`}>
       <div className="flex gap-3">
-        {/* Checkbox */}
         <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-1 transition-all
-          ${isSelected
-            ? 'bg-primary-600 border-primary-600 shadow-md ring-2 ring-primary-300/50'
-            : 'border-gray-300 dark:border-gray-600 group-hover:border-primary-400 group-hover:bg-primary-50'}`}>
+          ${isSelected ? 'bg-primary-600 border-primary-600 shadow-md' : 'border-gray-300 group-hover:border-primary-400'}`}>
           {isSelected && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
         </div>
 
         <div className="flex-1 min-w-0">
-          {/* Tags */}
-          <div className="flex flex-wrap gap-1 mb-1.5">
-            <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-md font-bold tabular-nums">#{q.questionNumber || globalIdx}</span>
-            <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-md font-bold">{q.paper === 'paper1' ? 'P1' : 'P2'}</span>
-            {q.unit && <span className="text-[9px] px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-md font-semibold truncate max-w-[160px]" title={q.unit}>{q.unit}</span>}
-            {q.chapter && <span className="text-[9px] px-1.5 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-md font-semibold truncate max-w-[140px]" title={q.chapter}>{q.chapter}</span>}
-            {q.topic && <span className="text-[9px] px-1.5 py-0.5 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-md font-semibold truncate max-w-[120px]" title={q.topic}>{q.topic}</span>}
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${dc.bg} ${dc.text}`}>{dc.label[displayLang] || q.difficulty}</span>
-            <span className="text-[9px] px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded-md font-semibold">
+          {/* Tags Row */}
+          <div className="flex flex-wrap gap-1 mb-1.5 items-center">
+            <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md font-bold tabular-nums">#{q.questionNumber || globalIdx}</span>
+            <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md font-bold">{q.paper === 'paper1' ? 'P1' : 'P2'}</span>
+            {q.unit && <span className="text-[9px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded-md font-semibold truncate max-w-[140px]" title={q.unit}>{q.unit}</span>}
+            {q.chapter && <span className="text-[9px] px-1.5 py-0.5 bg-green-50 text-green-700 rounded-md font-semibold truncate max-w-[120px]" title={q.chapter}>{q.chapter}</span>}
+            {q.topic && <span className="text-[9px] px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded-md font-semibold truncate max-w-[100px]" title={q.topic}>{q.topic}</span>}
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${dc.bg} ${dc.text}`}>{dc.label[displayLang]}</span>
+            <span className="text-[9px] px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded-md font-semibold">
               {QUESTION_TYPE_LABELS[q.questionType]?.[displayLang] || q.questionType}
             </span>
-            {q.isPYQ && <span className="text-[9px] px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded-md font-bold flex items-center gap-0.5"><Star className="w-2.5 h-2.5 fill-current" />PYQ</span>}
+            {q.isPYQ && <span className="text-[9px] px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded-md font-bold flex items-center gap-0.5"><Star className="w-2.5 h-2.5 fill-current" />PYQ {q.year || ''}</span>}
+            {/* Language + Explanation indicators */}
+            <div className="flex gap-0.5 items-center">
+              <span className={`w-5 h-3.5 text-[7px] font-black rounded flex items-center justify-center ${hasHi ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400'}`}>हि</span>
+              <span className={`w-5 h-3.5 text-[7px] font-black rounded flex items-center justify-center ${hasEn ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}>En</span>
+              {hasExpl && <span className="w-4 h-3.5 text-[7px] rounded bg-green-100 flex items-center justify-center" title="Explanation">💡</span>}
+            </div>
+            {/* Quality Score */}
+            <QualityBadge score={quality.score} />
+            {/* Test Usage */}
+            <TestUsageMini count={testUsage.length} onClick={() => onShowTestUsage?.(q, testUsage)} />
           </div>
 
-          {/* Text */}
+          {/* Question Text / Type Preview */}
           <div className="mb-1.5">
-            {isHtml ? (
-              <div className="text-[13px] text-gray-800 dark:text-gray-200 leading-relaxed break-words question-html-content"
-                dangerouslySetInnerHTML={{ __html: expanded || !isLong ? text : text.substring(0, 280) + '…' }} />
-            ) : (
-              <p className="text-[13px] text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap break-words">
-                {expanded || !isLong ? plain : plain.substring(0, 220) + '…'}
-              </p>
+            {typePreview && !plain && typePreview}
+            {(plain || !typePreview) && (
+              isHtml ? (
+                <div className="text-[13px] text-gray-800 leading-relaxed break-words question-html-content"
+                  dangerouslySetInnerHTML={{ __html: expanded || !isLong ? text : text.substring(0, 250) + '…' }} />
+              ) : (
+                <p className="text-[13px] text-gray-800 leading-relaxed whitespace-pre-wrap break-words">
+                  {expanded || !isLong ? plain : plain.substring(0, 200) + '…'}
+                </p>
+              )
             )}
             {isLong && (
               <button type="button" onClick={e => { e.stopPropagation(); setExpanded(!expanded); }}
-                className="mt-0.5 text-[11px] font-bold text-primary-600 hover:text-primary-700 flex items-center gap-0.5">
-                {expanded ? <><ChevronUp className="w-3 h-3" />{t('कम', 'Less')}</> : <><ChevronDown className="w-3 h-3" />{t('और पढ़ें', 'More')}</>}
+                className="mt-0.5 text-[11px] font-bold text-primary-600 flex items-center gap-0.5">
+                {expanded ? <><ChevronUp className="w-3 h-3" />{t('कम', 'Less')}</> : <><ChevronDown className="w-3 h-3" />{t('और', 'More')}</>}
               </button>
             )}
           </div>
 
-          {/* Options preview */}
-          {q.questionType === 'mcq' && q.options && (
+          {/* ═══ OPTIONS PREVIEW ═══ */}
+          {opts.length > 0 && (
             <div className="mt-1.5 grid grid-cols-2 gap-1">
-              {(Array.isArray(q.options) ? q.options : Object.values(q.options)).slice(0, 4).map((opt, oi) => {
+              {opts.slice(0, 4).map((opt, oi) => {
                 const oText = stripHtml(typeof opt === 'string' ? opt : (opt?.[displayLang] || opt?.hi || opt?.en || ''));
-                const correct = q.correctAnswer === oi || q.correctAnswer === String(oi) || q.correctAnswer === String.fromCharCode(65 + oi);
+                const correct = correctIdx === oi;
                 return (
-                  <div key={oi} className={`text-[10px] px-1.5 py-1 rounded-lg border flex items-start gap-1
+                  <div key={oi} className={`text-[10px] px-2 py-1.5 rounded-lg border flex items-start gap-1.5
                     ${correct ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
-                    <span className={`font-black w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] flex-shrink-0 mt-0.5
+                    <span className={`font-black w-4 h-4 rounded-full flex items-center justify-center text-[8px] flex-shrink-0 mt-0.5
                       ${correct ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-500'}`}>
-                      {String.fromCharCode(65 + oi)}
+                      {correct ? '✓' : String.fromCharCode(65 + oi)}
                     </span>
-                    <span className="truncate">{oText.substring(0, 50)}</span>
+                    <span className={`truncate ${correct ? 'font-semibold' : ''}`}>
+                      {oText ? oText.substring(0, 50) : <span className="italic text-gray-400">—</span>}
+                    </span>
                   </div>
                 );
               })}
             </div>
           )}
 
+          {/* ═══ TEST USAGE INLINE (when expanded) ═══ */}
+          {expanded && testUsage.length > 0 && (
+            <div className="mt-2 p-2 bg-violet-50 rounded-xl border border-violet-200">
+              <p className="text-[10px] font-bold text-violet-700 mb-1 flex items-center gap-1">
+                <ClipboardList className="w-3 h-3" />
+                {t(`${testUsage.length} टेस्ट में उपयोग`, `Used in ${testUsage.length} test(s)`)}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {testUsage.slice(0, 4).map((test, i) => (
+                  <span key={i} className="text-[9px] px-2 py-0.5 bg-violet-100 text-violet-700 rounded font-semibold truncate max-w-[120px]">
+                    {test.title?.substring(0, 20)}{test.title?.length > 20 ? '…' : ''}
+                  </span>
+                ))}
+                {testUsage.length > 4 && <span className="text-[9px] px-2 py-0.5 bg-violet-200 text-violet-800 rounded font-bold">+{testUsage.length - 4}</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Quality warnings (when expanded) */}
+          {expanded && quality.issues.length > 0 && (
+            <div className="mt-2 p-2 bg-amber-50 rounded-xl border border-amber-200">
+              <p className="text-[10px] font-bold text-amber-700 mb-1 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />{t('सुझाव', 'Suggestions')}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {quality.issues.map((issue, i) => (
+                  <span key={i} className="text-[8px] px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded-full">{issue}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Footer */}
           <div className="flex items-center justify-between mt-1.5">
-            <span className="text-[9px] text-gray-400 flex items-center gap-1 tabular-nums">
-              <Calendar className="w-2.5 h-2.5" />{q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : ''}
-            </span>
+            <div className="flex items-center gap-2 text-[9px] text-gray-400">
+              <span className="flex items-center gap-0.5 tabular-nums">
+                <Calendar className="w-2.5 h-2.5" />
+                {q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : ''}
+              </span>
+              {q.source && <span className="truncate max-w-[60px]">{q.source}</span>}
+              {q.timesAttempted > 0 && (
+                <span className="flex items-center gap-0.5">
+                  <Activity className="w-2.5 h-2.5" />{q.timesAttempted}
+                </span>
+              )}
+            </div>
             <button type="button" onClick={e => { e.stopPropagation(); onPreview(q); }}
-              className="opacity-0 group-hover:opacity-100 px-2 py-0.5 text-[10px] font-bold text-primary-600 hover:bg-primary-50 rounded flex items-center gap-0.5 transition-all">
-              <Eye className="w-3 h-3" />{t('देखें', 'View')}
+              className="opacity-0 group-hover:opacity-100 px-2.5 py-1 text-[10px] font-bold text-primary-600 hover:bg-primary-50 rounded-lg flex items-center gap-1 transition-all">
+              <Eye className="w-3 h-3" />{t('देखें', 'Preview')}
             </button>
           </div>
         </div>
@@ -193,31 +374,34 @@ const QuestionCard = React.memo(({ q, idx, globalIdx, isSelected, displayLang, l
 });
 
 // ════════════════════════════════════════
-// SIDEBAR
+// SIDEBAR (Enhanced with test info)
 // ════════════════════════════════════════
-const Sidebar = React.memo(({ selectedQuestions, language, marksPerQuestion, onClear, onClose }) => {
+const Sidebar = React.memo(({ selectedQuestions, language, marksPerQuestion, onClear, onClose, testUsageMap }) => {
   const t = (h, e) => language === 'hi' ? h : e;
   const total = selectedQuestions.length;
+
   const summary = useMemo(() => {
     const d = { easy: 0, medium: 0, hard: 0 }, ty = {}, un = {};
-    let pyq = 0;
+    let pyq = 0, withTests = 0, totalTestLinks = 0;
     selectedQuestions.forEach(q => {
       d[q.difficulty || 'medium']++;
       ty[q.questionType || 'mcq'] = (ty[q.questionType || 'mcq'] || 0) + 1;
       if (q.unit) un[q.unit] = (un[q.unit] || 0) + 1;
       if (q.isPYQ) pyq++;
+      const usage = testUsageMap?.[q._id] || [];
+      if (usage.length > 0) { withTests++; totalTestLinks += usage.length; }
     });
-    return { d, ty, un, pyq };
-  }, [selectedQuestions]);
+    return { d, ty, un, pyq, withTests, totalTestLinks };
+  }, [selectedQuestions, testUsageMap]);
 
   return (
-    <div className="w-72 border-l border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 flex flex-col h-full backdrop-blur-sm">
-      <div className="p-3.5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+    <div className="w-72 border-l border-gray-200 bg-gray-50/80 flex flex-col h-full backdrop-blur-sm">
+      <div className="p-3.5 border-b border-gray-200 flex items-center justify-between bg-white/80">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md"><BarChart3 className="w-4 h-4 text-white" /></div>
-          <div><h4 className="text-sm font-bold text-gray-900 dark:text-white">{t('विश्लेषण', 'Analysis')}</h4><p className="text-[10px] text-gray-500">{total} {t('चुने', 'sel')}</p></div>
+          <div><h4 className="text-sm font-bold text-gray-900">{t('विश्लेषण', 'Analysis')}</h4><p className="text-[10px] text-gray-500">{total} {t('चुने', 'sel')}</p></div>
         </div>
-        <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><X className="w-4 h-4 text-gray-400" /></button>
+        <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4 text-gray-400" /></button>
       </div>
       <div className="flex-1 overflow-y-auto p-3.5 space-y-4 scrollbar-thin">
         {total === 0 ? (
@@ -225,13 +409,15 @@ const Sidebar = React.memo(({ selectedQuestions, language, marksPerQuestion, onC
         ) : (
           <>
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-3 bg-gradient-to-br from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 rounded-xl border border-primary-200 dark:border-primary-800 text-center">
+              <div className="p-3 bg-gradient-to-br from-primary-50 to-blue-50 rounded-xl border border-primary-200 text-center">
                 <p className="text-2xl font-black text-primary-600 tabular-nums">{total}</p><p className="text-[9px] text-gray-500 uppercase font-bold">{t('प्रश्न', 'Q')}</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200 dark:border-green-800 text-center">
+              <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200 text-center">
                 <p className="text-2xl font-black text-green-600 tabular-nums">{total * marksPerQuestion}</p><p className="text-[9px] text-gray-500 uppercase font-bold">{t('अंक', 'Marks')}</p>
               </div>
             </div>
+
+            {/* Difficulty */}
             <div>
               <h5 className="text-[10px] font-bold text-gray-500 uppercase mb-2">{t('कठिनाई', 'Difficulty')}</h5>
               {Object.entries(DIFF).map(([key, cfg]) => (
@@ -244,6 +430,8 @@ const Sidebar = React.memo(({ selectedQuestions, language, marksPerQuestion, onC
                 {Object.entries(DIFF).map(([k, c]) => { const p = total ? (summary.d[k] / total) * 100 : 0; return p > 0 ? <div key={k} className={c.dot} style={{ width: `${p}%` }} /> : null; })}
               </div>
             </div>
+
+            {/* Types */}
             {Object.keys(summary.ty).length > 0 && (
               <div>
                 <h5 className="text-[10px] font-bold text-gray-500 uppercase mb-1.5">{t('प्रकार', 'Types')}</h5>
@@ -252,18 +440,51 @@ const Sidebar = React.memo(({ selectedQuestions, language, marksPerQuestion, onC
                 ))}
               </div>
             )}
+
+            {/* PYQ */}
             {summary.pyq > 0 && (
-              <div className="p-2.5 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200 flex items-center justify-between">
+              <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between">
                 <span className="text-xs font-bold text-amber-700 flex items-center gap-1"><Star className="w-3 h-3 fill-current" />PYQ</span>
                 <span className="text-sm font-black text-amber-600 tabular-nums">{summary.pyq}</span>
+              </div>
+            )}
+
+            {/* ═══ TEST USAGE SUMMARY ═══ */}
+            {summary.withTests > 0 && (
+              <div className="p-2.5 bg-violet-50 rounded-xl border border-violet-200">
+                <h5 className="text-[10px] font-bold text-violet-700 uppercase mb-1.5 flex items-center gap-1">
+                  <ClipboardList className="w-3 h-3" />{t('टेस्ट उपयोग', 'Test Usage')}
+                </h5>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-violet-600">{t('टेस्ट में उपयोग', 'Used in tests')}</span>
+                  <span className="font-black text-violet-700">{summary.withTests}/{total}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-violet-600">{t('कुल लिंक', 'Total links')}</span>
+                  <span className="font-black text-violet-700">{summary.totalTestLinks}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Units */}
+            {Object.keys(summary.un).length > 0 && (
+              <div>
+                <h5 className="text-[10px] font-bold text-gray-500 uppercase mb-1.5">{t('इकाइयां', 'Units')}</h5>
+                {Object.entries(summary.un).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([un, cnt]) => (
+                  <div key={un} className="flex justify-between py-1 text-xs"><span className="text-gray-600 truncate max-w-[140px]">{un}</span><span className="font-bold tabular-nums">{cnt}</span></div>
+                ))}
               </div>
             )}
           </>
         )}
       </div>
       {total > 0 && (
-        <div className="p-3 border-t bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-          <div className="text-center text-[10px] text-gray-500 mb-2">{t('अंक:', 'Marks:')} <b className="text-green-600">{total * marksPerQuestion}</b> • {t('समय:', 'Time:')} <b className="text-blue-600">~{Math.round(total * 1.2)}m</b></div>
+        <div className="p-3 border-t bg-white/80">
+          <div className="text-center text-[10px] text-gray-500 mb-2">
+            {t('अंक:', 'Marks:')} <b className="text-green-600">{total * marksPerQuestion}</b> •
+            {t(' समय:', ' Time:')} <b className="text-blue-600">~{Math.round(total * 1.2)}m</b> •
+            {t(' गुण:', ' Avg Q:')} <b className="text-purple-600">{total > 0 ? Math.round(selectedQuestions.reduce((s, q) => s + calcQuality(q).score, 0) / total) : 0}%</b>
+          </div>
           <button onClick={onClear} className="w-full py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl border border-red-200 flex items-center justify-center gap-1.5"><Trash2 className="w-3 h-3" />{t('सभी हटाएं', 'Clear All')}</button>
         </div>
       )}
@@ -271,8 +492,67 @@ const Sidebar = React.memo(({ selectedQuestions, language, marksPerQuestion, onC
   );
 });
 
+// ═══ Test Usage Detail Modal ═══
+const TestUsageModal = ({ question, tests, isOpen, onClose, language }) => {
+  if (!isOpen || !question) return null;
+  const t = (h, e) => language === 'hi' ? h : e;
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10002] flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[70vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-3.5 border-b border-gray-200 bg-violet-50 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center shadow-md">
+              <ClipboardList className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-gray-900">{t('टेस्ट उपयोग', 'Test Usage')}</h3>
+              <p className="text-[10px] text-gray-500">Q.{question.questionNumber || '?'} — {tests.length} {t('टेस्ट', 'tests')}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl"><X className="w-4 h-4 text-gray-500" /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {tests.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <ClipboardList className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm">{t('किसी टेस्ट में उपयोग नहीं', 'Not used in any test')}</p>
+            </div>
+          ) : (
+            tests.map((test, i) => (
+              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200 hover:bg-violet-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
+                    <ClipboardList className="w-4 h-4 text-violet-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-800">{test.title}</p>
+                    <p className="text-[10px] text-gray-500 flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 bg-gray-200 rounded text-[9px] font-bold uppercase">{test.testType}</span>
+                      {test.paper && <span>{test.paper}</span>}
+                      {test.totalQuestions && <span>{test.totalQuestions}Q</span>}
+                      {test.createdAt && <span>{formatDate(test.createdAt)}</span>}
+                    </p>
+                  </div>
+                </div>
+                <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${test.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                  {test.status || 'active'}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="px-5 py-3 border-t border-gray-200 bg-gray-50">
+          <button onClick={onClose} className="w-full py-2.5 bg-gray-900 text-white rounded-xl font-bold text-sm">{t('बंद करें', 'Close')}</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 // ══════════════════════════════════════════
-// ★ MAIN MODAL ★
+// ★★★ MAIN MODAL ★★★
 // ══════════════════════════════════════════
 const QuestionLibraryModal = ({
   isOpen, onClose, questions = [], questionsLoading,
@@ -281,6 +561,7 @@ const QuestionLibraryModal = ({
   getUnitOptions, getChapterOptions, getTopicOptions, getTypeOptions, mainFilters
 }) => {
   const t = useCallback((h, e) => language === 'hi' ? h : e, [language]);
+  const toast = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [displayLang, setDisplayLang] = useState(language);
@@ -296,7 +577,12 @@ const QuestionLibraryModal = ({
   const [fullscreen, setFullscreen] = useState(false);
   const [batchMsg, setBatchMsg] = useState(null);
   const searchRef = useRef(null);
-  const listRef = useRef(null);
+
+  // ═══ NEW STATE: Test usage tracking ═══
+  const [testUsageMap, setTestUsageMap] = useState({});
+  const [testUsageLoading, setTestUsageLoading] = useState(false);
+  const [testUsageQuestion, setTestUsageQuestion] = useState(null);
+  const [testUsageTests, setTestUsageTests] = useState([]);
 
   const [filters, setFilters] = useState({
     papers: [], units: [], chapters: [], topics: [],
@@ -304,6 +590,47 @@ const QuestionLibraryModal = ({
   });
 
   const selectedIds = useMemo(() => new Set(selectedQuestions.map(q => q._id)), [selectedQuestions]);
+
+  // ═══ LOAD TEST USAGE ═══
+  useEffect(() => {
+    if (isOpen && questions.length > 0) {
+      loadTestUsage(questions.map(q => q._id));
+    }
+  }, [isOpen, questions]);
+
+  const loadTestUsage = async (ids) => {
+    if (!ids || ids.length === 0) return;
+    setTestUsageLoading(true);
+    try {
+      const res = await questionService.getTestUsage(ids.slice(0, 200));
+      if (res.success) {
+        setTestUsageMap(prev => ({ ...prev, ...res.data }));
+      }
+    } catch (err) {
+      console.error('Test usage load failed:', err);
+    } finally {
+      setTestUsageLoading(false);
+    }
+  };
+
+  const handleShowTestUsage = (question, tests) => {
+    setTestUsageQuestion(question);
+    setTestUsageTests(tests);
+  };
+
+  // ═══ EXPORT SELECTED ═══
+  const handleExportSelected = useCallback(() => {
+    const data = selectedQuestions.length > 0 ? selectedQuestions : [];
+    if (data.length === 0) return;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `questions-export-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${data.length} ${t('प्रश्न निर्यात', 'questions exported')}`);
+  }, [selectedQuestions, toast, t]);
 
   useEffect(() => {
     if (isOpen) {
@@ -319,7 +646,7 @@ const QuestionLibraryModal = ({
 
   useEffect(() => { setDisplayLang(language); }, [language]);
 
-  // ═══ FILTERED ═══
+  // ═══ FILTERED + SORTED ═══
   const filtered = useMemo(() => {
     let r = [...questions];
     if (filters.papers.length) r = r.filter(q => filters.papers.includes(q.paper));
@@ -352,10 +679,13 @@ const QuestionLibraryModal = ({
       case 'difficulty_desc': r.sort((a, b) => (ord[b.difficulty] || 2) - (ord[a.difficulty] || 2)); break;
       case 'type': r.sort((a, b) => (a.questionType || '').localeCompare(b.questionType || '')); break;
       case 'number': r.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)); break;
+      case 'quality': r.sort((a, b) => calcQuality(b).score - calcQuality(a).score); break;
+      case 'most_used': r.sort((a, b) => (testUsageMap[b._id]?.length || 0) - (testUsageMap[a._id]?.length || 0)); break;
+      case 'unused': r.sort((a, b) => (testUsageMap[a._id]?.length || 0) - (testUsageMap[b._id]?.length || 0)); break;
       default: break;
     }
     return r;
-  }, [questions, filters, searchQuery, sortBy, getUnitOptions, getChapterOptions, mainFilters]);
+  }, [questions, filters, searchQuery, sortBy, getUnitOptions, getChapterOptions, mainFilters, testUsageMap]);
 
   const display = useMemo(() => tab === 'selected' ? selectedQuestions : filtered, [tab, selectedQuestions, filtered]);
   const totalPages = Math.max(1, Math.ceil(display.length / perPage));
@@ -371,10 +701,15 @@ const QuestionLibraryModal = ({
   }, [filters]);
 
   const quickCounts = useMemo(() => {
-    const c = { easy: 0, medium: 0, hard: 0, pyq: 0 }, tc = {};
-    questions.forEach(q => { if (q.difficulty) c[q.difficulty]++; if (q.isPYQ) c.pyq++; if (q.questionType) tc[q.questionType] = (tc[q.questionType] || 0) + 1; });
+    const c = { easy: 0, medium: 0, hard: 0, pyq: 0, unused: 0 }, tc = {};
+    questions.forEach(q => {
+      if (q.difficulty) c[q.difficulty]++;
+      if (q.isPYQ) c.pyq++;
+      if (q.questionType) tc[q.questionType] = (tc[q.questionType] || 0) + 1;
+      if (!(testUsageMap[q._id]?.length)) c.unused++;
+    });
     return { ...c, types: tc };
-  }, [questions]);
+  }, [questions, testUsageMap]);
 
   const selOnPage = useMemo(() => paginated.filter(q => selectedIds.has(q._id)).length, [paginated, selectedIds]);
   const allPageSel = paginated.length > 0 && selOnPage === paginated.length;
@@ -384,31 +719,22 @@ const QuestionLibraryModal = ({
   useEffect(() => {
     if (!isOpen) return;
     const h = (e) => {
-      if (e.key === 'Escape') { preview ? setPreview(null) : onClose(); return; }
+      if (e.key === 'Escape') { if (testUsageQuestion) { setTestUsageQuestion(null); return; } preview ? setPreview(null) : onClose(); return; }
       if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) { e.preventDefault(); searchRef.current?.focus(); }
       if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); setPage(p => Math.max(1, p - 1)); }
       if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); setPage(p => Math.min(totalPages, p + 1)); }
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
-  }, [isOpen, preview, totalPages]);
+  }, [isOpen, preview, totalPages, testUsageQuestion]);
 
-  // ═══ SELECTION — Compatible with parent's API ═══
+  // ═══ SELECTION HANDLERS ═══
   const flash = useCallback(msg => { setBatchMsg(msg); setTimeout(() => setBatchMsg(null), 2500); }, []);
 
-  /*
-   * Parent's selectAllFilteredQuestions does:
-   *   const newQ = filtered.filter(q => !selectedQuestions.includes(q._id));
-   *   pushSelection([...selectedQuestions, ...newQ]);
-   *
-   * So onSelectAllFiltered(questionsToAdd) = ADDS new ones to existing
-   * We must pass ONLY the new ones to add, not the merged array
-   */
   const handleBatchSelect = useCallback((count) => {
     const unsel = filtered.filter(q => !selectedIds.has(q._id));
     const toAdd = unsel.slice(0, Math.min(count, unsel.length));
     if (toAdd.length === 0) { flash(t('सभी चुने हुए', 'All selected')); return; }
-    // Pass ONLY new questions — parent will merge
     onSelectAllFiltered(toAdd);
     flash(`✓ +${toAdd.length} ${t('चुने', 'selected')}!`);
   }, [filtered, selectedIds, onSelectAllFiltered, flash, t]);
@@ -433,9 +759,7 @@ const QuestionLibraryModal = ({
     filtered.forEach(q => onToggleQuestion(q));
   }, [filtered, onToggleQuestion]);
 
-  const handleToggle = useCallback((q) => {
-    onToggleQuestion(q);
-  }, [onToggleQuestion]);
+  const handleToggle = useCallback((q) => { onToggleQuestion(q); }, [onToggleQuestion]);
 
   // ═══ FILTER HANDLERS ═══
   const updateFilter = useCallback((key, value) => {
@@ -471,25 +795,21 @@ const QuestionLibraryModal = ({
 
   if (!isOpen) return null;
 
-  // ═══ RENDER ═══
   return createPortal(
-    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-1.5 sm:p-3">
-      <div className={`bg-white dark:bg-gray-900 rounded-2xl sm:rounded-3xl shadow-2xl w-full flex overflow-hidden border border-gray-200/80 dark:border-gray-700 transition-all
-        ${fullscreen ? 'max-w-full h-full rounded-none' : 'max-w-7xl h-[97vh]'}`}>
-
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-1.5 sm:p-3">
+      <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full flex overflow-hidden border border-gray-200 transition-all ${fullscreen ? 'max-w-full h-full rounded-none' : 'max-w-7xl h-[97vh]'}`}>
         <div className="flex-1 flex flex-col min-w-0">
 
           {/* ═══ HEADER ═══ */}
-          <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-slate-50 via-white to-blue-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800 flex-shrink-0">
+          <div className="px-4 py-2.5 border-b border-gray-200 bg-gradient-to-r from-slate-50 via-white to-blue-50 flex-shrink-0">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/25 flex-shrink-0">
-                  <BookOpen className="w-5 h-5 text-white" />
-                </div>
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg flex-shrink-0"><BookOpen className="w-5 h-5 text-white" /></div>
                 <div className="min-w-0">
-                  <h3 className="font-black text-lg text-gray-900 dark:text-white leading-tight">{t('प्रश्न लाइब्रेरी', 'Question Library')}</h3>
+                  <h3 className="font-black text-lg text-gray-900 leading-tight">{t('प्रश्न लाइब्रेरी', 'Question Library')}</h3>
                   <div className="flex items-center gap-2 text-[10px] text-gray-500">
                     <span className="tabular-nums font-medium">{filtered.length}/{questions.length} {t('प्रश्न', 'Q')}</span>
+                    {testUsageLoading && <span className="text-violet-500 flex items-center gap-0.5"><Activity className="w-3 h-3 animate-pulse" />{t('टेस्ट लोड...', 'Loading tests...')}</span>}
                     {selectedQuestions.length > 0 && (
                       <span className="text-primary-600 font-bold flex items-center gap-0.5">
                         <CheckCircle2 className="w-3 h-3" />{selectedQuestions.length} {t('चुने', 'sel')}
@@ -500,70 +820,84 @@ const QuestionLibraryModal = ({
                 </div>
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
-                <div className="hidden sm:flex bg-gray-100 dark:bg-gray-700 rounded-xl p-0.5">
+                {/* Language toggle */}
+                <div className="hidden sm:flex bg-gray-100 rounded-xl p-0.5">
                   {[{ k: 'hi', l: 'हि' }, { k: 'en', l: 'En' }].map(l => (
                     <button key={l.k} type="button" onClick={() => setDisplayLang(l.k)}
-                      className={`px-2.5 py-1.5 text-xs font-bold rounded-lg transition-all ${displayLang === l.k ? 'bg-white dark:bg-gray-600 text-primary-600 shadow-sm' : 'text-gray-500'}`}>{l.l}</button>
+                      className={`px-2.5 py-1.5 text-xs font-bold rounded-lg transition-all ${displayLang === l.k ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500'}`}>{l.l}</button>
                   ))}
                 </div>
                 {selectedQuestions.length > 0 && (
-                  <div className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-800 rounded-xl">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-primary-600" />
-                    <span className="text-xs font-black text-primary-700 tabular-nums">{selectedQuestions.length}</span>
-                  </div>
+                  <>
+                    <div className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 bg-primary-50 border border-primary-200 rounded-xl">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-primary-600" />
+                      <span className="text-xs font-black text-primary-700 tabular-nums">{selectedQuestions.length}</span>
+                    </div>
+                    <button type="button" onClick={handleExportSelected} title={t('निर्यात', 'Export')} className="hidden sm:flex p-2 rounded-xl border border-gray-200 text-gray-500 hover:border-green-300 hover:text-green-600 hover:bg-green-50 transition-all">
+                      <Download className="w-4 h-4" />
+                    </button>
+                  </>
                 )}
-                <button type="button" onClick={() => setShowSidebar(!showSidebar)} className={`hidden lg:flex p-2 rounded-xl border transition-all ${showSidebar ? 'bg-primary-50 border-primary-300 text-primary-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                <button type="button" onClick={() => setShowSidebar(!showSidebar)} className={`hidden lg:flex p-2 rounded-xl border transition-all ${showSidebar ? 'bg-primary-50 border-primary-300 text-primary-700' : 'border-gray-200 text-gray-500'}`}>
                   {showSidebar ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
                 </button>
-                <button type="button" onClick={() => setFullscreen(!fullscreen)} className="hidden sm:flex p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl">
+                <button type="button" onClick={() => setFullscreen(!fullscreen)} className="hidden sm:flex p-2 hover:bg-gray-100 rounded-xl">
                   {fullscreen ? <Minimize2 className="w-4 h-4 text-gray-500" /> : <Maximize2 className="w-4 h-4 text-gray-500" />}
                 </button>
-                <button onClick={onClose} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-xl"><X className="w-5 h-5 text-gray-500" /></button>
+                <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-xl"><X className="w-5 h-5 text-gray-500" /></button>
               </div>
             </div>
           </div>
 
           {/* ═══ SEARCH + CONTROLS ═══ */}
-          <div className="px-4 py-2.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="px-4 py-2.5 bg-white border-b border-gray-200 flex-shrink-0">
             <div className="flex gap-2 items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input ref={searchRef} type="text" value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
                   placeholder={t('खोजें… ( / )', 'Search… ( / )')}
-                  className="w-full pl-9 pr-9 py-2.5 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-4 focus:ring-primary-500/20 focus:border-primary-500 bg-white dark:bg-gray-800 text-sm transition-all text-gray-900 dark:text-white" />
+                  className="w-full pl-9 pr-9 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-primary-500/20 focus:border-primary-500 bg-white text-sm text-gray-900" />
                 {searchQuery && <button type="button" onClick={() => { setSearchQuery(''); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2"><X className="w-3.5 h-3.5 text-gray-400" /></button>}
               </div>
               <button type="button" onClick={() => setShowFilters(!showFilters)}
                 className={`px-3 py-2.5 rounded-xl border-2 text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap
-                  ${showFilters ? 'bg-primary-50 border-primary-500 text-primary-700 shadow-md' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-                <SlidersHorizontal className="w-4 h-4" /><span className="hidden sm:inline">{t('फ़िल्टर', 'Filters')}</span>
+                  ${showFilters ? 'bg-primary-50 border-primary-500 text-primary-700 shadow-md' : 'border-gray-200 text-gray-600'}`}>
+                <SlidersHorizontal className="w-4 h-4" />
                 {filterCount > 0 && <span className="bg-primary-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-black">{filterCount}</span>}
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
               </button>
-              <div className="hidden md:flex items-center gap-1 bg-gray-50 dark:bg-gray-800 rounded-xl p-1 border border-gray-200 dark:border-gray-700">
-                {[5, 10, 25].map(n => (
+              {/* Batch select */}
+              <div className="hidden md:flex items-center gap-1 bg-gray-50 rounded-xl p-1 border border-gray-200">
+                {[5, 10, 25, 50].map(n => (
                   <button key={n} type="button" onClick={() => handleBatchSelect(Math.min(n, unselCount))} disabled={unselCount === 0}
                     className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all ${unselCount > 0 ? 'text-primary-700 hover:bg-primary-100 active:scale-95' : 'text-gray-400 cursor-not-allowed'}`}>
                     <Plus className="w-3 h-3 inline" />{n}
                   </button>
                 ))}
               </div>
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="hidden sm:block px-2 py-2.5 border-2 border-gray-200 rounded-xl text-xs bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer">
-                {[{ v: 'newest', l: t('नवीनतम', 'New') }, { v: 'oldest', l: t('पुराने', 'Old') }, { v: 'difficulty_asc', l: 'Diff↑' }, { v: 'difficulty_desc', l: 'Diff↓' }, { v: 'number', l: '#' }].map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+              {/* Sort - with NEW options */}
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="hidden sm:block px-2 py-2.5 border-2 border-gray-200 rounded-xl text-xs bg-white cursor-pointer">
+                <option value="newest">{t('नवीनतम', 'Newest')}</option>
+                <option value="oldest">{t('पुराने', 'Oldest')}</option>
+                <option value="difficulty_asc">Diff ↑</option>
+                <option value="difficulty_desc">Diff ↓</option>
+                <option value="number">#</option>
+                <option value="quality">{t('गुणवत्ता', 'Quality')}</option>
+                <option value="most_used">{t('ज़्यादा उपयोग', 'Most Used')}</option>
+                <option value="unused">{t('अप्रयुक्त', 'Unused')}</option>
               </select>
-              <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }} className="hidden sm:block px-2 py-2.5 border-2 border-gray-200 rounded-xl text-xs bg-white dark:bg-gray-700 w-14 cursor-pointer">
-                {[5, 10, 15, 20, 30].map(o => <option key={o} value={o}>{o}</option>)}
+              <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }} className="hidden sm:block px-2 py-2.5 border-2 border-gray-200 rounded-xl text-xs bg-white w-14 cursor-pointer">
+                {[5, 10, 15, 20, 30, 50].map(o => <option key={o} value={o}>{o}</option>)}
               </select>
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-0.5">
+              <div className="flex bg-gray-100 rounded-xl p-0.5">
                 {[{ k: 'list', i: List }, { k: 'grid', i: LayoutGrid }].map(v => (
-                  <button key={v.k} type="button" onClick={() => setViewMode(v.k)} className={`p-2 rounded-lg ${viewMode === v.k ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}>
+                  <button key={v.k} type="button" onClick={() => setViewMode(v.k)} className={`p-2 rounded-lg ${viewMode === v.k ? 'bg-white shadow-sm' : ''}`}>
                     <v.i className={`w-4 h-4 ${viewMode === v.k ? 'text-primary-600' : 'text-gray-400'}`} />
                   </button>
                 ))}
               </div>
               <button type="button" onClick={applyFilters} disabled={questionsLoading}
-                className="px-4 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-lg shadow-primary-500/25 text-sm flex-shrink-0">
-                <RefreshCw className={`w-4 h-4 ${questionsLoading ? 'animate-spin' : ''}`} /><span className="hidden sm:inline">{t('लोड', 'Load')}</span>
+                className="px-4 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-lg text-sm flex-shrink-0">
+                <RefreshCw className={`w-4 h-4 ${questionsLoading ? 'animate-spin' : ''}`} />
               </button>
             </div>
             {batchMsg && <div className="mt-2 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200"><CheckCircle2 className="w-4 h-4" />{batchMsg}</div>}
@@ -571,14 +905,14 @@ const QuestionLibraryModal = ({
 
           {/* ═══ FILTERS PANEL ═══ */}
           {showFilters && (
-            <div className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 flex-shrink-0 space-y-2 max-h-[35vh] overflow-y-auto">
+            <div className="px-4 py-2.5 border-b border-gray-200 bg-gray-50/80 flex-shrink-0 space-y-2 max-h-[35vh] overflow-y-auto">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[10px] font-bold text-gray-400 uppercase">{t('त्वरित:', 'Quick:')}</span>
                 {Object.entries(DIFF).map(([k, c]) => {
                   const on = filters.difficulties.includes(k);
                   return (
                     <button key={k} type="button" onClick={() => toggleDiff(k)}
-                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all ${on ? `${c.pill} shadow-md scale-[1.03]` : c.pillOff}`}>
+                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all ${on ? `${c.pill} shadow-md` : c.pillOff}`}>
                       {k === 'easy' ? <Sparkles className="w-3 h-3" /> : k === 'hard' ? <Flame className="w-3 h-3" /> : <Gauge className="w-3 h-3" />}
                       {c.label[language]}
                       {quickCounts[k] > 0 && <span className={`px-1.5 rounded-full text-[9px] font-black ${on ? 'bg-white/25' : 'bg-black/5'}`}>{quickCounts[k]}</span>}
@@ -590,20 +924,12 @@ const QuestionLibraryModal = ({
                   className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all ${filters.isPYQ === true ? 'bg-amber-600 text-white border-amber-600 shadow-md' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'}`}>
                   <Star className="w-3 h-3" />PYQ{quickCounts.pyq > 0 && <span className={`px-1.5 rounded-full text-[9px] font-black ${filters.isPYQ ? 'bg-white/25' : 'bg-black/5'}`}>{quickCounts.pyq}</span>}
                 </button>
-                {Object.entries(quickCounts.types || {}).filter(([, c]) => c > 0).slice(0, 3).map(([ty, cnt]) => (
-                  <button key={ty} type="button" onClick={() => toggleType(ty)}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all ${filters.types.includes(ty) ? 'bg-purple-600 text-white border-purple-600 shadow-md' : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'}`}>
-                    <CircleDot className="w-3 h-3" />{QUESTION_TYPE_LABELS[ty]?.[language]?.substring(0, 10) || ty.substring(0, 8)}<span className={`px-1.5 rounded-full text-[9px] font-black ${filters.types.includes(ty) ? 'bg-white/25' : 'bg-black/5'}`}>{cnt}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-1.5 flex-wrap md:hidden">
-                <span className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-0.5"><Zap className="w-3 h-3 text-amber-500" />{t('चयन:', 'Sel:')}</span>
-                {[5, 10, 15, 20, 25, 50].map(n => (
-                  <button key={n} type="button" onClick={() => handleBatchSelect(Math.min(n, unselCount))} disabled={unselCount === 0}
-                    className={`px-2 py-1 rounded-lg text-[10px] font-bold border ${unselCount > 0 ? 'bg-primary-50 text-primary-700 border-primary-200 hover:bg-primary-100' : 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'}`}>+{n}</button>
-                ))}
-                <span className="text-[9px] text-gray-400 ml-1">({unselCount} {t('शेष', 'left')})</span>
+                {/* ═══ NEW: Unused filter ═══ */}
+                <button type="button" onClick={() => setSortBy(sortBy === 'unused' ? 'newest' : 'unused')}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all ${sortBy === 'unused' ? 'bg-violet-600 text-white border-violet-600 shadow-md' : 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100'}`}>
+                  <Shield className="w-3 h-3" />{t('अप्रयुक्त', 'Unused')}
+                  {quickCounts.unused > 0 && <span className={`px-1.5 rounded-full text-[9px] font-black ${sortBy === 'unused' ? 'bg-white/25' : 'bg-black/5'}`}>{quickCounts.unused}</span>}
+                </button>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="w-full sm:w-auto sm:min-w-[130px]"><MiniMultiSelect options={Object.entries(PAPER_LABELS).map(([k, v]) => ({ value: k, label: t(v.hi, v.en), shortName: k === 'paper1' ? 'P1' : 'P2' }))} selected={filters.papers} onChange={v => updateFilter('papers', v)} placeholder={t('पेपर', 'Paper')} language={language} icon={BookOpen} /></div>
@@ -613,7 +939,7 @@ const QuestionLibraryModal = ({
                 {filterCount > 0 && <button type="button" onClick={clearFilters} className="px-2.5 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-1"><RotateCcw className="w-3.5 h-3.5" />{t('रीसेट', 'Reset')}</button>}
               </div>
               {showAdvanced && (
-                <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div className="p-3 bg-white rounded-xl border border-gray-200">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div><label className="text-[10px] font-bold text-gray-600 mb-1 block">{t('अध्याय', 'Chapter')}</label><MiniMultiSelect options={getChapterOptions ? getChapterOptions(filters.units.length ? filters.units : mainFilters?.units || [], filters.papers.length ? filters.papers : mainFilters?.papers || []) : []} selected={filters.chapters} onChange={v => updateFilter('chapters', v)} placeholder={t('अध्याय', 'Chapter')} language={language} /></div>
                     <div><label className="text-[10px] font-bold text-gray-600 mb-1 block">{t('विषय', 'Topic')}</label><MiniMultiSelect options={getTopicOptions ? getTopicOptions(filters.chapters.length ? filters.chapters : mainFilters?.chapters || [], filters.units.length ? filters.units : mainFilters?.units || [], filters.papers.length ? filters.papers : mainFilters?.papers || []) : []} selected={filters.topics} onChange={v => updateFilter('topics', v)} placeholder={t('विषय', 'Topic')} language={language} /></div>
@@ -633,20 +959,20 @@ const QuestionLibraryModal = ({
             </div>
           )}
 
-          {/* ═══ TABS + PAGE SELECT ═══ */}
-          <div className="flex items-center border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0 px-1">
+          {/* ═══ TABS ═══ */}
+          <div className="flex items-center border-b border-gray-200 bg-white flex-shrink-0 px-1">
             {[
               { key: 'all', label: t('सभी', 'All'), icon: FileText, count: filtered.length },
-              { key: 'selected', label: t('चुने', 'Sel'), icon: CheckCircle2, count: selectedQuestions.length, hl: selectedQuestions.length > 0 }
+              { key: 'selected', label: t('चुने', 'Selected'), icon: CheckCircle2, count: selectedQuestions.length, hl: selectedQuestions.length > 0 }
             ].map(tb => (
               <button key={tb.key} type="button" onClick={() => { setTab(tb.key); setPage(1); }}
                 className={`flex-1 px-3 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-all border-b-[3px]
                   ${tab === tb.key ? 'text-primary-600 border-primary-600 bg-primary-50/50' : 'text-gray-500 hover:bg-gray-50 border-transparent'}`}>
                 <tb.icon className="w-4 h-4" />{tb.label}
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black tabular-nums ${tb.hl ? 'bg-primary-600 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}>{tb.count}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black tabular-nums ${tb.hl ? 'bg-primary-600 text-white' : 'bg-gray-200'}`}>{tb.count}</span>
               </button>
             ))}
-            <div className="w-px h-7 bg-gray-200 dark:bg-gray-700 mx-1" />
+            <div className="w-px h-7 bg-gray-200 mx-1" />
             {tab === 'all' && paginated.length > 0 && (
               <div className="flex items-center gap-1.5 px-2">
                 <button type="button" onClick={allPageSel ? handleDeselectPage : handleSelectPage}
@@ -667,7 +993,7 @@ const QuestionLibraryModal = ({
           </div>
 
           {/* ═══ QUESTIONS ═══ */}
-          <div ref={listRef} className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gray-50/80 dark:bg-gray-800/30 overscroll-contain scroll-smooth">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gray-50/80 overscroll-contain scroll-smooth">
             {questionsLoading ? (
               <div className="flex flex-col items-center justify-center py-20">
                 <div className="w-12 h-12 border-[3px] border-primary-200 border-t-primary-600 rounded-full animate-spin" />
@@ -675,7 +1001,7 @@ const QuestionLibraryModal = ({
               </div>
             ) : paginated.length === 0 ? (
               <div className="text-center py-16">
-                <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center shadow-inner">
+                <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center shadow-inner">
                   {tab === 'selected' ? <CheckCircle2 className="w-10 h-10 text-gray-300" /> : <FileText className="w-10 h-10 text-gray-300" />}
                 </div>
                 <h3 className="font-bold text-lg text-gray-700">{tab === 'selected' ? t('कोई प्रश्न नहीं चुना', 'No questions selected') : t('कोई प्रश्न नहीं', 'No questions found')}</h3>
@@ -692,7 +1018,9 @@ const QuestionLibraryModal = ({
                 {paginated.map((q, idx) => (
                   <QuestionCard key={q._id} q={q} idx={idx} globalIdx={(page - 1) * perPage + idx + 1}
                     isSelected={selectedIds.has(q._id)} displayLang={displayLang} language={language}
-                    onToggle={handleToggle} onPreview={setPreview} viewMode="list" />
+                    onToggle={handleToggle} onPreview={setPreview} viewMode="list"
+                    testUsage={testUsageMap[q._id] || []}
+                    onShowTestUsage={handleShowTestUsage} />
                 ))}
               </div>
             ) : (
@@ -700,14 +1028,16 @@ const QuestionLibraryModal = ({
                 {paginated.map((q, idx) => (
                   <QuestionCard key={q._id} q={q} idx={idx} globalIdx={(page - 1) * perPage + idx + 1}
                     isSelected={selectedIds.has(q._id)} displayLang={displayLang} language={language}
-                    onToggle={handleToggle} onPreview={setPreview} viewMode="grid" />
+                    onToggle={handleToggle} onPreview={setPreview} viewMode="grid"
+                    testUsage={testUsageMap[q._id] || []}
+                    onShowTestUsage={handleShowTestUsage} />
                 ))}
               </div>
             )}
           </div>
 
           {/* ═══ FOOTER ═══ */}
-          <div className="px-4 py-2.5 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0">
+          <div className="px-4 py-2.5 border-t border-gray-200 bg-white flex-shrink-0">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <div className="flex items-center gap-2">
@@ -717,8 +1047,15 @@ const QuestionLibraryModal = ({
                     {selectedQuestions.length > 0 && <span className="text-[10px] text-green-600 font-bold ml-1">({selectedQuestions.length * marksPerQuestion}M)</span>}
                   </div>
                 </div>
-                {selectedQuestions.length > 0 && <button type="button" onClick={onClearAll} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>}
+                {selectedQuestions.length > 0 && (
+                  <>
+                    <button type="button" onClick={handleExportSelected} className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg" title="Export"><Download className="w-4 h-4" /></button>
+                    <button type="button" onClick={onClearAll} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                  </>
+                )}
               </div>
+
+              {/* Pagination */}
               {display.length > 0 && (
                 <div className="flex items-center gap-0.5">
                   <span className="text-[10px] text-gray-500 mr-1.5 tabular-nums hidden sm:inline">{(page - 1) * perPage + 1}-{Math.min(page * perPage, display.length)}/{display.length}</span>
@@ -738,10 +1075,11 @@ const QuestionLibraryModal = ({
                   <button type="button" onClick={() => setPage(totalPages)} disabled={page >= totalPages} className="p-1.5 hover:bg-gray-100 rounded-lg disabled:opacity-30"><ChevronLast className="w-4 h-4" /></button>
                 </div>
               )}
+
               <div className="flex items-center gap-2">
                 <button type="button" onClick={onClose} className="px-4 py-2.5 border-2 border-gray-300 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-100">{t('रद्द', 'Cancel')}</button>
                 <button type="button" onClick={onClose}
-                  className="px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-primary-500/25 flex items-center gap-2">
+                  className="px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-xl font-bold text-sm shadow-lg flex items-center gap-2">
                   <CheckCheck className="w-5 h-5" />{t('पूर्ण', 'Done')}
                   {selectedQuestions.length > 0 && <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold tabular-nums">{selectedQuestions.length}</span>}
                 </button>
@@ -750,8 +1088,9 @@ const QuestionLibraryModal = ({
           </div>
         </div>
 
-        {showSidebar && <Sidebar selectedQuestions={selectedQuestions} language={language} marksPerQuestion={marksPerQuestion} onClear={onClearAll} onClose={() => setShowSidebar(false)} />}
+        {showSidebar && <Sidebar selectedQuestions={selectedQuestions} language={language} marksPerQuestion={marksPerQuestion} onClear={onClearAll} onClose={() => setShowSidebar(false)} testUsageMap={testUsageMap} />}
         {preview && <QuestionPreviewModal question={preview} isOpen={!!preview} onClose={() => setPreview(null)} language={displayLang} />}
+        {testUsageQuestion && <TestUsageModal question={testUsageQuestion} tests={testUsageTests} isOpen={!!testUsageQuestion} onClose={() => setTestUsageQuestion(null)} language={language} />}
       </div>
 
       <style>{`
