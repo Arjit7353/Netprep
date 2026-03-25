@@ -89,8 +89,7 @@ const Counter = ({ end, suffix = '', prefix = '' }) => {
   return <>{prefix}{c}{suffix}</>;
 };
 
-// ═══ Replace GradeBadge in ResultPage.jsx ═══
-
+/* ═══════════ GRADE BADGE ═══════════ */
 const GradeBadge = ({ percentage, language }) => {
   const cfg = percentage >= 90
     ? { grade: 'A+', color: 'from-emerald-500 to-green-600', text: language === 'hi' ? 'उत्कृष्ट!' : 'Outstanding!', icon: Trophy }
@@ -137,47 +136,8 @@ const StatCard = ({ icon: Icon, label, value, color, gradient, delay = 0 }) => (
     </div>
   </div>
 );
-// ═══ Replace LanguageToggle in ResultPage.jsx ═══
 
-const LanguageToggle = ({ language, onChange }) => {
-  const handleToggle = () => {
-    const newLang = language === 'hi' ? 'en' : 'hi';
-    // Call parent handler
-    if (onChange) onChange(newLang);
-    // Also persist and broadcast
-    try {
-      localStorage.setItem('netprep_lang', newLang);
-      window.dispatchEvent(new CustomEvent('netprep-lang-change', { detail: newLang }));
-    } catch {}
-  };
-
-  return (
-    <button
-      onClick={handleToggle}
-      className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 transition-all text-white text-sm font-bold active:scale-95"
-      title={language === 'hi' ? 'Switch to English' : 'हिंदी में बदलें'}
-    >
-      <Languages className="w-4 h-4" />
-      <span>{language === 'hi' ? 'EN' : 'हि'}</span>
-    </button>
-  );
-};
-
-// ═══ In ResultPage main component, replace handleLanguageChange: ═══
-
-const handleLanguageChange = useCallback((newLang) => {
-  if (newLang !== 'hi' && newLang !== 'en') return;
-  // Call parent
-  if (onLanguageChange) onLanguageChange(newLang);
-  // Persist
-  try {
-    localStorage.setItem('netprep_lang', newLang);
-    window.dispatchEvent(new CustomEvent('netprep-lang-change', { detail: newLang }));
-  } catch {}
-}, [onLanguageChange]);
-
-// ═══ Replace Insights component — remove all emoji, Lucide only ═══
-
+/* ═══════════ INSIGHTS ═══════════ */
 const Insights = ({ attempt, answers, questions, language }) => {
   const insights = useMemo(() => {
     if (!answers?.length) return [];
@@ -229,6 +189,7 @@ const Insights = ({ attempt, answers, questions, language }) => {
     </div>
   );
 };
+
 /* ═══════════ QUESTION GRID ═══════════ */
 const QuestionGrid = ({ answers, onQuestionClick, language }) => {
   const getStyle = (a) => {
@@ -265,7 +226,6 @@ const QuestionGrid = ({ answers, onQuestionClick, language }) => {
         ))}
       </div>
 
-      {/* Quick stats under grid */}
       <div className="grid grid-cols-3 gap-3 mt-4">
         {[
           { count: answers.filter(a => a.isCorrect).length, label: language === 'hi' ? 'सही' : 'Correct', color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
@@ -345,7 +305,6 @@ const TimeAnalysis = ({ answers, language }) => {
         </ResponsiveContainer>
       </div>
 
-      {/* Fastest / Slowest */}
       <div className="grid grid-cols-2 gap-4">
         {data.fastest && (
           <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-2xl p-5 border border-emerald-200 dark:border-emerald-800">
@@ -369,7 +328,6 @@ const TimeAnalysis = ({ answers, language }) => {
         )}
       </div>
 
-      {/* Time distribution insight */}
       {data.avgW > data.avgC * 1.5 && (
         <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl">
           <Lightbulb className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -384,27 +342,73 @@ const TimeAnalysis = ({ answers, language }) => {
   );
 };
 
-
 /* ════════════════════════════════════════════════════════════
                      MAIN RESULT PAGE
    ════════════════════════════════════════════════════════════ */
 const ResultPage = ({
-  attempt, test, questions = [], language = 'hi',
+  attempt, test, questions = [], language: propLanguage = 'hi',
   onLanguageChange, onReattempt, onGoBack,
   previousAttempts = []
 }) => {
+  // ═══════════ LOCAL LANGUAGE STATE ═══════════
+  const [language, setLanguage] = useState(() => {
+    // Initialize from localStorage or prop
+    try {
+      const saved = localStorage.getItem('netprep_lang');
+      if (saved === 'hi' || saved === 'en') return saved;
+    } catch {}
+    return propLanguage;
+  });
+
   const [activeTab, setActiveTab] = useState('overview');
   const [solutionIndex, setSolutionIndex] = useState(0);
-  const [showAllInsights, setShowAllInsights] = useState(false);
   const navigate = useNavigate();
 
-  const handleLanguageChange = useCallback((newLang) => {
-    if (onLanguageChange) onLanguageChange(newLang);
+  // ═══════════ SYNC LANGUAGE WITH PROP ═══════════
+  useEffect(() => {
+    if (propLanguage && propLanguage !== language) {
+      setLanguage(propLanguage);
+    }
+  }, [propLanguage]);
+
+  // ═══════════ LISTEN FOR GLOBAL LANGUAGE CHANGES ═══════════
+  useEffect(() => {
+    const handleLangChange = (e) => {
+      const newLang = e.detail;
+      if (newLang === 'hi' || newLang === 'en') {
+        setLanguage(newLang);
+      }
+    };
+    window.addEventListener('netprep-lang-change', handleLangChange);
+    return () => window.removeEventListener('netprep-lang-change', handleLangChange);
+  }, []);
+
+  // ═══════════ LANGUAGE TOGGLE HANDLER ═══════════
+  const handleLanguageToggle = useCallback(() => {
+    const newLang = language === 'hi' ? 'en' : 'hi';
+    
+    // Update local state
+    setLanguage(newLang);
+    
+    // Persist to localStorage
     try {
       localStorage.setItem('netprep_lang', newLang);
+    } catch (e) {
+      console.warn('Failed to save language preference:', e);
+    }
+    
+    // Dispatch global event for other components
+    try {
       window.dispatchEvent(new CustomEvent('netprep-lang-change', { detail: newLang }));
-    } catch {}
-  }, [onLanguageChange]);
+    } catch (e) {
+      console.warn('Failed to dispatch language event:', e);
+    }
+    
+    // Call parent handler if provided
+    if (typeof onLanguageChange === 'function') {
+      onLanguageChange(newLang);
+    }
+  }, [language, onLanguageChange]);
 
   const answers = attempt?.answers || [];
   const totalQ = answers.length || test?.totalQuestions || 0;
@@ -447,7 +451,7 @@ const ResultPage = ({
         test={test}
         initialIndex={solutionIndex}
         onClose={() => setActiveTab('overview')}
-        onLanguageChange={handleLanguageChange}
+        onLanguageChange={handleLanguageToggle}
       />
     );
   }
@@ -469,7 +473,15 @@ const ResultPage = ({
               <span className="text-sm font-medium">{language === 'hi' ? 'वापस' : 'Back'}</span>
             </button>
             <div className="flex items-center gap-2 print:hidden">
-              <LanguageToggle language={language} onChange={handleLanguageChange} />
+              {/* ═══════════ LANGUAGE TOGGLE BUTTON ═══════════ */}
+              <button
+                onClick={handleLanguageToggle}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 transition-all text-white text-sm font-bold active:scale-95"
+                title={language === 'hi' ? 'Switch to English' : 'हिंदी में बदलें'}
+              >
+                <Languages className="w-4 h-4" />
+                <span>{language === 'hi' ? 'EN' : 'हि'}</span>
+              </button>
               <button onClick={() => window.print()}
                 className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all active:scale-95" title="Print">
                 <Printer className="w-4 h-4" />
