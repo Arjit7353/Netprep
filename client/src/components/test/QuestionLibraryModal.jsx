@@ -1,7 +1,6 @@
 // client/src/components/test/QuestionLibraryModal.jsx
 // ════════════════════════════════════════════════════════════════
-// EXTREME ADVANCED v4.0 — Test usage, Analytics, Inline edit,
-// Smart suggestions, Export, Quality scores, Full type rendering
+// EXTREME ADVANCED v4.0 — DARK MODE FIXED
 // ════════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -50,9 +49,30 @@ const stripHtml = (html) => {
 };
 
 const DIFF = {
-  easy: { label: { hi: 'आसान', en: 'Easy' }, bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-300', dot: 'bg-emerald-500', pill: 'bg-emerald-600 text-white border-emerald-600', pillOff: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' },
-  medium: { label: { hi: 'मध्यम', en: 'Medium' }, bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500', pill: 'bg-amber-600 text-white border-amber-600', pillOff: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' },
-  hard: { label: { hi: 'कठिन', en: 'Hard' }, bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', dot: 'bg-red-500', pill: 'bg-red-600 text-white border-red-600', pillOff: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' }
+  easy: {
+    label: { hi: 'आसान', en: 'Easy' },
+    bg: 'bg-emerald-100 dark:bg-emerald-900/30',
+    text: 'text-emerald-700 dark:text-emerald-300',
+    dot: 'bg-emerald-500',
+    pill: 'bg-emerald-600 text-white border-emerald-600',
+    pillOff: 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40'
+  },
+  medium: {
+    label: { hi: 'मध्यम', en: 'Medium' },
+    bg: 'bg-amber-100 dark:bg-amber-900/30',
+    text: 'text-amber-700 dark:text-amber-300',
+    dot: 'bg-amber-500',
+    pill: 'bg-amber-600 text-white border-amber-600',
+    pillOff: 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+  },
+  hard: {
+    label: { hi: 'कठिन', en: 'Hard' },
+    bg: 'bg-red-100 dark:bg-red-900/30',
+    text: 'text-red-700 dark:text-red-300',
+    dot: 'bg-red-500',
+    pill: 'bg-red-600 text-white border-red-600',
+    pillOff: 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40'
+  }
 };
 
 // ═══ Quality Calculator ═══
@@ -66,7 +86,9 @@ const calcQuality = (q) => {
   if (hasEn) s += 15; else issues.push('No English');
   const optH = q.options?.hi?.filter(o => o?.trim())?.length || 0;
   const optE = q.options?.en?.filter(o => o?.trim())?.length || 0;
-  if (optH >= 4 || optE >= 4) s += 20; else if (optH >= 2 || optE >= 2) { s += 10; issues.push(`Only ${Math.max(optH, optE)} options`); } else issues.push('Missing options');
+  if (optH >= 4 || optE >= 4) s += 20;
+  else if (optH >= 2 || optE >= 2) { s += 10; issues.push(`Only ${Math.max(optH, optE)} options`); }
+  else issues.push('Missing options');
   if (q.correctAnswer !== null && q.correctAnswer !== undefined) s += 10; else issues.push('No answer');
   if (q.explanation?.hi || q.explanation?.en) s += 15; else issues.push('No explanation');
   if (q.chapter) s += 5; else issues.push('No chapter');
@@ -74,13 +96,19 @@ const calcQuality = (q) => {
   if (q.difficulty) s += 5;
   if (q.tags?.length > 0) s += 2;
   if (q.source) s += 3;
-  s += 5; // base
+  s += 5;
   return { score: Math.min(100, s), issues };
 };
 
 // ═══ Quality Badge ═══
 const QualityBadge = ({ score }) => {
-  const c = score >= 80 ? 'text-emerald-600 bg-emerald-50' : score >= 60 ? 'text-blue-600 bg-blue-50' : score >= 40 ? 'text-amber-600 bg-amber-50' : 'text-red-600 bg-red-50';
+  const c = score >= 80
+    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30'
+    : score >= 60
+      ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30'
+      : score >= 40
+        ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30'
+        : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30';
   return (
     <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black ${c}`} title={`Quality: ${score}%`}>
       <svg className="w-3 h-3 -rotate-90" viewBox="0 0 20 20">
@@ -98,7 +126,7 @@ const TestUsageMini = ({ count, onClick }) => {
   if (!count || count === 0) return null;
   return (
     <button type="button" onClick={e => { e.stopPropagation(); onClick?.(); }}
-      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
+      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors"
       title={`Used in ${count} test(s)`}>
       <ClipboardList className="w-2.5 h-2.5" />{count}
     </button>
@@ -106,7 +134,7 @@ const TestUsageMini = ({ count, onClick }) => {
 };
 
 // ════════════════════════════════════════
-// ★ QUESTION CARD (Extreme Enhanced)
+// ★ QUESTION CARD (Dark Mode Enhanced)
 // ════════════════════════════════════════
 const QuestionCard = React.memo(({
   q, idx, globalIdx, isSelected, displayLang, language,
@@ -127,7 +155,6 @@ const QuestionCard = React.memo(({
   const hasEn = !!(q.question?.en || q.assertionReasonData?.assertion?.en);
   const hasExpl = !!(q.explanation?.hi || q.explanation?.en);
 
-  // Get options
   const getOpts = () => {
     if (!q.options) return [];
     if (Array.isArray(q.options)) return q.options;
@@ -137,15 +164,14 @@ const QuestionCard = React.memo(({
   const opts = getOpts();
   const correctIdx = q.correctAnswer;
 
-  // Type-specific preview
   const getTypePreview = () => {
     if (plain) return null;
     if (q.questionType === 'assertion_reason') {
       const a = q.assertionReasonData?.assertion;
       const aText = a?.[displayLang] || a?.hi || a?.en || '';
       return aText ? (
-        <span className="text-[12px] text-gray-700">
-          <span className="text-[10px] font-bold text-blue-600 mr-1">A:</span>
+        <span className="text-[12px] text-gray-700 dark:text-secondary-300">
+          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 mr-1">A:</span>
           {aText.substring(0, 80)}{aText.length > 80 ? '…' : ''}
         </span>
       ) : null;
@@ -154,10 +180,10 @@ const QuestionCard = React.memo(({
       const s = q.statementData?.statements;
       const arr = s?.[displayLang] || s?.hi || s?.en || [];
       return arr.length > 0 ? (
-        <div className="text-[12px] text-gray-700 space-y-0.5">
+        <div className="text-[12px] text-gray-700 dark:text-secondary-300 space-y-0.5">
           {arr.slice(0, 2).map((st, si) => (
             <span key={si} className="block">
-              <span className="text-[10px] font-bold text-amber-600 mr-1">{si + 1}.</span>
+              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mr-1">{si + 1}.</span>
               {(typeof st === 'string' ? st : '').substring(0, 55)}{st?.length > 55 ? '…' : ''}
             </span>
           ))}
@@ -168,8 +194,8 @@ const QuestionCard = React.memo(({
       const listA = q.matchData?.listA;
       const arr = listA?.[displayLang] || listA?.hi || listA?.en || [];
       return arr.length > 0 ? (
-        <span className="text-[12px] text-gray-700">
-          <span className="text-[10px] font-bold text-green-600 mr-1">{t('सुमेलन:', 'Match:')}</span>
+        <span className="text-[12px] text-gray-700 dark:text-secondary-300">
+          <span className="text-[10px] font-bold text-green-600 dark:text-green-400 mr-1">{t('सुमेलन:', 'Match:')}</span>
           {arr.slice(0, 2).join(' | ').substring(0, 70)}…
         </span>
       ) : null;
@@ -184,19 +210,34 @@ const QuestionCard = React.memo(({
     return (
       <div onClick={e => { e.stopPropagation(); onToggle(q); }}
         className={`relative p-3 rounded-2xl border-2 cursor-pointer group transition-all duration-200
-          ${isSelected ? 'border-primary-500 bg-gradient-to-br from-primary-50 to-blue-50 shadow-lg' : 'border-gray-200 bg-white hover:border-primary-300 hover:shadow-lg'}`}>
+          ${isSelected
+            ? 'border-primary-500 bg-gradient-to-br from-primary-50 to-blue-50 dark:from-primary-950/30 dark:to-blue-950/20 shadow-lg'
+            : 'border-gray-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-lg'
+          }`}>
         <div className={`absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center transition-all
-          ${isSelected ? 'bg-primary-600 shadow-lg ring-2 ring-primary-300/50' : 'bg-gray-100 group-hover:bg-primary-100'}`}>
-          {isSelected ? <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /> : <span className="text-[9px] font-bold text-gray-400">{globalIdx}</span>}
+          ${isSelected
+            ? 'bg-primary-600 shadow-lg ring-2 ring-primary-300/50'
+            : 'bg-gray-100 dark:bg-secondary-700 group-hover:bg-primary-100 dark:group-hover:bg-primary-900/30'
+          }`}>
+          {isSelected
+            ? <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+            : <span className="text-[9px] font-bold text-gray-400 dark:text-secondary-500">{globalIdx}</span>
+          }
         </div>
         <div className="flex flex-wrap gap-1 mb-2 pr-8">
-          <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 rounded-md font-bold">{q.paper === 'paper1' ? 'P1' : 'P2'}</span>
-          <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${dc.bg} ${dc.text}`}>{(q.difficulty || 'M')[0].toUpperCase()}</span>
-          {q.isPYQ && <span className="text-[9px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-md font-bold">PYQ</span>}
+          <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 dark:bg-secondary-700 text-gray-600 dark:text-secondary-300 rounded-md font-bold">
+            {q.paper === 'paper1' ? 'P1' : 'P2'}
+          </span>
+          <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${dc.bg} ${dc.text}`}>
+            {(q.difficulty || 'M')[0].toUpperCase()}
+          </span>
+          {q.isPYQ && (
+            <span className="text-[9px] px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-md font-bold">PYQ</span>
+          )}
           <QualityBadge score={quality.score} />
           <TestUsageMini count={testUsage.length} onClick={() => onShowTestUsage?.(q, testUsage)} />
         </div>
-        <p className="text-[11px] text-gray-700 leading-relaxed break-words mb-2 min-h-[40px]">
+        <p className="text-[11px] text-gray-700 dark:text-secondary-300 leading-relaxed break-words mb-2 min-h-[40px]">
           {plain.substring(0, 130)}{plain.length > 130 ? '…' : ''}
         </p>
         {opts.length > 0 && (
@@ -206,20 +247,23 @@ const QuestionCard = React.memo(({
               const correct = correctIdx === oi;
               return (
                 <span key={oi} className={`text-[8px] px-1.5 py-0.5 rounded border truncate max-w-[80px]
-                  ${correct ? 'bg-emerald-50 border-emerald-300 text-emerald-700 font-bold' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                  ${correct
+                    ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 font-bold'
+                    : 'bg-gray-50 dark:bg-secondary-700 border-gray-200 dark:border-secondary-600 text-gray-500 dark:text-secondary-400'
+                  }`}>
                   {correct ? '✓' : String.fromCharCode(65 + oi)}: {oText.substring(0, 18)}
                 </span>
               );
             })}
           </div>
         )}
-        <div className="flex items-center justify-between pt-1.5 border-t border-gray-100">
-          <span className="text-[9px] text-gray-400 truncate max-w-[80px]">{q.chapter || q.unit || ''}</span>
+        <div className="flex items-center justify-between pt-1.5 border-t border-gray-100 dark:border-secondary-700">
+          <span className="text-[9px] text-gray-400 dark:text-secondary-500 truncate max-w-[80px]">{q.chapter || q.unit || ''}</span>
           <div className="flex items-center gap-1">
             {hasExpl && <span className="text-[8px]" title="Has explanation">💡</span>}
             <button type="button" onClick={e => { e.stopPropagation(); onPreview(q); }}
-              className="p-1 hover:bg-primary-50 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-              <Eye className="w-3 h-3 text-gray-400 group-hover:text-primary-600" />
+              className="p-1 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+              <Eye className="w-3 h-3 text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400" />
             </button>
           </div>
         </div>
@@ -232,36 +276,60 @@ const QuestionCard = React.memo(({
     <div onClick={e => { e.stopPropagation(); onToggle(q); }}
       className={`p-3 rounded-2xl border-2 cursor-pointer group relative transition-all duration-200
         ${isSelected
-          ? 'border-primary-500 bg-gradient-to-r from-primary-50/80 to-blue-50/40 shadow-lg ring-1 ring-primary-500/20'
-          : 'border-gray-200 bg-white hover:border-primary-300 hover:shadow-lg'}`}>
+          ? 'border-primary-500 bg-gradient-to-r from-primary-50/80 to-blue-50/40 dark:from-primary-950/30 dark:to-blue-950/20 shadow-lg ring-1 ring-primary-500/20'
+          : 'border-gray-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-lg'
+        }`}>
       <div className="flex gap-3">
         <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-1 transition-all
-          ${isSelected ? 'bg-primary-600 border-primary-600 shadow-md' : 'border-gray-300 group-hover:border-primary-400'}`}>
+          ${isSelected
+            ? 'bg-primary-600 border-primary-600 shadow-md'
+            : 'border-gray-300 dark:border-secondary-600 group-hover:border-primary-400'
+          }`}>
           {isSelected && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
         </div>
 
         <div className="flex-1 min-w-0">
           {/* Tags Row */}
           <div className="flex flex-wrap gap-1 mb-1.5 items-center">
-            <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md font-bold tabular-nums">#{q.questionNumber || globalIdx}</span>
-            <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md font-bold">{q.paper === 'paper1' ? 'P1' : 'P2'}</span>
-            {q.unit && <span className="text-[9px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded-md font-semibold truncate max-w-[140px]" title={q.unit}>{q.unit}</span>}
-            {q.chapter && <span className="text-[9px] px-1.5 py-0.5 bg-green-50 text-green-700 rounded-md font-semibold truncate max-w-[120px]" title={q.chapter}>{q.chapter}</span>}
-            {q.topic && <span className="text-[9px] px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded-md font-semibold truncate max-w-[100px]" title={q.topic}>{q.topic}</span>}
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${dc.bg} ${dc.text}`}>{dc.label[displayLang]}</span>
-            <span className="text-[9px] px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded-md font-semibold">
+            <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 dark:bg-secondary-700 text-gray-500 dark:text-secondary-400 rounded-md font-bold tabular-nums">
+              #{q.questionNumber || globalIdx}
+            </span>
+            <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 dark:bg-secondary-700 text-gray-500 dark:text-secondary-400 rounded-md font-bold">
+              {q.paper === 'paper1' ? 'P1' : 'P2'}
+            </span>
+            {q.unit && (
+              <span className="text-[9px] px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md font-semibold truncate max-w-[140px]" title={q.unit}>
+                {q.unit}
+              </span>
+            )}
+            {q.chapter && (
+              <span className="text-[9px] px-1.5 py-0.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-md font-semibold truncate max-w-[120px]" title={q.chapter}>
+                {q.chapter}
+              </span>
+            )}
+            {q.topic && (
+              <span className="text-[9px] px-1.5 py-0.5 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-md font-semibold truncate max-w-[100px]" title={q.topic}>
+                {q.topic}
+              </span>
+            )}
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-md font-bold ${dc.bg} ${dc.text}`}>
+              {dc.label[displayLang]}
+            </span>
+            <span className="text-[9px] px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-md font-semibold">
               {QUESTION_TYPE_LABELS[q.questionType]?.[displayLang] || q.questionType}
             </span>
-            {q.isPYQ && <span className="text-[9px] px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded-md font-bold flex items-center gap-0.5"><Star className="w-2.5 h-2.5 fill-current" />PYQ {q.year || ''}</span>}
+            {q.isPYQ && (
+              <span className="text-[9px] px-1.5 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-md font-bold flex items-center gap-0.5">
+                <Star className="w-2.5 h-2.5 fill-current" />PYQ {q.year || ''}
+              </span>
+            )}
             {/* Language + Explanation indicators */}
             <div className="flex gap-0.5 items-center">
-              <span className={`w-5 h-3.5 text-[7px] font-black rounded flex items-center justify-center ${hasHi ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400'}`}>हि</span>
-              <span className={`w-5 h-3.5 text-[7px] font-black rounded flex items-center justify-center ${hasEn ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}>En</span>
-              {hasExpl && <span className="w-4 h-3.5 text-[7px] rounded bg-green-100 flex items-center justify-center" title="Explanation">💡</span>}
+              <span className={`w-5 h-3.5 text-[7px] font-black rounded flex items-center justify-center ${hasHi ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : 'bg-gray-100 dark:bg-secondary-700 text-gray-400 dark:text-secondary-500'}`}>हि</span>
+              <span className={`w-5 h-3.5 text-[7px] font-black rounded flex items-center justify-center ${hasEn ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-secondary-700 text-gray-400 dark:text-secondary-500'}`}>En</span>
+              {hasExpl && <span className="w-4 h-3.5 text-[7px] rounded bg-green-100 dark:bg-green-900/30 flex items-center justify-center" title="Explanation">💡</span>}
             </div>
-            {/* Quality Score */}
             <QualityBadge score={quality.score} />
-            {/* Test Usage */}
             <TestUsageMini count={testUsage.length} onClick={() => onShowTestUsage?.(q, testUsage)} />
           </div>
 
@@ -270,17 +338,17 @@ const QuestionCard = React.memo(({
             {typePreview && !plain && typePreview}
             {(plain || !typePreview) && (
               isHtml ? (
-                <div className="text-[13px] text-gray-800 leading-relaxed break-words question-html-content"
+                <div className="text-[13px] text-gray-800 dark:text-secondary-200 leading-relaxed break-words question-html-content"
                   dangerouslySetInnerHTML={{ __html: expanded || !isLong ? text : text.substring(0, 250) + '…' }} />
               ) : (
-                <p className="text-[13px] text-gray-800 leading-relaxed whitespace-pre-wrap break-words">
+                <p className="text-[13px] text-gray-800 dark:text-secondary-200 leading-relaxed whitespace-pre-wrap break-words">
                   {expanded || !isLong ? plain : plain.substring(0, 200) + '…'}
                 </p>
               )
             )}
             {isLong && (
               <button type="button" onClick={e => { e.stopPropagation(); setExpanded(!expanded); }}
-                className="mt-0.5 text-[11px] font-bold text-primary-600 flex items-center gap-0.5">
+                className="mt-0.5 text-[11px] font-bold text-primary-600 dark:text-primary-400 flex items-center gap-0.5">
                 {expanded ? <><ChevronUp className="w-3 h-3" />{t('कम', 'Less')}</> : <><ChevronDown className="w-3 h-3" />{t('और', 'More')}</>}
               </button>
             )}
@@ -294,13 +362,16 @@ const QuestionCard = React.memo(({
                 const correct = correctIdx === oi;
                 return (
                   <div key={oi} className={`text-[10px] px-2 py-1.5 rounded-lg border flex items-start gap-1.5
-                    ${correct ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                    ${correct
+                      ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-gray-50 dark:bg-secondary-700/50 border-gray-200 dark:border-secondary-600 text-gray-500 dark:text-secondary-400'
+                    }`}>
                     <span className={`font-black w-4 h-4 rounded-full flex items-center justify-center text-[8px] flex-shrink-0 mt-0.5
-                      ${correct ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                      ${correct ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-secondary-600 text-gray-500 dark:text-secondary-400'}`}>
                       {correct ? '✓' : String.fromCharCode(65 + oi)}
                     </span>
                     <span className={`truncate ${correct ? 'font-semibold' : ''}`}>
-                      {oText ? oText.substring(0, 50) : <span className="italic text-gray-400">—</span>}
+                      {oText ? oText.substring(0, 50) : <span className="italic text-gray-400 dark:text-secondary-500">—</span>}
                     </span>
                   </div>
                 );
@@ -308,33 +379,39 @@ const QuestionCard = React.memo(({
             </div>
           )}
 
-          {/* ═══ TEST USAGE INLINE (when expanded) ═══ */}
+          {/* ═══ TEST USAGE INLINE ═══ */}
           {expanded && testUsage.length > 0 && (
-            <div className="mt-2 p-2 bg-violet-50 rounded-xl border border-violet-200">
-              <p className="text-[10px] font-bold text-violet-700 mb-1 flex items-center gap-1">
+            <div className="mt-2 p-2 bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-200 dark:border-violet-800">
+              <p className="text-[10px] font-bold text-violet-700 dark:text-violet-300 mb-1 flex items-center gap-1">
                 <ClipboardList className="w-3 h-3" />
                 {t(`${testUsage.length} टेस्ट में उपयोग`, `Used in ${testUsage.length} test(s)`)}
               </p>
               <div className="flex flex-wrap gap-1">
                 {testUsage.slice(0, 4).map((test, i) => (
-                  <span key={i} className="text-[9px] px-2 py-0.5 bg-violet-100 text-violet-700 rounded font-semibold truncate max-w-[120px]">
+                  <span key={i} className="text-[9px] px-2 py-0.5 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 rounded font-semibold truncate max-w-[120px]">
                     {test.title?.substring(0, 20)}{test.title?.length > 20 ? '…' : ''}
                   </span>
                 ))}
-                {testUsage.length > 4 && <span className="text-[9px] px-2 py-0.5 bg-violet-200 text-violet-800 rounded font-bold">+{testUsage.length - 4}</span>}
+                {testUsage.length > 4 && (
+                  <span className="text-[9px] px-2 py-0.5 bg-violet-200 dark:bg-violet-800 text-violet-800 dark:text-violet-200 rounded font-bold">
+                    +{testUsage.length - 4}
+                  </span>
+                )}
               </div>
             </div>
           )}
 
-          {/* Quality warnings (when expanded) */}
+          {/* Quality warnings */}
           {expanded && quality.issues.length > 0 && (
-            <div className="mt-2 p-2 bg-amber-50 rounded-xl border border-amber-200">
-              <p className="text-[10px] font-bold text-amber-700 mb-1 flex items-center gap-1">
+            <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+              <p className="text-[10px] font-bold text-amber-700 dark:text-amber-300 mb-1 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" />{t('सुझाव', 'Suggestions')}
               </p>
               <div className="flex flex-wrap gap-1">
                 {quality.issues.map((issue, i) => (
-                  <span key={i} className="text-[8px] px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded-full">{issue}</span>
+                  <span key={i} className="text-[8px] px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 rounded-full">
+                    {issue}
+                  </span>
                 ))}
               </div>
             </div>
@@ -342,7 +419,7 @@ const QuestionCard = React.memo(({
 
           {/* Footer */}
           <div className="flex items-center justify-between mt-1.5">
-            <div className="flex items-center gap-2 text-[9px] text-gray-400">
+            <div className="flex items-center gap-2 text-[9px] text-gray-400 dark:text-secondary-500">
               <span className="flex items-center gap-0.5 tabular-nums">
                 <Calendar className="w-2.5 h-2.5" />
                 {q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }) : ''}
@@ -355,7 +432,7 @@ const QuestionCard = React.memo(({
               )}
             </div>
             <button type="button" onClick={e => { e.stopPropagation(); onPreview(q); }}
-              className="opacity-0 group-hover:opacity-100 px-2.5 py-1 text-[10px] font-bold text-primary-600 hover:bg-primary-50 rounded-lg flex items-center gap-1 transition-all">
+              className="opacity-0 group-hover:opacity-100 px-2.5 py-1 text-[10px] font-bold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg flex items-center gap-1 transition-all">
               <Eye className="w-3 h-3" />{t('देखें', 'Preview')}
             </button>
           </div>
@@ -374,7 +451,7 @@ const QuestionCard = React.memo(({
 });
 
 // ════════════════════════════════════════
-// SIDEBAR (Enhanced with test info)
+// SIDEBAR
 // ════════════════════════════════════════
 const Sidebar = React.memo(({ selectedQuestions, language, marksPerQuestion, onClear, onClose, testUsageMap }) => {
   const t = (h, e) => language === 'hi' ? h : e;
@@ -395,73 +472,103 @@ const Sidebar = React.memo(({ selectedQuestions, language, marksPerQuestion, onC
   }, [selectedQuestions, testUsageMap]);
 
   return (
-    <div className="w-72 border-l border-gray-200 bg-gray-50/80 flex flex-col h-full backdrop-blur-sm">
-      <div className="p-3.5 border-b border-gray-200 flex items-center justify-between bg-white/80">
+    <div className="w-72 border-l border-gray-200 dark:border-secondary-700 bg-gray-50/80 dark:bg-secondary-900/80 flex flex-col h-full backdrop-blur-sm">
+      <div className="p-3.5 border-b border-gray-200 dark:border-secondary-700 flex items-center justify-between bg-white/80 dark:bg-secondary-800/80">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md"><BarChart3 className="w-4 h-4 text-white" /></div>
-          <div><h4 className="text-sm font-bold text-gray-900">{t('विश्लेषण', 'Analysis')}</h4><p className="text-[10px] text-gray-500">{total} {t('चुने', 'sel')}</p></div>
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md">
+            <BarChart3 className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-gray-900 dark:text-white">{t('विश्लेषण', 'Analysis')}</h4>
+            <p className="text-[10px] text-gray-500 dark:text-secondary-400">{total} {t('चुने', 'sel')}</p>
+          </div>
         </div>
-        <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4 text-gray-400" /></button>
+        <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-secondary-700 rounded-lg">
+          <X className="w-4 h-4 text-gray-400 dark:text-secondary-500" />
+        </button>
       </div>
       <div className="flex-1 overflow-y-auto p-3.5 space-y-4 scrollbar-thin">
         {total === 0 ? (
-          <div className="text-center py-12"><CheckCircle2 className="w-12 h-12 text-gray-300 mx-auto mb-3" /><p className="text-sm text-gray-500">{t('कोई प्रश्न नहीं', 'No questions')}</p></div>
+          <div className="text-center py-12">
+            <CheckCircle2 className="w-12 h-12 text-gray-300 dark:text-secondary-600 mx-auto mb-3" />
+            <p className="text-sm text-gray-500 dark:text-secondary-400">{t('कोई प्रश्न नहीं', 'No questions')}</p>
+          </div>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-3 bg-gradient-to-br from-primary-50 to-blue-50 rounded-xl border border-primary-200 text-center">
-                <p className="text-2xl font-black text-primary-600 tabular-nums">{total}</p><p className="text-[9px] text-gray-500 uppercase font-bold">{t('प्रश्न', 'Q')}</p>
+              <div className="p-3 bg-gradient-to-br from-primary-50 to-blue-50 dark:from-primary-950/30 dark:to-blue-950/20 rounded-xl border border-primary-200 dark:border-primary-800 text-center">
+                <p className="text-2xl font-black text-primary-600 dark:text-primary-400 tabular-nums">{total}</p>
+                <p className="text-[9px] text-gray-500 dark:text-secondary-400 uppercase font-bold">{t('प्रश्न', 'Q')}</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-200 text-center">
-                <p className="text-2xl font-black text-green-600 tabular-nums">{total * marksPerQuestion}</p><p className="text-[9px] text-gray-500 uppercase font-bold">{t('अंक', 'Marks')}</p>
+              <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/20 rounded-xl border border-green-200 dark:border-green-800 text-center">
+                <p className="text-2xl font-black text-green-600 dark:text-green-400 tabular-nums">{total * marksPerQuestion}</p>
+                <p className="text-[9px] text-gray-500 dark:text-secondary-400 uppercase font-bold">{t('अंक', 'Marks')}</p>
               </div>
             </div>
 
             {/* Difficulty */}
             <div>
-              <h5 className="text-[10px] font-bold text-gray-500 uppercase mb-2">{t('कठिनाई', 'Difficulty')}</h5>
+              <h5 className="text-[10px] font-bold text-gray-500 dark:text-secondary-400 uppercase mb-2">{t('कठिनाई', 'Difficulty')}</h5>
               {Object.entries(DIFF).map(([key, cfg]) => (
                 <div key={key} className={`flex items-center justify-between p-2 rounded-lg ${cfg.bg} mb-1`}>
-                  <div className="flex items-center gap-1.5"><div className={`w-2 h-2 rounded-full ${cfg.dot}`} /><span className={`text-xs font-semibold ${cfg.text}`}>{cfg.label[language]}</span></div>
-                  <span className="text-xs font-black tabular-nums">{summary.d[key]} <span className="text-gray-400 font-normal text-[10px]">({total ? Math.round((summary.d[key] / total) * 100) : 0}%)</span></span>
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+                    <span className={`text-xs font-semibold ${cfg.text}`}>{cfg.label[language]}</span>
+                  </div>
+                  <span className={`text-xs font-black tabular-nums ${cfg.text}`}>
+                    {summary.d[key]}
+                    <span className="text-gray-400 dark:text-secondary-500 font-normal text-[10px] ml-0.5">
+                      ({total ? Math.round((summary.d[key] / total) * 100) : 0}%)
+                    </span>
+                  </span>
                 </div>
               ))}
-              <div className="mt-1.5 h-1.5 rounded-full bg-gray-200 overflow-hidden flex">
-                {Object.entries(DIFF).map(([k, c]) => { const p = total ? (summary.d[k] / total) * 100 : 0; return p > 0 ? <div key={k} className={c.dot} style={{ width: `${p}%` }} /> : null; })}
+              <div className="mt-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-secondary-700 overflow-hidden flex">
+                {Object.entries(DIFF).map(([k, c]) => {
+                  const p = total ? (summary.d[k] / total) * 100 : 0;
+                  return p > 0 ? <div key={k} className={c.dot} style={{ width: `${p}%` }} /> : null;
+                })}
               </div>
             </div>
 
             {/* Types */}
             {Object.keys(summary.ty).length > 0 && (
               <div>
-                <h5 className="text-[10px] font-bold text-gray-500 uppercase mb-1.5">{t('प्रकार', 'Types')}</h5>
+                <h5 className="text-[10px] font-bold text-gray-500 dark:text-secondary-400 uppercase mb-1.5">{t('प्रकार', 'Types')}</h5>
                 {Object.entries(summary.ty).sort((a, b) => b[1] - a[1]).map(([ty, cnt]) => (
-                  <div key={ty} className="flex justify-between py-1 text-xs"><span className="text-gray-600 truncate max-w-[140px]">{QUESTION_TYPE_LABELS[ty]?.[language] || ty}</span><span className="font-bold tabular-nums">{cnt}</span></div>
+                  <div key={ty} className="flex justify-between py-1 text-xs">
+                    <span className="text-gray-600 dark:text-secondary-400 truncate max-w-[140px]">
+                      {QUESTION_TYPE_LABELS[ty]?.[language] || ty}
+                    </span>
+                    <span className="font-bold tabular-nums text-gray-800 dark:text-secondary-200">{cnt}</span>
+                  </div>
                 ))}
               </div>
             )}
 
             {/* PYQ */}
             {summary.pyq > 0 && (
-              <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between">
-                <span className="text-xs font-bold text-amber-700 flex items-center gap-1"><Star className="w-3 h-3 fill-current" />PYQ</span>
-                <span className="text-sm font-black text-amber-600 tabular-nums">{summary.pyq}</span>
+              <div className="p-2.5 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800 flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                  <Star className="w-3 h-3 fill-current" />PYQ
+                </span>
+                <span className="text-sm font-black text-amber-600 dark:text-amber-400 tabular-nums">{summary.pyq}</span>
               </div>
             )}
 
-            {/* ═══ TEST USAGE SUMMARY ═══ */}
+            {/* Test Usage Summary */}
             {summary.withTests > 0 && (
-              <div className="p-2.5 bg-violet-50 rounded-xl border border-violet-200">
-                <h5 className="text-[10px] font-bold text-violet-700 uppercase mb-1.5 flex items-center gap-1">
+              <div className="p-2.5 bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-200 dark:border-violet-800">
+                <h5 className="text-[10px] font-bold text-violet-700 dark:text-violet-300 uppercase mb-1.5 flex items-center gap-1">
                   <ClipboardList className="w-3 h-3" />{t('टेस्ट उपयोग', 'Test Usage')}
                 </h5>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-violet-600">{t('टेस्ट में उपयोग', 'Used in tests')}</span>
-                  <span className="font-black text-violet-700">{summary.withTests}/{total}</span>
+                  <span className="text-violet-600 dark:text-violet-400">{t('टेस्ट में उपयोग', 'Used in tests')}</span>
+                  <span className="font-black text-violet-700 dark:text-violet-300">{summary.withTests}/{total}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-violet-600">{t('कुल लिंक', 'Total links')}</span>
-                  <span className="font-black text-violet-700">{summary.totalTestLinks}</span>
+                  <span className="text-violet-600 dark:text-violet-400">{t('कुल लिंक', 'Total links')}</span>
+                  <span className="font-black text-violet-700 dark:text-violet-300">{summary.totalTestLinks}</span>
                 </div>
               </div>
             )}
@@ -469,9 +576,12 @@ const Sidebar = React.memo(({ selectedQuestions, language, marksPerQuestion, onC
             {/* Units */}
             {Object.keys(summary.un).length > 0 && (
               <div>
-                <h5 className="text-[10px] font-bold text-gray-500 uppercase mb-1.5">{t('इकाइयां', 'Units')}</h5>
+                <h5 className="text-[10px] font-bold text-gray-500 dark:text-secondary-400 uppercase mb-1.5">{t('इकाइयां', 'Units')}</h5>
                 {Object.entries(summary.un).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([un, cnt]) => (
-                  <div key={un} className="flex justify-between py-1 text-xs"><span className="text-gray-600 truncate max-w-[140px]">{un}</span><span className="font-bold tabular-nums">{cnt}</span></div>
+                  <div key={un} className="flex justify-between py-1 text-xs">
+                    <span className="text-gray-600 dark:text-secondary-400 truncate max-w-[140px]">{un}</span>
+                    <span className="font-bold tabular-nums text-gray-800 dark:text-secondary-200">{cnt}</span>
+                  </div>
                 ))}
               </div>
             )}
@@ -479,13 +589,16 @@ const Sidebar = React.memo(({ selectedQuestions, language, marksPerQuestion, onC
         )}
       </div>
       {total > 0 && (
-        <div className="p-3 border-t bg-white/80">
-          <div className="text-center text-[10px] text-gray-500 mb-2">
-            {t('अंक:', 'Marks:')} <b className="text-green-600">{total * marksPerQuestion}</b> •
-            {t(' समय:', ' Time:')} <b className="text-blue-600">~{Math.round(total * 1.2)}m</b> •
-            {t(' गुण:', ' Avg Q:')} <b className="text-purple-600">{total > 0 ? Math.round(selectedQuestions.reduce((s, q) => s + calcQuality(q).score, 0) / total) : 0}%</b>
+        <div className="p-3 border-t border-gray-200 dark:border-secondary-700 bg-white/80 dark:bg-secondary-800/80">
+          <div className="text-center text-[10px] text-gray-500 dark:text-secondary-400 mb-2">
+            {t('अंक:', 'Marks:')} <b className="text-green-600 dark:text-green-400">{total * marksPerQuestion}</b> •
+            {t(' समय:', ' Time:')} <b className="text-blue-600 dark:text-blue-400">~{Math.round(total * 1.2)}m</b> •
+            {t(' गुण:', ' Avg Q:')} <b className="text-purple-600 dark:text-purple-400">{total > 0 ? Math.round(selectedQuestions.reduce((s, q) => s + calcQuality(q).score, 0) / total) : 0}%</b>
           </div>
-          <button onClick={onClear} className="w-full py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl border border-red-200 flex items-center justify-center gap-1.5"><Trash2 className="w-3 h-3" />{t('सभी हटाएं', 'Clear All')}</button>
+          <button onClick={onClear}
+            className="w-full py-2 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 flex items-center justify-center gap-1.5">
+            <Trash2 className="w-3 h-3" />{t('सभी हटाएं', 'Clear All')}
+          </button>
         </div>
       )}
     </div>
@@ -499,51 +612,64 @@ const TestUsageModal = ({ question, tests, isOpen, onClose, language }) => {
 
   return createPortal(
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10002] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[70vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="px-5 py-3.5 border-b border-gray-200 bg-violet-50 flex items-center justify-between">
+      <div className="bg-white dark:bg-secondary-900 rounded-2xl shadow-2xl w-full max-w-md max-h-[70vh] flex flex-col overflow-hidden border border-gray-200 dark:border-secondary-700"
+        onClick={e => e.stopPropagation()}>
+        <div className="px-5 py-3.5 border-b border-gray-200 dark:border-secondary-700 bg-violet-50 dark:bg-violet-900/20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center shadow-md">
               <ClipboardList className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-gray-900">{t('टेस्ट उपयोग', 'Test Usage')}</h3>
-              <p className="text-[10px] text-gray-500">Q.{question.questionNumber || '?'} — {tests.length} {t('टेस्ट', 'tests')}</p>
+              <h3 className="font-bold text-sm text-gray-900 dark:text-white">{t('टेस्ट उपयोग', 'Test Usage')}</h3>
+              <p className="text-[10px] text-gray-500 dark:text-secondary-400">
+                Q.{question.questionNumber || '?'} — {tests.length} {t('टेस्ट', 'tests')}
+              </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl"><X className="w-4 h-4 text-gray-500" /></button>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-secondary-700 rounded-xl">
+            <X className="w-4 h-4 text-gray-500 dark:text-secondary-400" />
+          </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-white dark:bg-secondary-900">
           {tests.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <ClipboardList className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <div className="text-center py-8 text-gray-500 dark:text-secondary-400">
+              <ClipboardList className="w-10 h-10 text-gray-300 dark:text-secondary-600 mx-auto mb-3" />
               <p className="text-sm">{t('किसी टेस्ट में उपयोग नहीं', 'Not used in any test')}</p>
             </div>
           ) : (
             tests.map((test, i) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200 hover:bg-violet-50 transition-colors">
+              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-secondary-800 rounded-xl border border-gray-200 dark:border-secondary-700 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
-                    <ClipboardList className="w-4 h-4 text-violet-600" />
+                  <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                    <ClipboardList className="w-4 h-4 text-violet-600 dark:text-violet-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-800">{test.title}</p>
-                    <p className="text-[10px] text-gray-500 flex items-center gap-2">
-                      <span className="px-1.5 py-0.5 bg-gray-200 rounded text-[9px] font-bold uppercase">{test.testType}</span>
+                    <p className="text-sm font-bold text-gray-800 dark:text-secondary-200">{test.title}</p>
+                    <p className="text-[10px] text-gray-500 dark:text-secondary-500 flex items-center gap-2">
+                      <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-secondary-700 rounded text-[9px] font-bold uppercase text-gray-600 dark:text-secondary-300">
+                        {test.testType}
+                      </span>
                       {test.paper && <span>{test.paper}</span>}
                       {test.totalQuestions && <span>{test.totalQuestions}Q</span>}
                       {test.createdAt && <span>{formatDate(test.createdAt)}</span>}
                     </p>
                   </div>
                 </div>
-                <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${test.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${test.status === 'active'
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                  : 'bg-gray-100 dark:bg-secondary-700 text-gray-600 dark:text-secondary-300'
+                  }`}>
                   {test.status || 'active'}
                 </span>
               </div>
             ))
           )}
         </div>
-        <div className="px-5 py-3 border-t border-gray-200 bg-gray-50">
-          <button onClick={onClose} className="w-full py-2.5 bg-gray-900 text-white rounded-xl font-bold text-sm">{t('बंद करें', 'Close')}</button>
+        <div className="px-5 py-3 border-t border-gray-200 dark:border-secondary-700 bg-gray-50 dark:bg-secondary-800">
+          <button onClick={onClose}
+            className="w-full py-2.5 bg-gray-900 dark:bg-primary-600 hover:bg-gray-800 dark:hover:bg-primary-500 text-white rounded-xl font-bold text-sm transition-colors">
+            {t('बंद करें', 'Close')}
+          </button>
         </div>
       </div>
     </div>,
@@ -578,7 +704,6 @@ const QuestionLibraryModal = ({
   const [batchMsg, setBatchMsg] = useState(null);
   const searchRef = useRef(null);
 
-  // ═══ NEW STATE: Test usage tracking ═══
   const [testUsageMap, setTestUsageMap] = useState({});
   const [testUsageLoading, setTestUsageLoading] = useState(false);
   const [testUsageQuestion, setTestUsageQuestion] = useState(null);
@@ -591,7 +716,6 @@ const QuestionLibraryModal = ({
 
   const selectedIds = useMemo(() => new Set(selectedQuestions.map(q => q._id)), [selectedQuestions]);
 
-  // ═══ LOAD TEST USAGE ═══
   useEffect(() => {
     if (isOpen && questions.length > 0) {
       loadTestUsage(questions.map(q => q._id));
@@ -618,7 +742,6 @@ const QuestionLibraryModal = ({
     setTestUsageTests(tests);
   };
 
-  // ═══ EXPORT SELECTED ═══
   const handleExportSelected = useCallback(() => {
     const data = selectedQuestions.length > 0 ? selectedQuestions : [];
     if (data.length === 0) return;
@@ -789,31 +912,49 @@ const QuestionLibraryModal = ({
     onApplyFilters(f); setPage(1);
   }, [filters, searchQuery, onApplyFilters]);
 
-  const toggleDiff = useCallback(d => { setFilters(p => ({ ...p, difficulties: p.difficulties.includes(d) ? p.difficulties.filter(x => x !== d) : [...p.difficulties, d] })); setPage(1); }, []);
-  const togglePYQ = useCallback(() => { setFilters(p => ({ ...p, isPYQ: p.isPYQ === true ? null : true })); setPage(1); }, []);
-  const toggleType = useCallback(ty => { setFilters(p => ({ ...p, types: p.types.includes(ty) ? p.types.filter(x => x !== ty) : [...p.types, ty] })); setPage(1); }, []);
+  const toggleDiff = useCallback(d => {
+    setFilters(p => ({ ...p, difficulties: p.difficulties.includes(d) ? p.difficulties.filter(x => x !== d) : [...p.difficulties, d] }));
+    setPage(1);
+  }, []);
+  const togglePYQ = useCallback(() => {
+    setFilters(p => ({ ...p, isPYQ: p.isPYQ === true ? null : true }));
+    setPage(1);
+  }, []);
+  const toggleType = useCallback(ty => {
+    setFilters(p => ({ ...p, types: p.types.includes(ty) ? p.types.filter(x => x !== ty) : [...p.types, ty] }));
+    setPage(1);
+  }, []);
 
   if (!isOpen) return null;
 
   return createPortal(
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-1.5 sm:p-3">
-      <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full flex overflow-hidden border border-gray-200 transition-all ${fullscreen ? 'max-w-full h-full rounded-none' : 'max-w-7xl h-[97vh]'}`}>
+      <div className={`bg-white dark:bg-secondary-900 rounded-2xl shadow-2xl w-full flex overflow-hidden border border-gray-200 dark:border-secondary-700 transition-all
+        ${fullscreen ? 'max-w-full h-full rounded-none' : 'max-w-7xl h-[97vh]'}`}>
         <div className="flex-1 flex flex-col min-w-0">
 
           {/* ═══ HEADER ═══ */}
-          <div className="px-4 py-2.5 border-b border-gray-200 bg-gradient-to-r from-slate-50 via-white to-blue-50 flex-shrink-0">
+          <div className="px-4 py-2.5 border-b border-gray-200 dark:border-secondary-700 bg-gradient-to-r from-slate-50 via-white to-blue-50 dark:from-secondary-800 dark:via-secondary-900 dark:to-secondary-800 flex-shrink-0">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg flex-shrink-0"><BookOpen className="w-5 h-5 text-white" /></div>
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                  <BookOpen className="w-5 h-5 text-white" />
+                </div>
                 <div className="min-w-0">
-                  <h3 className="font-black text-lg text-gray-900 leading-tight">{t('प्रश्न लाइब्रेरी', 'Question Library')}</h3>
-                  <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                  <h3 className="font-black text-lg text-gray-900 dark:text-white leading-tight">
+                    {t('प्रश्न लाइब्रेरी', 'Question Library')}
+                  </h3>
+                  <div className="flex items-center gap-2 text-[10px] text-gray-500 dark:text-secondary-400">
                     <span className="tabular-nums font-medium">{filtered.length}/{questions.length} {t('प्रश्न', 'Q')}</span>
-                    {testUsageLoading && <span className="text-violet-500 flex items-center gap-0.5"><Activity className="w-3 h-3 animate-pulse" />{t('टेस्ट लोड...', 'Loading tests...')}</span>}
+                    {testUsageLoading && (
+                      <span className="text-violet-500 dark:text-violet-400 flex items-center gap-0.5">
+                        <Activity className="w-3 h-3 animate-pulse" />{t('टेस्ट लोड...', 'Loading tests...')}
+                      </span>
+                    )}
                     {selectedQuestions.length > 0 && (
-                      <span className="text-primary-600 font-bold flex items-center gap-0.5">
+                      <span className="text-primary-600 dark:text-primary-400 font-bold flex items-center gap-0.5">
                         <CheckCircle2 className="w-3 h-3" />{selectedQuestions.length} {t('चुने', 'sel')}
-                        <span className="text-green-600 ml-0.5">({selectedQuestions.length * marksPerQuestion}M)</span>
+                        <span className="text-green-600 dark:text-green-400 ml-0.5">({selectedQuestions.length * marksPerQuestion}M)</span>
                       </span>
                     )}
                   </div>
@@ -821,61 +962,99 @@ const QuestionLibraryModal = ({
               </div>
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 {/* Language toggle */}
-                <div className="hidden sm:flex bg-gray-100 rounded-xl p-0.5">
+                <div className="hidden sm:flex bg-gray-100 dark:bg-secondary-700 rounded-xl p-0.5">
                   {[{ k: 'hi', l: 'हि' }, { k: 'en', l: 'En' }].map(l => (
                     <button key={l.k} type="button" onClick={() => setDisplayLang(l.k)}
-                      className={`px-2.5 py-1.5 text-xs font-bold rounded-lg transition-all ${displayLang === l.k ? 'bg-white text-primary-600 shadow-sm' : 'text-gray-500'}`}>{l.l}</button>
+                      className={`px-2.5 py-1.5 text-xs font-bold rounded-lg transition-all
+                        ${displayLang === l.k
+                          ? 'bg-white dark:bg-secondary-600 text-primary-600 dark:text-primary-400 shadow-sm'
+                          : 'text-gray-500 dark:text-secondary-400 hover:text-gray-700 dark:hover:text-secondary-300'
+                        }`}>
+                      {l.l}
+                    </button>
                   ))}
                 </div>
                 {selectedQuestions.length > 0 && (
                   <>
-                    <div className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 bg-primary-50 border border-primary-200 rounded-xl">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-primary-600" />
-                      <span className="text-xs font-black text-primary-700 tabular-nums">{selectedQuestions.length}</span>
+                    <div className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-xl">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
+                      <span className="text-xs font-black text-primary-700 dark:text-primary-300 tabular-nums">{selectedQuestions.length}</span>
                     </div>
-                    <button type="button" onClick={handleExportSelected} title={t('निर्यात', 'Export')} className="hidden sm:flex p-2 rounded-xl border border-gray-200 text-gray-500 hover:border-green-300 hover:text-green-600 hover:bg-green-50 transition-all">
+                    <button type="button" onClick={handleExportSelected} title={t('निर्यात', 'Export')}
+                      className="hidden sm:flex p-2 rounded-xl border border-gray-200 dark:border-secondary-600 text-gray-500 dark:text-secondary-400 hover:border-green-300 dark:hover:border-green-700 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all">
                       <Download className="w-4 h-4" />
                     </button>
                   </>
                 )}
-                <button type="button" onClick={() => setShowSidebar(!showSidebar)} className={`hidden lg:flex p-2 rounded-xl border transition-all ${showSidebar ? 'bg-primary-50 border-primary-300 text-primary-700' : 'border-gray-200 text-gray-500'}`}>
+                <button type="button" onClick={() => setShowSidebar(!showSidebar)}
+                  className={`hidden lg:flex p-2 rounded-xl border transition-all
+                    ${showSidebar
+                      ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-400'
+                      : 'border-gray-200 dark:border-secondary-600 text-gray-500 dark:text-secondary-400'
+                    }`}>
                   {showSidebar ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
                 </button>
-                <button type="button" onClick={() => setFullscreen(!fullscreen)} className="hidden sm:flex p-2 hover:bg-gray-100 rounded-xl">
-                  {fullscreen ? <Minimize2 className="w-4 h-4 text-gray-500" /> : <Maximize2 className="w-4 h-4 text-gray-500" />}
+                <button type="button" onClick={() => setFullscreen(!fullscreen)}
+                  className="hidden sm:flex p-2 hover:bg-gray-100 dark:hover:bg-secondary-700 rounded-xl">
+                  {fullscreen
+                    ? <Minimize2 className="w-4 h-4 text-gray-500 dark:text-secondary-400" />
+                    : <Maximize2 className="w-4 h-4 text-gray-500 dark:text-secondary-400" />
+                  }
                 </button>
-                <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-xl"><X className="w-5 h-5 text-gray-500" /></button>
+                <button onClick={onClose} className="p-2 hover:bg-gray-200 dark:hover:bg-secondary-700 rounded-xl">
+                  <X className="w-5 h-5 text-gray-500 dark:text-secondary-400" />
+                </button>
               </div>
             </div>
           </div>
 
           {/* ═══ SEARCH + CONTROLS ═══ */}
-          <div className="px-4 py-2.5 bg-white border-b border-gray-200 flex-shrink-0">
+          <div className="px-4 py-2.5 bg-white dark:bg-secondary-900 border-b border-gray-200 dark:border-secondary-700 flex-shrink-0">
             <div className="flex gap-2 items-center">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input ref={searchRef} type="text" value={searchQuery} onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-secondary-500" />
+                <input ref={searchRef} type="text" value={searchQuery}
+                  onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
                   placeholder={t('खोजें… ( / )', 'Search… ( / )')}
-                  className="w-full pl-9 pr-9 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-primary-500/20 focus:border-primary-500 bg-white text-sm text-gray-900" />
-                {searchQuery && <button type="button" onClick={() => { setSearchQuery(''); setPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2"><X className="w-3.5 h-3.5 text-gray-400" /></button>}
+                  className="w-full pl-9 pr-9 py-2.5 border-2 border-gray-200 dark:border-secondary-600 rounded-xl
+                    focus:ring-4 focus:ring-primary-500/20 focus:border-primary-500 dark:focus:border-primary-400
+                    bg-white dark:bg-secondary-800 text-sm text-gray-900 dark:text-white
+                    placeholder-gray-400 dark:placeholder-secondary-500 transition-colors" />
+                {searchQuery && (
+                  <button type="button" onClick={() => { setSearchQuery(''); setPage(1); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <X className="w-3.5 h-3.5 text-gray-400 dark:text-secondary-500" />
+                  </button>
+                )}
               </div>
               <button type="button" onClick={() => setShowFilters(!showFilters)}
                 className={`px-3 py-2.5 rounded-xl border-2 text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap
-                  ${showFilters ? 'bg-primary-50 border-primary-500 text-primary-700 shadow-md' : 'border-gray-200 text-gray-600'}`}>
+                  ${showFilters
+                    ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500 dark:border-primary-600 text-primary-700 dark:text-primary-300 shadow-md'
+                    : 'border-gray-200 dark:border-secondary-600 text-gray-600 dark:text-secondary-400 hover:bg-gray-50 dark:hover:bg-secondary-800'
+                  }`}>
                 <SlidersHorizontal className="w-4 h-4" />
-                {filterCount > 0 && <span className="bg-primary-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-black">{filterCount}</span>}
+                {filterCount > 0 && (
+                  <span className="bg-primary-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-black">{filterCount}</span>
+                )}
               </button>
               {/* Batch select */}
-              <div className="hidden md:flex items-center gap-1 bg-gray-50 rounded-xl p-1 border border-gray-200">
+              <div className="hidden md:flex items-center gap-1 bg-gray-50 dark:bg-secondary-800 rounded-xl p-1 border border-gray-200 dark:border-secondary-700">
                 {[5, 10, 25, 50].map(n => (
                   <button key={n} type="button" onClick={() => handleBatchSelect(Math.min(n, unselCount))} disabled={unselCount === 0}
-                    className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all ${unselCount > 0 ? 'text-primary-700 hover:bg-primary-100 active:scale-95' : 'text-gray-400 cursor-not-allowed'}`}>
+                    className={`px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all
+                      ${unselCount > 0
+                        ? 'text-primary-700 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/30 active:scale-95'
+                        : 'text-gray-400 dark:text-secondary-600 cursor-not-allowed'
+                      }`}>
                     <Plus className="w-3 h-3 inline" />{n}
                   </button>
                 ))}
               </div>
-              {/* Sort - with NEW options */}
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="hidden sm:block px-2 py-2.5 border-2 border-gray-200 rounded-xl text-xs bg-white cursor-pointer">
+              {/* Sort */}
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+                className="hidden sm:block px-2 py-2.5 border-2 border-gray-200 dark:border-secondary-600 rounded-xl text-xs
+                  bg-white dark:bg-secondary-800 text-gray-700 dark:text-secondary-300 cursor-pointer">
                 <option value="newest">{t('नवीनतम', 'Newest')}</option>
                 <option value="oldest">{t('पुराने', 'Oldest')}</option>
                 <option value="difficulty_asc">Diff ↑</option>
@@ -885,13 +1064,16 @@ const QuestionLibraryModal = ({
                 <option value="most_used">{t('ज़्यादा उपयोग', 'Most Used')}</option>
                 <option value="unused">{t('अप्रयुक्त', 'Unused')}</option>
               </select>
-              <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }} className="hidden sm:block px-2 py-2.5 border-2 border-gray-200 rounded-xl text-xs bg-white w-14 cursor-pointer">
+              <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
+                className="hidden sm:block px-2 py-2.5 border-2 border-gray-200 dark:border-secondary-600 rounded-xl text-xs
+                  bg-white dark:bg-secondary-800 text-gray-700 dark:text-secondary-300 w-14 cursor-pointer">
                 {[5, 10, 15, 20, 30, 50].map(o => <option key={o} value={o}>{o}</option>)}
               </select>
-              <div className="flex bg-gray-100 rounded-xl p-0.5">
+              <div className="flex bg-gray-100 dark:bg-secondary-700 rounded-xl p-0.5">
                 {[{ k: 'list', i: List }, { k: 'grid', i: LayoutGrid }].map(v => (
-                  <button key={v.k} type="button" onClick={() => setViewMode(v.k)} className={`p-2 rounded-lg ${viewMode === v.k ? 'bg-white shadow-sm' : ''}`}>
-                    <v.i className={`w-4 h-4 ${viewMode === v.k ? 'text-primary-600' : 'text-gray-400'}`} />
+                  <button key={v.k} type="button" onClick={() => setViewMode(v.k)}
+                    className={`p-2 rounded-lg ${viewMode === v.k ? 'bg-white dark:bg-secondary-600 shadow-sm' : ''}`}>
+                    <v.i className={`w-4 h-4 ${viewMode === v.k ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400 dark:text-secondary-500'}`} />
                   </button>
                 ))}
               </div>
@@ -900,116 +1082,252 @@ const QuestionLibraryModal = ({
                 <RefreshCw className={`w-4 h-4 ${questionsLoading ? 'animate-spin' : ''}`} />
               </button>
             </div>
-            {batchMsg && <div className="mt-2 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200"><CheckCircle2 className="w-4 h-4" />{batchMsg}</div>}
+            {batchMsg && (
+              <div className="mt-2 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                <CheckCircle2 className="w-4 h-4" />{batchMsg}
+              </div>
+            )}
           </div>
 
           {/* ═══ FILTERS PANEL ═══ */}
           {showFilters && (
-            <div className="px-4 py-2.5 border-b border-gray-200 bg-gray-50/80 flex-shrink-0 space-y-2 max-h-[35vh] overflow-y-auto">
+            <div className="px-4 py-2.5 border-b border-gray-200 dark:border-secondary-700 bg-gray-50/80 dark:bg-secondary-800/80 flex-shrink-0 space-y-2 max-h-[35vh] overflow-y-auto">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] font-bold text-gray-400 uppercase">{t('त्वरित:', 'Quick:')}</span>
+                <span className="text-[10px] font-bold text-gray-400 dark:text-secondary-500 uppercase">{t('त्वरित:', 'Quick:')}</span>
                 {Object.entries(DIFF).map(([k, c]) => {
                   const on = filters.difficulties.includes(k);
                   return (
                     <button key={k} type="button" onClick={() => toggleDiff(k)}
-                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all ${on ? `${c.pill} shadow-md` : c.pillOff}`}>
+                      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all
+                        ${on ? `${c.pill} shadow-md` : c.pillOff}`}>
                       {k === 'easy' ? <Sparkles className="w-3 h-3" /> : k === 'hard' ? <Flame className="w-3 h-3" /> : <Gauge className="w-3 h-3" />}
                       {c.label[language]}
-                      {quickCounts[k] > 0 && <span className={`px-1.5 rounded-full text-[9px] font-black ${on ? 'bg-white/25' : 'bg-black/5'}`}>{quickCounts[k]}</span>}
+                      {quickCounts[k] > 0 && (
+                        <span className={`px-1.5 rounded-full text-[9px] font-black ${on ? 'bg-white/25' : 'bg-black/5 dark:bg-white/10'}`}>
+                          {quickCounts[k]}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
-                <div className="w-px h-5 bg-gray-300" />
+                <div className="w-px h-5 bg-gray-300 dark:bg-secondary-600" />
                 <button type="button" onClick={togglePYQ}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all ${filters.isPYQ === true ? 'bg-amber-600 text-white border-amber-600 shadow-md' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'}`}>
-                  <Star className="w-3 h-3" />PYQ{quickCounts.pyq > 0 && <span className={`px-1.5 rounded-full text-[9px] font-black ${filters.isPYQ ? 'bg-white/25' : 'bg-black/5'}`}>{quickCounts.pyq}</span>}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all
+                    ${filters.isPYQ === true
+                      ? 'bg-amber-600 text-white border-amber-600 shadow-md'
+                      : 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                    }`}>
+                  <Star className="w-3 h-3" />PYQ
+                  {quickCounts.pyq > 0 && (
+                    <span className={`px-1.5 rounded-full text-[9px] font-black ${filters.isPYQ ? 'bg-white/25' : 'bg-black/5 dark:bg-white/10'}`}>
+                      {quickCounts.pyq}
+                    </span>
+                  )}
                 </button>
-                {/* ═══ NEW: Unused filter ═══ */}
                 <button type="button" onClick={() => setSortBy(sortBy === 'unused' ? 'newest' : 'unused')}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all ${sortBy === 'unused' ? 'bg-violet-600 text-white border-violet-600 shadow-md' : 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100'}`}>
+                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all
+                    ${sortBy === 'unused'
+                      ? 'bg-violet-600 text-white border-violet-600 shadow-md'
+                      : 'bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800 hover:bg-violet-100 dark:hover:bg-violet-900/40'
+                    }`}>
                   <Shield className="w-3 h-3" />{t('अप्रयुक्त', 'Unused')}
-                  {quickCounts.unused > 0 && <span className={`px-1.5 rounded-full text-[9px] font-black ${sortBy === 'unused' ? 'bg-white/25' : 'bg-black/5'}`}>{quickCounts.unused}</span>}
+                  {quickCounts.unused > 0 && (
+                    <span className={`px-1.5 rounded-full text-[9px] font-black ${sortBy === 'unused' ? 'bg-white/25' : 'bg-black/5 dark:bg-white/10'}`}>
+                      {quickCounts.unused}
+                    </span>
+                  )}
                 </button>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <div className="w-full sm:w-auto sm:min-w-[130px]"><MiniMultiSelect options={Object.entries(PAPER_LABELS).map(([k, v]) => ({ value: k, label: t(v.hi, v.en), shortName: k === 'paper1' ? 'P1' : 'P2' }))} selected={filters.papers} onChange={v => updateFilter('papers', v)} placeholder={t('पेपर', 'Paper')} language={language} icon={BookOpen} /></div>
-                <div className="w-full sm:w-auto sm:min-w-[160px]"><MiniMultiSelect options={getUnitOptions ? getUnitOptions(filters.papers.length ? filters.papers : mainFilters?.papers).map(u => ({ ...u, shortName: (u.shortName || '').substring(0, 18) })) : []} selected={filters.units} onChange={v => updateFilter('units', v)} placeholder={t('इकाई', 'Unit')} language={language} icon={Target} /></div>
-                <div className="w-[calc(50%-4px)] sm:w-auto sm:min-w-[120px]"><MiniMultiSelect options={getTypeOptions ? getTypeOptions() : []} selected={filters.types} onChange={v => updateFilter('types', v)} placeholder={t('प्रकार', 'Type')} language={language} icon={Layers} /></div>
-                <button type="button" onClick={() => setShowAdvanced(!showAdvanced)} className={`px-2.5 py-2.5 rounded-xl border-2 text-xs font-bold flex items-center gap-1 ${showAdvanced ? 'bg-primary-50 border-primary-500 text-primary-700' : 'border-gray-200 text-gray-600'}`}><Sliders className="w-3.5 h-3.5" />{t('अधिक', 'More')}</button>
-                {filterCount > 0 && <button type="button" onClick={clearFilters} className="px-2.5 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-1"><RotateCcw className="w-3.5 h-3.5" />{t('रीसेट', 'Reset')}</button>}
+                <div className="w-full sm:w-auto sm:min-w-[130px]">
+                  <MiniMultiSelect
+                    options={Object.entries(PAPER_LABELS).map(([k, v]) => ({ value: k, label: t(v.hi, v.en), shortName: k === 'paper1' ? 'P1' : 'P2' }))}
+                    selected={filters.papers} onChange={v => updateFilter('papers', v)}
+                    placeholder={t('पेपर', 'Paper')} language={language} icon={BookOpen} />
+                </div>
+                <div className="w-full sm:w-auto sm:min-w-[160px]">
+                  <MiniMultiSelect
+                    options={getUnitOptions ? getUnitOptions(filters.papers.length ? filters.papers : mainFilters?.papers).map(u => ({ ...u, shortName: (u.shortName || '').substring(0, 18) })) : []}
+                    selected={filters.units} onChange={v => updateFilter('units', v)}
+                    placeholder={t('इकाई', 'Unit')} language={language} icon={Target} />
+                </div>
+                <div className="w-[calc(50%-4px)] sm:w-auto sm:min-w-[120px]">
+                  <MiniMultiSelect
+                    options={getTypeOptions ? getTypeOptions() : []}
+                    selected={filters.types} onChange={v => updateFilter('types', v)}
+                    placeholder={t('प्रकार', 'Type')} language={language} icon={Layers} />
+                </div>
+                <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
+                  className={`px-2.5 py-2.5 rounded-xl border-2 text-xs font-bold flex items-center gap-1
+                    ${showAdvanced
+                      ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-500 dark:border-primary-600 text-primary-700 dark:text-primary-300'
+                      : 'border-gray-200 dark:border-secondary-600 text-gray-600 dark:text-secondary-400'
+                    }`}>
+                  <Sliders className="w-3.5 h-3.5" />{t('अधिक', 'More')}
+                </button>
+                {filterCount > 0 && (
+                  <button type="button" onClick={clearFilters}
+                    className="px-2.5 py-2 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center gap-1">
+                    <RotateCcw className="w-3.5 h-3.5" />{t('रीसेट', 'Reset')}
+                  </button>
+                )}
               </div>
               {showAdvanced && (
-                <div className="p-3 bg-white rounded-xl border border-gray-200">
+                <div className="p-3 bg-white dark:bg-secondary-800 rounded-xl border border-gray-200 dark:border-secondary-700">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div><label className="text-[10px] font-bold text-gray-600 mb-1 block">{t('अध्याय', 'Chapter')}</label><MiniMultiSelect options={getChapterOptions ? getChapterOptions(filters.units.length ? filters.units : mainFilters?.units || [], filters.papers.length ? filters.papers : mainFilters?.papers || []) : []} selected={filters.chapters} onChange={v => updateFilter('chapters', v)} placeholder={t('अध्याय', 'Chapter')} language={language} /></div>
-                    <div><label className="text-[10px] font-bold text-gray-600 mb-1 block">{t('विषय', 'Topic')}</label><MiniMultiSelect options={getTopicOptions ? getTopicOptions(filters.chapters.length ? filters.chapters : mainFilters?.chapters || [], filters.units.length ? filters.units : mainFilters?.units || [], filters.papers.length ? filters.papers : mainFilters?.papers || []) : []} selected={filters.topics} onChange={v => updateFilter('topics', v)} placeholder={t('विषय', 'Topic')} language={language} /></div>
-                    <div><label className="text-[10px] font-bold text-gray-600 mb-1 block">PYQ</label><div className="flex gap-1.5">{[{ v: true, l: 'PYQ' }, { v: false, l: 'Non-PYQ' }].map(o => (<button key={String(o.v)} type="button" onClick={() => updateFilter('isPYQ', filters.isPYQ === o.v ? null : o.v)} className={`flex-1 px-2 py-2 text-[10px] font-bold rounded-lg border-2 ${filters.isPYQ === o.v ? 'bg-amber-50 border-amber-500 text-amber-700' : 'border-gray-200 text-gray-600 bg-white'}`}>{o.l}</button>))}</div></div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-600 dark:text-secondary-400 mb-1 block">{t('अध्याय', 'Chapter')}</label>
+                      <MiniMultiSelect
+                        options={getChapterOptions ? getChapterOptions(filters.units.length ? filters.units : mainFilters?.units || [], filters.papers.length ? filters.papers : mainFilters?.papers || []) : []}
+                        selected={filters.chapters} onChange={v => updateFilter('chapters', v)}
+                        placeholder={t('अध्याय', 'Chapter')} language={language} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-600 dark:text-secondary-400 mb-1 block">{t('विषय', 'Topic')}</label>
+                      <MiniMultiSelect
+                        options={getTopicOptions ? getTopicOptions(filters.chapters.length ? filters.chapters : mainFilters?.chapters || [], filters.units.length ? filters.units : mainFilters?.units || [], filters.papers.length ? filters.papers : mainFilters?.papers || []) : []}
+                        selected={filters.topics} onChange={v => updateFilter('topics', v)}
+                        placeholder={t('विषय', 'Topic')} language={language} />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-gray-600 dark:text-secondary-400 mb-1 block">PYQ</label>
+                      <div className="flex gap-1.5">
+                        {[{ v: true, l: 'PYQ' }, { v: false, l: 'Non-PYQ' }].map(o => (
+                          <button key={String(o.v)} type="button"
+                            onClick={() => updateFilter('isPYQ', filters.isPYQ === o.v ? null : o.v)}
+                            className={`flex-1 px-2 py-2 text-[10px] font-bold rounded-lg border-2
+                              ${filters.isPYQ === o.v
+                                ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-500 dark:border-amber-600 text-amber-700 dark:text-amber-300'
+                                : 'border-gray-200 dark:border-secondary-600 text-gray-600 dark:text-secondary-400 bg-white dark:bg-secondary-800'
+                              }`}>
+                            {o.l}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-2"><label className="text-[10px] font-bold text-gray-600 mb-1 block">{t('तिथि', 'Date')}</label><DateRangePicker startDate={filters.startDate} endDate={filters.endDate} onStartChange={v => updateFilter('startDate', v)} onEndChange={v => updateFilter('endDate', v)} language={language} /></div>
+                  <div className="mt-2">
+                    <label className="text-[10px] font-bold text-gray-600 dark:text-secondary-400 mb-1 block">{t('तिथि', 'Date')}</label>
+                    <DateRangePicker
+                      startDate={filters.startDate} endDate={filters.endDate}
+                      onStartChange={v => updateFilter('startDate', v)}
+                      onEndChange={v => updateFilter('endDate', v)} language={language} />
+                  </div>
                 </div>
               )}
               {filterCount > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {filters.papers.map(p => <FilterChip key={`p-${p}`} label={p === 'paper1' ? 'P1' : 'P2'} onRemove={() => updateFilter('papers', filters.papers.filter(x => x !== p))} color="gray" />)}
-                  {filters.difficulties.map(d => <FilterChip key={`d-${d}`} label={DIFFICULTY_LABELS[d]?.[language] || d} onRemove={() => updateFilter('difficulties', filters.difficulties.filter(x => x !== d))} color={d === 'easy' ? 'green' : d === 'hard' ? 'red' : 'amber'} />)}
-                  {filters.types.slice(0, 2).map(ty => <FilterChip key={`t-${ty}`} label={QUESTION_TYPE_LABELS[ty]?.[language] || ty} onRemove={() => updateFilter('types', filters.types.filter(x => x !== ty))} color="purple" />)}
-                  {filters.isPYQ === true && <FilterChip label="PYQ" onRemove={() => updateFilter('isPYQ', null)} color="amber" />}
+                  {filters.papers.map(p => (
+                    <FilterChip key={`p-${p}`} label={p === 'paper1' ? 'P1' : 'P2'}
+                      onRemove={() => updateFilter('papers', filters.papers.filter(x => x !== p))} color="gray" />
+                  ))}
+                  {filters.difficulties.map(d => (
+                    <FilterChip key={`d-${d}`} label={DIFFICULTY_LABELS[d]?.[language] || d}
+                      onRemove={() => updateFilter('difficulties', filters.difficulties.filter(x => x !== d))}
+                      color={d === 'easy' ? 'green' : d === 'hard' ? 'red' : 'amber'} />
+                  ))}
+                  {filters.types.slice(0, 2).map(ty => (
+                    <FilterChip key={`t-${ty}`} label={QUESTION_TYPE_LABELS[ty]?.[language] || ty}
+                      onRemove={() => updateFilter('types', filters.types.filter(x => x !== ty))} color="purple" />
+                  ))}
+                  {filters.isPYQ === true && (
+                    <FilterChip label="PYQ" onRemove={() => updateFilter('isPYQ', null)} color="amber" />
+                  )}
                 </div>
               )}
             </div>
           )}
 
           {/* ═══ TABS ═══ */}
-          <div className="flex items-center border-b border-gray-200 bg-white flex-shrink-0 px-1">
+          <div className="flex items-center border-b border-gray-200 dark:border-secondary-700 bg-white dark:bg-secondary-900 flex-shrink-0 px-1">
             {[
               { key: 'all', label: t('सभी', 'All'), icon: FileText, count: filtered.length },
               { key: 'selected', label: t('चुने', 'Selected'), icon: CheckCircle2, count: selectedQuestions.length, hl: selectedQuestions.length > 0 }
             ].map(tb => (
               <button key={tb.key} type="button" onClick={() => { setTab(tb.key); setPage(1); }}
                 className={`flex-1 px-3 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-all border-b-[3px]
-                  ${tab === tb.key ? 'text-primary-600 border-primary-600 bg-primary-50/50' : 'text-gray-500 hover:bg-gray-50 border-transparent'}`}>
+                  ${tab === tb.key
+                    ? 'text-primary-600 dark:text-primary-400 border-primary-600 dark:border-primary-400 bg-primary-50/50 dark:bg-primary-900/10'
+                    : 'text-gray-500 dark:text-secondary-400 hover:bg-gray-50 dark:hover:bg-secondary-800 border-transparent'
+                  }`}>
                 <tb.icon className="w-4 h-4" />{tb.label}
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black tabular-nums ${tb.hl ? 'bg-primary-600 text-white' : 'bg-gray-200'}`}>{tb.count}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black tabular-nums
+                  ${tb.hl
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-gray-200 dark:bg-secondary-700 text-gray-600 dark:text-secondary-300'
+                  }`}>
+                  {tb.count}
+                </span>
               </button>
             ))}
-            <div className="w-px h-7 bg-gray-200 mx-1" />
+            <div className="w-px h-7 bg-gray-200 dark:bg-secondary-700 mx-1" />
             {tab === 'all' && paginated.length > 0 && (
               <div className="flex items-center gap-1.5 px-2">
                 <button type="button" onClick={allPageSel ? handleDeselectPage : handleSelectPage}
-                  className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${allPageSel ? 'bg-primary-600 border-primary-600' : selOnPage > 0 ? 'bg-primary-100 border-primary-400' : 'border-gray-300 hover:border-primary-400'}`}>
+                  className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all
+                    ${allPageSel
+                      ? 'bg-primary-600 border-primary-600'
+                      : selOnPage > 0
+                        ? 'bg-primary-100 dark:bg-primary-900/30 border-primary-400 dark:border-primary-600'
+                        : 'border-gray-300 dark:border-secondary-600 hover:border-primary-400'
+                    }`}>
                   {allPageSel && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-                  {selOnPage > 0 && !allPageSel && <Minus className="w-3 h-3 text-primary-600" />}
+                  {selOnPage > 0 && !allPageSel && <Minus className="w-3 h-3 text-primary-600 dark:text-primary-400" />}
                 </button>
-                <span className="text-[10px] text-gray-500 font-medium hidden sm:inline">{t('पेज', 'Page')}</span>
+                <span className="text-[10px] text-gray-500 dark:text-secondary-400 font-medium hidden sm:inline">{t('पेज', 'Page')}</span>
               </div>
             )}
             {selectedQuestions.length > 0 && (
               <div className="flex items-center gap-0.5 px-1">
-                <button type="button" onClick={handleSelectAllFiltered} title={`Select all ${filtered.length}`} className="p-1.5 hover:bg-primary-50 rounded-lg text-primary-600"><CheckCheck className="w-4 h-4" /></button>
-                <button type="button" onClick={handleInvert} title="Invert" className="p-1.5 hover:bg-primary-50 rounded-lg text-primary-600"><ArrowUpDown className="w-3.5 h-3.5" /></button>
-                <button type="button" onClick={onClearAll} title="Clear" className="p-1.5 hover:bg-red-50 rounded-lg text-red-500"><XCircle className="w-4 h-4" /></button>
+                <button type="button" onClick={handleSelectAllFiltered} title={`Select all ${filtered.length}`}
+                  className="p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg text-primary-600 dark:text-primary-400">
+                  <CheckCheck className="w-4 h-4" />
+                </button>
+                <button type="button" onClick={handleInvert} title="Invert"
+                  className="p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg text-primary-600 dark:text-primary-400">
+                  <ArrowUpDown className="w-3.5 h-3.5" />
+                </button>
+                <button type="button" onClick={onClearAll} title="Clear"
+                  className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-red-500 dark:text-red-400">
+                  <XCircle className="w-4 h-4" />
+                </button>
               </div>
             )}
           </div>
 
           {/* ═══ QUESTIONS ═══ */}
-          <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gray-50/80 overscroll-contain scroll-smooth">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gray-50/80 dark:bg-secondary-950/50 overscroll-contain scroll-smooth">
             {questionsLoading ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <div className="w-12 h-12 border-[3px] border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-                <p className="mt-4 text-gray-500 text-sm">{t('लोड हो रहा है…', 'Loading…')}</p>
+                <div className="w-12 h-12 border-[3px] border-primary-200 dark:border-primary-800 border-t-primary-600 dark:border-t-primary-400 rounded-full animate-spin" />
+                <p className="mt-4 text-gray-500 dark:text-secondary-400 text-sm">{t('लोड हो रहा है…', 'Loading…')}</p>
               </div>
             ) : paginated.length === 0 ? (
               <div className="text-center py-16">
-                <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center shadow-inner">
-                  {tab === 'selected' ? <CheckCircle2 className="w-10 h-10 text-gray-300" /> : <FileText className="w-10 h-10 text-gray-300" />}
+                <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-gray-100 to-gray-50 dark:from-secondary-800 dark:to-secondary-700 flex items-center justify-center shadow-inner">
+                  {tab === 'selected'
+                    ? <CheckCircle2 className="w-10 h-10 text-gray-300 dark:text-secondary-600" />
+                    : <FileText className="w-10 h-10 text-gray-300 dark:text-secondary-600" />
+                  }
                 </div>
-                <h3 className="font-bold text-lg text-gray-700">{tab === 'selected' ? t('कोई प्रश्न नहीं चुना', 'No questions selected') : t('कोई प्रश्न नहीं', 'No questions found')}</h3>
-                <p className="text-sm text-gray-500 mt-2">{tab === 'all' ? t('फ़िल्टर बदलें या लोड करें', 'Change filters or Load') : t('"सभी" से चुनें', 'Select from All')}</p>
+                <h3 className="font-bold text-lg text-gray-700 dark:text-secondary-300">
+                  {tab === 'selected' ? t('कोई प्रश्न नहीं चुना', 'No questions selected') : t('कोई प्रश्न नहीं', 'No questions found')}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-secondary-400 mt-2">
+                  {tab === 'all' ? t('फ़िल्टर बदलें या लोड करें', 'Change filters or Load') : t('"सभी" से चुनें', 'Select from All')}
+                </p>
                 {tab === 'all' && (
                   <div className="mt-4 flex justify-center gap-3">
-                    {filterCount > 0 && <button type="button" onClick={clearFilters} className="px-4 py-2 text-sm font-bold text-primary-600 hover:bg-primary-50 rounded-xl">{t('रीसेट', 'Reset')}</button>}
-                    <button type="button" onClick={applyFilters} className="px-4 py-2 text-sm font-bold text-white bg-primary-600 rounded-xl">{t('लोड', 'Load')}</button>
+                    {filterCount > 0 && (
+                      <button type="button" onClick={clearFilters}
+                        className="px-4 py-2 text-sm font-bold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl">
+                        {t('रीसेट', 'Reset')}
+                      </button>
+                    )}
+                    <button type="button" onClick={applyFilters}
+                      className="px-4 py-2 text-sm font-bold text-white bg-primary-600 rounded-xl">
+                      {t('लोड', 'Load')}
+                    </button>
                   </div>
                 )}
               </div>
@@ -1037,20 +1355,32 @@ const QuestionLibraryModal = ({
           </div>
 
           {/* ═══ FOOTER ═══ */}
-          <div className="px-4 py-2.5 border-t border-gray-200 bg-white flex-shrink-0">
+          <div className="px-4 py-2.5 border-t border-gray-200 dark:border-secondary-700 bg-white dark:bg-secondary-900 flex-shrink-0">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
                 <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md"><CheckCircle2 className="w-4 h-4 text-white" /></div>
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md">
+                    <CheckCircle2 className="w-4 h-4 text-white" />
+                  </div>
                   <div className="leading-tight">
-                    <span className="text-lg font-black text-primary-600 tabular-nums">{selectedQuestions.length}</span>
-                    {selectedQuestions.length > 0 && <span className="text-[10px] text-green-600 font-bold ml-1">({selectedQuestions.length * marksPerQuestion}M)</span>}
+                    <span className="text-lg font-black text-primary-600 dark:text-primary-400 tabular-nums">{selectedQuestions.length}</span>
+                    {selectedQuestions.length > 0 && (
+                      <span className="text-[10px] text-green-600 dark:text-green-400 font-bold ml-1">
+                        ({selectedQuestions.length * marksPerQuestion}M)
+                      </span>
+                    )}
                   </div>
                 </div>
                 {selectedQuestions.length > 0 && (
                   <>
-                    <button type="button" onClick={handleExportSelected} className="p-1.5 text-green-500 hover:bg-green-50 rounded-lg" title="Export"><Download className="w-4 h-4" /></button>
-                    <button type="button" onClick={onClearAll} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                    <button type="button" onClick={handleExportSelected}
+                      className="p-1.5 text-green-500 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg" title="Export">
+                      <Download className="w-4 h-4" />
+                    </button>
+                    <button type="button" onClick={onClearAll}
+                      className="p-1.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </>
                 )}
               </div>
@@ -1058,39 +1388,75 @@ const QuestionLibraryModal = ({
               {/* Pagination */}
               {display.length > 0 && (
                 <div className="flex items-center gap-0.5">
-                  <span className="text-[10px] text-gray-500 mr-1.5 tabular-nums hidden sm:inline">{(page - 1) * perPage + 1}-{Math.min(page * perPage, display.length)}/{display.length}</span>
-                  <button type="button" onClick={() => setPage(1)} disabled={page === 1} className="p-1.5 hover:bg-gray-100 rounded-lg disabled:opacity-30"><ChevronFirst className="w-4 h-4" /></button>
-                  <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-1.5 hover:bg-gray-100 rounded-lg disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
+                  <span className="text-[10px] text-gray-500 dark:text-secondary-400 mr-1.5 tabular-nums hidden sm:inline">
+                    {(page - 1) * perPage + 1}-{Math.min(page * perPage, display.length)}/{display.length}
+                  </span>
+                  <button type="button" onClick={() => setPage(1)} disabled={page === 1}
+                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-secondary-700 rounded-lg disabled:opacity-30 text-gray-600 dark:text-secondary-400">
+                    <ChevronFirst className="w-4 h-4" />
+                  </button>
+                  <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-secondary-700 rounded-lg disabled:opacity-30 text-gray-600 dark:text-secondary-400">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
                   {(() => {
                     let s = Math.max(1, Math.min(page - 2, totalPages - 4));
-                    let e = Math.min(s + 4, totalPages); s = Math.max(1, e - 4);
+                    let e = Math.min(s + 4, totalPages);
+                    s = Math.max(1, e - 4);
                     const pages = [];
                     for (let p = s; p <= e; p++) pages.push(
                       <button key={p} type="button" onClick={() => setPage(p)}
-                        className={`w-8 h-8 rounded-lg text-xs font-bold tabular-nums ${page === p ? 'bg-primary-600 text-white shadow-lg' : 'hover:bg-gray-100 text-gray-600'}`}>{p}</button>
+                        className={`w-8 h-8 rounded-lg text-xs font-bold tabular-nums
+                          ${page === p
+                            ? 'bg-primary-600 text-white shadow-lg'
+                            : 'hover:bg-gray-100 dark:hover:bg-secondary-700 text-gray-600 dark:text-secondary-400'
+                          }`}>
+                        {p}
+                      </button>
                     );
                     return pages;
                   })()}
-                  <button type="button" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="p-1.5 hover:bg-gray-100 rounded-lg disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
-                  <button type="button" onClick={() => setPage(totalPages)} disabled={page >= totalPages} className="p-1.5 hover:bg-gray-100 rounded-lg disabled:opacity-30"><ChevronLast className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
+                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-secondary-700 rounded-lg disabled:opacity-30 text-gray-600 dark:text-secondary-400">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  <button type="button" onClick={() => setPage(totalPages)} disabled={page >= totalPages}
+                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-secondary-700 rounded-lg disabled:opacity-30 text-gray-600 dark:text-secondary-400">
+                    <ChevronLast className="w-4 h-4" />
+                  </button>
                 </div>
               )}
 
               <div className="flex items-center gap-2">
-                <button type="button" onClick={onClose} className="px-4 py-2.5 border-2 border-gray-300 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-100">{t('रद्द', 'Cancel')}</button>
+                <button type="button" onClick={onClose}
+                  className="px-4 py-2.5 border-2 border-gray-300 dark:border-secondary-600 text-gray-700 dark:text-secondary-300 rounded-xl font-bold text-sm hover:bg-gray-100 dark:hover:bg-secondary-800 transition-colors">
+                  {t('रद्द', 'Cancel')}
+                </button>
                 <button type="button" onClick={onClose}
                   className="px-5 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-xl font-bold text-sm shadow-lg flex items-center gap-2">
                   <CheckCheck className="w-5 h-5" />{t('पूर्ण', 'Done')}
-                  {selectedQuestions.length > 0 && <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold tabular-nums">{selectedQuestions.length}</span>}
+                  {selectedQuestions.length > 0 && (
+                    <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold tabular-nums">{selectedQuestions.length}</span>
+                  )}
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        {showSidebar && <Sidebar selectedQuestions={selectedQuestions} language={language} marksPerQuestion={marksPerQuestion} onClear={onClearAll} onClose={() => setShowSidebar(false)} testUsageMap={testUsageMap} />}
-        {preview && <QuestionPreviewModal question={preview} isOpen={!!preview} onClose={() => setPreview(null)} language={displayLang} />}
-        {testUsageQuestion && <TestUsageModal question={testUsageQuestion} tests={testUsageTests} isOpen={!!testUsageQuestion} onClose={() => setTestUsageQuestion(null)} language={language} />}
+        {showSidebar && (
+          <Sidebar selectedQuestions={selectedQuestions} language={language}
+            marksPerQuestion={marksPerQuestion} onClear={onClearAll}
+            onClose={() => setShowSidebar(false)} testUsageMap={testUsageMap} />
+        )}
+        {preview && (
+          <QuestionPreviewModal question={preview} isOpen={!!preview}
+            onClose={() => setPreview(null)} language={displayLang} />
+        )}
+        {testUsageQuestion && (
+          <TestUsageModal question={testUsageQuestion} tests={testUsageTests}
+            isOpen={!!testUsageQuestion} onClose={() => setTestUsageQuestion(null)} language={language} />
+        )}
       </div>
 
       <style>{`
@@ -1098,6 +1464,7 @@ const QuestionLibraryModal = ({
         .question-html-content p { margin-bottom: 4px; }
         .question-html-content table { border-collapse: collapse; width: 100%; font-size: 12px; }
         .question-html-content td, .question-html-content th { border: 1px solid #e5e7eb; padding: 4px 8px; }
+        .dark .question-html-content td, .dark .question-html-content th { border-color: #374151; }
       `}</style>
     </div>,
     document.body
