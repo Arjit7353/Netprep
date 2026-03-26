@@ -1,5 +1,7 @@
+// client/src/App.jsx
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import SplashScreen from './components/common/SplashScreen';
 import { ToastProvider } from './components/common/Toast';
 import { ThemeProvider } from './context/ThemeContext';
 import {
@@ -18,8 +20,7 @@ import Results from './pages/Results';
 import ResultDetail from './pages/ResultDetail';
 import SolutionPage from './pages/SolutionPage';
 import ManageSyllabus from './pages/ManageSyllabus';
-import PYQHub from './pages/PYQHub';  // ✅ NEW
-
+import PYQHub from './pages/PYQHub';
 
 // ─────────────────────────────────────────────
 //  ADVANCED FULL-SCREEN LOADER
@@ -45,13 +46,11 @@ const AdvancedLoader = ({ serverReady }) => {
     'Finalizing',
   ];
 
-  // Animated dots
   useEffect(() => {
     const iv = setInterval(() => setDots(d => (d.length >= 3 ? '' : d + '.')), 400);
     return () => clearInterval(iv);
   }, []);
 
-  // Simulated progress (smooth logarithmic curve)
   useEffect(() => {
     if (serverReady) return;
     const iv = setInterval(() => {
@@ -68,7 +67,6 @@ const AdvancedLoader = ({ serverReady }) => {
     return () => clearInterval(iv);
   }, [serverReady]);
 
-  // Server ready -> jump to 100%, fade out
   useEffect(() => {
     if (!serverReady) return;
     setProgress(100);
@@ -260,15 +258,11 @@ const LANGUAGE_STORAGE_KEY = 'netprep-language';
 //  MAIN APP
 // ─────────────────────────────────────────────
 function App() {
-  // Initialize language from localStorage with proper error handling
   const [language, setLanguageState] = useState(() => {
     try {
       const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-      // Validate stored value
-      if (stored === 'hi' || stored === 'en') {
-        return stored;
-      }
-      return 'en'; // Default to English
+      if (stored === 'hi' || stored === 'en') return stored;
+      return 'en';
     } catch {
       return 'en';
     }
@@ -277,19 +271,18 @@ function App() {
   const [serverReady, setServerReady] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
   const [minTimePassed, setMinTimePassed] = useState(false);
+
+  // ✅ FIX: Added missing showSplash state
+  const [showSplash, setShowSplash] = useState(true);
+
   const checkDone = useRef(false);
 
-  // Memoized setLanguage to prevent unnecessary re-renders
   const setLanguage = useCallback((newLang) => {
-    // Validate input
     if (newLang !== 'hi' && newLang !== 'en') {
       console.warn('Invalid language:', newLang);
       return;
     }
-    
     setLanguageState(newLang);
-    
-    // Save to localStorage
     try {
       localStorage.setItem(LANGUAGE_STORAGE_KEY, newLang);
     } catch (e) {
@@ -297,13 +290,13 @@ function App() {
     }
   }, []);
 
-  // ── Minimum 2 sec loader display ──
+  // Minimum 2 sec loader display
   useEffect(() => {
     const t = setTimeout(() => setMinTimePassed(true), 2000);
     return () => clearTimeout(t);
   }, []);
 
-  // ── Background server health check ──
+  // Background server health check
   useEffect(() => {
     if (checkDone.current) return;
     checkDone.current = true;
@@ -339,7 +332,7 @@ function App() {
     ping();
   }, []);
 
-  // ── Hide loader when server ready + min time passed ──
+  // Hide loader when server ready + min time passed
   useEffect(() => {
     if (serverReady && minTimePassed) {
       const t = setTimeout(() => setShowLoader(false), 1000);
@@ -347,16 +340,16 @@ function App() {
     }
   }, [serverReady, minTimePassed]);
 
-  // ── Sync language to localStorage whenever it changes ──
+  // Sync language to localStorage
   useEffect(() => {
     try {
       localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
     } catch (e) {
-      // Ignore storage errors
+      // Ignore
     }
   }, [language]);
 
-  // ── Listen for storage changes from other tabs ──
+  // Listen for storage changes from other tabs
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === LANGUAGE_STORAGE_KEY && e.newValue) {
@@ -365,7 +358,6 @@ function App() {
         }
       }
     };
-
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
@@ -374,133 +366,86 @@ function App() {
     <ThemeProvider>
       <ToastProvider>
         <div className="font-sans antialiased">
-          {showLoader && (
-            <AdvancedLoader serverReady={serverReady && minTimePassed} />
-          )}
-          <Routes>
-          <Route path="/pyq/*" element={<PYQHub language={language} setLanguage={setLanguage} />} />
 
-            {/* Dashboard */}
-            <Route
-              path="/"
-              element={
-                <Dashboard language={language} setLanguage={setLanguage} />
-              }
-            />
-            
-            {/* Question Bank */}
-            <Route
-              path="/questions"
-              element={
-                <QuestionBank
-                  language={language}
-                  setLanguage={setLanguage}
-                />
-              }
-            />
-            
-            {/* Import Questions */}
-            <Route
-              path="/import"
-              element={
-                <ImportQuestions
-                  language={language}
-                  setLanguage={setLanguage}
-                />
-              }
-            />
-            
-            {/* Tests */}
-            <Route
-              path="/tests"
-              element={
-                <TestListPage
-                  language={language}
-                  setLanguage={setLanguage}
-                />
-              }
-            />
-            
-            {/* Create Test */}
-            <Route
-              path="/tests/create"
-              element={
-                <CreateTestPage
-                  language={language}
-                  setLanguage={setLanguage}
-                />
-              }
-            />
-            
-            {/* Edit Test */}
-            <Route
-              path="/tests/edit/:id"
-              element={
-                <CreateTestPage
-                  language={language}
-                  setLanguage={setLanguage}
-                />
-              }
-            />
-            
-            {/* Take Test */}
-            <Route 
-              path="/test/:id" 
-              element={<TakeTest language={language} setLanguage={setLanguage} />} 
-            />
-            
-            {/* Results List */}
-            <Route
-              path="/results"
-              element={
-                <Results language={language} setLanguage={setLanguage} />
-              }
-            />
-            
-            {/* Result Detail */}
-            <Route
-              path="/results/:id"
-              element={
-                <ResultDetail
-                  language={language}
-                  setLanguage={setLanguage}
-                />
-              }
-            />
-            
-            {/* Solutions */}
-            <Route
-              path="/results/:id/solutions"
-              element={
-                <SolutionPage
-                  language={language}
-                  setLanguage={setLanguage}
-                />
-              }
-            />
-            
-            {/* Syllabus Management - NEW */}
-            <Route
-              path="/syllabus"
-              element={
-                <ManageSyllabus
-                  language={language}
-                  setLanguage={setLanguage}
-                />
-              }
-            />
-            
-            {/* Settings */}
-            <Route
-              path="/settings"
-              element={
-                <Settings language={language} setLanguage={setLanguage} />
-              }
-            />
-            
-            {/* 404 Not Found */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          {/* ✅ FIX: Loader uses existing showLoader state */}
+          {showLoader && <AdvancedLoader serverReady={serverReady} />}
+
+          {/* ✅ FIX: Splash uses newly added showSplash state */}
+          {showSplash && !showLoader && (
+            <SplashScreen onComplete={() => setShowSplash(false)} />
+          )}
+
+          {/* Only render routes after loader is done */}
+          {!showLoader && !showSplash && (
+            <Routes>
+              <Route
+                path="/pyq/*"
+                element={<PYQHub language={language} setLanguage={setLanguage} />}
+              />
+
+              <Route
+                path="/"
+                element={<Dashboard language={language} setLanguage={setLanguage} />}
+              />
+
+              <Route
+                path="/questions"
+                element={<QuestionBank language={language} setLanguage={setLanguage} />}
+              />
+
+              <Route
+                path="/import"
+                element={<ImportQuestions language={language} setLanguage={setLanguage} />}
+              />
+
+              <Route
+                path="/tests"
+                element={<TestListPage language={language} setLanguage={setLanguage} />}
+              />
+
+              <Route
+                path="/tests/create"
+                element={<CreateTestPage language={language} setLanguage={setLanguage} />}
+              />
+
+              <Route
+                path="/tests/edit/:id"
+                element={<CreateTestPage language={language} setLanguage={setLanguage} />}
+              />
+
+              <Route
+                path="/test/:id"
+                element={<TakeTest language={language} setLanguage={setLanguage} />}
+              />
+
+              <Route
+                path="/results"
+                element={<Results language={language} setLanguage={setLanguage} />}
+              />
+
+              <Route
+                path="/results/:id"
+                element={<ResultDetail language={language} setLanguage={setLanguage} />}
+              />
+
+              <Route
+                path="/results/:id/solutions"
+                element={<SolutionPage language={language} setLanguage={setLanguage} />}
+              />
+
+              <Route
+                path="/syllabus"
+                element={<ManageSyllabus language={language} setLanguage={setLanguage} />}
+              />
+
+              <Route
+                path="/settings"
+                element={<Settings language={language} setLanguage={setLanguage} />}
+              />
+
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          )}
         </div>
       </ToastProvider>
     </ThemeProvider>

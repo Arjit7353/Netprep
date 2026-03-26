@@ -3,7 +3,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, BarChart, Bar
 } from 'recharts';
-import { TrendingUp, TrendingDown, Minus, Activity, Award, Hash, Flame, Target, Clock, Zap } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Activity, Award, Hash, Star } from 'lucide-react';
 
 const ResultComparison = ({ attempts = [], currentAttempt, language = 'hi' }) => {
   const chartData = useMemo(() => {
@@ -12,8 +12,11 @@ const ResultComparison = ({ attempts = [], currentAttempt, language = 'hi' }) =>
       .sort((a, b) => new Date(a.completedAt || a.createdAt) - new Date(b.completedAt || b.createdAt))
       .map((att, i) => ({
         name: `#${att.attemptNumber || i + 1}`,
-        score: att.score || 0, accuracy: att.accuracy || 0,
-        correct: att.correctCount || 0, wrong: att.wrongCount || 0, skipped: att.skippedCount || 0,
+        score: att.score || 0, 
+        accuracy: att.accuracy || 0,
+        correct: att.correctCount || 0, 
+        wrong: att.wrongCount || 0, 
+        skipped: att.skippedCount || 0,
         time: att.totalTimeTaken ? Math.round(att.totalTimeTaken / 60) : 0,
         isCurrent: att._id === currentAttempt?._id,
         date: att.completedAt ? new Date(att.completedAt).toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' }) : '',
@@ -51,16 +54,37 @@ const ResultComparison = ({ attempts = [], currentAttempt, language = 'hi' }) =>
 
   return (
     <div className="space-y-6">
-
       {/* Trend Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           ...(trend ? [
-            { label: language === 'hi' ? 'अंक रुझान' : 'Score Trend', ...trend.score, val: `${trend.score.diff > 0 ? '+' : ''}${trend.score.diff}`, gradient: trend.score.diff >= 0 ? 'from-emerald-500 to-green-600' : 'from-red-500 to-rose-600' },
-            { label: language === 'hi' ? 'सटीकता' : 'Accuracy', ...trend.accuracy, val: `${trend.accuracy.diff > 0 ? '+' : ''}${trend.accuracy.diff}%`, gradient: trend.accuracy.diff >= 0 ? 'from-blue-500 to-cyan-600' : 'from-orange-500 to-red-600' },
+            { 
+              label: language === 'hi' ? 'अंक रुझान' : 'Score Trend', 
+              ...trend.score, 
+              val: `${trend.score.diff > 0 ? '+' : ''}${trend.score.diff}`, 
+              gradient: trend.score.diff >= 0 ? 'from-emerald-500 to-green-600' : 'from-red-500 to-rose-600' 
+            },
+            { 
+              label: language === 'hi' ? 'सटीकता' : 'Accuracy', 
+              ...trend.accuracy, 
+              val: `${trend.accuracy.diff > 0 ? '+' : ''}${trend.accuracy.diff}%`, 
+              gradient: trend.accuracy.diff >= 0 ? 'from-blue-500 to-cyan-600' : 'from-orange-500 to-red-600' 
+            },
           ] : []),
-          { label: language === 'hi' ? 'सर्वश्रेष्ठ' : 'Best Score', icon: Award, color: 'text-amber-600', val: `${bestScore}`, gradient: 'from-amber-500 to-orange-600' },
-          { label: language === 'hi' ? 'प्रयास' : 'Attempts', icon: Hash, color: 'text-primary-600', val: `${chartData.length}`, gradient: 'from-primary-500 to-indigo-600' },
+          { 
+            label: language === 'hi' ? 'सर्वश्रेष्ठ' : 'Best Score', 
+            icon: Award, 
+            color: 'text-amber-600', 
+            val: `${bestScore}`, 
+            gradient: 'from-amber-500 to-orange-600' 
+          },
+          { 
+            label: language === 'hi' ? 'प्रयास' : 'Attempts', 
+            icon: Hash, 
+            color: 'text-primary-600', 
+            val: `${chartData.length}`, 
+            gradient: 'from-primary-500 to-indigo-600' 
+          },
         ].map((s, i) => (
           <div key={i} className="relative overflow-hidden bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-4 group hover:shadow-lg transition-all">
             <div className={`absolute -top-3 -right-3 w-14 h-14 bg-gradient-to-br ${s.gradient} rounded-full opacity-10 group-hover:opacity-20 transition-opacity`} />
@@ -73,35 +97,29 @@ const ResultComparison = ({ attempts = [], currentAttempt, language = 'hi' }) =>
         ))}
       </div>
 
-      // ═══ In ResultComparison.jsx, replace the Improvement Insight block ═══
+      {/* Improvement Insight */}
+      {trend && (
+        <div className={`flex items-start gap-3 p-4 rounded-2xl border ${
+          trend.score.diff > 0 ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' :
+          trend.score.diff < 0 ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' :
+          'bg-gray-50 dark:bg-secondary-700 border-gray-200 dark:border-secondary-600'
+        }`}>
+          {trend.score.diff > 0 ? <TrendingUp className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" /> :
+           trend.score.diff < 0 ? <TrendingDown className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" /> :
+           <Minus className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />}
+          <p className={`text-sm font-medium ${
+            trend.score.diff > 0 ? 'text-emerald-800 dark:text-emerald-300' :
+            trend.score.diff < 0 ? 'text-red-800 dark:text-red-300' : 'text-gray-600'
+          }`}>
+            {trend.score.diff > 0
+              ? (language === 'hi' ? `पिछले प्रयास से ${trend.score.diff} अंक बढ़े! बढ़िया सुधार!` : `Improved by ${trend.score.diff} points! Great progress!`)
+              : trend.score.diff < 0
+                ? (language === 'hi' ? `पिछले प्रयास से ${Math.abs(trend.score.diff)} अंक कम। अभ्यास जारी रखें।` : `Decreased by ${Math.abs(trend.score.diff)} points. Keep practicing.`)
+                : (language === 'hi' ? 'पिछले प्रयास जैसा ही स्कोर।' : 'Same score as last attempt.')}
+          </p>
+        </div>
+      )}
 
-{/* Improvement Insight — Lucide icons only */}
-{trend && (
-  <div className={`flex items-start gap-3 p-4 rounded-2xl border ${
-    trend.score.diff > 0 ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' :
-    trend.score.diff < 0 ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' :
-    'bg-gray-50 dark:bg-secondary-700 border-gray-200 dark:border-secondary-600'
-  }`}>
-    {trend.score.diff > 0 ? <TrendingUp className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" /> :
-     trend.score.diff < 0 ? <TrendingDown className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" /> :
-     <Minus className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />}
-    <p className={`text-sm font-medium ${
-      trend.score.diff > 0 ? 'text-emerald-800 dark:text-emerald-300' :
-      trend.score.diff < 0 ? 'text-red-800 dark:text-red-300' : 'text-gray-600'
-    }`}>
-      {trend.score.diff > 0
-        ? (language === 'hi' ? `पिछले प्रयास से ${trend.score.diff} अंक बढ़े! बढ़िया सुधार!` : `Improved by ${trend.score.diff} points! Great progress!`)
-        : trend.score.diff < 0
-          ? (language === 'hi' ? `पिछले प्रयास से ${Math.abs(trend.score.diff)} अंक कम। अभ्यास जारी रखें।` : `Decreased by ${Math.abs(trend.score.diff)} points. Keep practicing.`)
-          : (language === 'hi' ? 'पिछले प्रयास जैसा ही स्कोर।' : 'Same score as last attempt.')}
-    </p>
-  </div>
-)}
-
-// ═══ In comparison table, replace star emoji ═══
-// Find: {r.score === bestScore && <span className="ml-1 text-amber-500">⭐</span>}
-// Replace with:
-{r.score === bestScore && <Star className="inline w-3.5 h-3.5 ml-1 text-amber-500 fill-amber-500" />}
       {/* Performance Trend Line */}
       <div className="bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-5 shadow-sm">
         <h4 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -168,7 +186,7 @@ const ResultComparison = ({ attempts = [], currentAttempt, language = 'hi' }) =>
                 <td className="py-3 px-3 text-center text-gray-500 text-xs">{r.date}</td>
                 <td className="py-3 px-3 text-center font-bold text-gray-800 dark:text-secondary-200">
                   {r.score}
-                  {r.score === bestScore && <span className="ml-1 text-amber-500">⭐</span>}
+                  {r.score === bestScore && <Star className="inline w-3.5 h-3.5 ml-1 text-amber-500 fill-amber-500" />}
                 </td>
                 <td className="py-3 px-3 text-center text-emerald-600 font-bold">{r.correct}</td>
                 <td className="py-3 px-3 text-center text-red-500 font-bold">{r.wrong}</td>
