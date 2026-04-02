@@ -26,19 +26,18 @@ const SequenceOrder = ({
   const getOptionStyle = (index) => {
     if (showAnswer) {
       if (index === question.correctAnswer) {
-        return 'bg-green-50 border-green-500 text-green-800';
+        return 'bg-green-50 dark:bg-green-900/25 border-green-500 dark:border-green-600 text-green-800 dark:text-green-200';
       }
       if (selectedAnswer === index && index !== question.correctAnswer) {
-        return 'bg-red-50 border-red-500 text-red-800';
+        return 'bg-red-50 dark:bg-red-900/25 border-red-500 dark:border-red-600 text-red-800 dark:text-red-200';
       }
     }
     if (selectedAnswer === index) {
-      return 'bg-primary-50 border-primary-500 text-primary-800';
+      return 'bg-primary-50 dark:bg-primary-900/25 border-primary-500 dark:border-primary-600 text-primary-800 dark:text-primary-200';
     }
-    return 'bg-white border-gray-300 hover:border-gray-400';
+    return 'bg-white dark:bg-secondary-800 border-gray-300 dark:border-secondary-600 hover:border-gray-400 dark:hover:border-secondary-500';
   };
 
-  // Convert numeric to roman
   const toRoman = (num) => {
     const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
     return romanNumerals[num] || (num + 1).toString();
@@ -47,7 +46,7 @@ const SequenceOrder = ({
   return (
     <div className="space-y-4">
       {/* Instruction */}
-      <div className="text-gray-700 font-medium">
+      <div className="text-gray-700 dark:text-secondary-200 font-medium">
         {questionText || (language === 'hi' 
           ? 'निम्नलिखित को सही क्रम में व्यवस्थित कीजिए:'
           : 'Arrange the following in correct order:'
@@ -55,17 +54,17 @@ const SequenceOrder = ({
       </div>
 
       {/* Items List */}
-      <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+      <div className="bg-gray-50 dark:bg-secondary-900/50 rounded-lg border border-gray-200 dark:border-secondary-700 p-4">
         <div className="space-y-2">
           {items.map((item, index) => (
             <div 
               key={index} 
-              className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200"
+              className="flex items-start gap-3 p-3 bg-white dark:bg-secondary-800 rounded-lg border border-gray-200 dark:border-secondary-600"
             >
-              <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-100 text-primary-700 font-bold flex items-center justify-center text-sm">
+              <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 font-bold flex items-center justify-center text-sm">
                 {toRoman(index)}
               </span>
-              <span className="text-gray-800 flex-1">{item}</span>
+              <span className="text-gray-800 dark:text-secondary-200 flex-1">{item}</span>
             </div>
           ))}
         </div>
@@ -73,18 +72,18 @@ const SequenceOrder = ({
 
       {/* Correct Order (when showing answer) */}
       {showAnswer && correctOrder.length > 0 && (
-        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm font-medium text-green-800 mb-2">
+        <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+          <p className="text-sm font-medium text-green-800 dark:text-green-300 mb-2">
             {language === 'hi' ? 'सही क्रम:' : 'Correct Order:'}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {correctOrder.map((itemIndex, i) => (
               <React.Fragment key={i}>
-                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full text-sm font-medium">
                   {toRoman(itemIndex)}
                 </span>
                 {i < correctOrder.length - 1 && (
-                  <ArrowDown className="w-4 h-4 text-green-600 rotate-[-90deg]" />
+                  <ArrowDown className="w-4 h-4 text-green-600 dark:text-green-400 rotate-[-90deg]" />
                 )}
               </React.Fragment>
             ))}
@@ -93,7 +92,7 @@ const SequenceOrder = ({
       )}
 
       {/* Option instruction */}
-      <div className="text-sm text-gray-600">
+      <div className="text-sm text-gray-600 dark:text-secondary-400">
         {language === 'hi' 
           ? 'नीचे दिए गए विकल्पों में से सही क्रम चुनिए:'
           : 'Choose the correct sequence from the options given below:'
@@ -116,13 +115,13 @@ const SequenceOrder = ({
           >
             <div className="flex-shrink-0">
               {showAnswer && index === question.correctAnswer ? (
-                <CheckCircle className="w-5 h-5 text-green-600" />
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
               ) : selectedAnswer === index ? (
                 <div className="w-5 h-5 rounded-full bg-primary-600 flex items-center justify-center">
                   <div className="w-2 h-2 rounded-full bg-white" />
                 </div>
               ) : (
-                <Circle className="w-5 h-5 text-gray-400" />
+                <Circle className="w-5 h-5 text-gray-400 dark:text-secondary-500" />
               )}
             </div>
 
@@ -136,11 +135,11 @@ const SequenceOrder = ({
 
       {/* Explanation */}
       {showAnswer && explanation && (
-        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm font-medium text-blue-800 mb-1">
+        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">
             {language === 'hi' ? 'व्याख्या:' : 'Explanation:'}
           </p>
-          <p className="text-sm text-blue-700">{explanation}</p>
+          <p className="text-sm text-blue-700 dark:text-blue-400">{explanation}</p>
         </div>
       )}
     </div>

@@ -100,7 +100,14 @@ const questionService = {
   bulkUpdatePYQQuestions: async (pyqIds, updates) => {
     return apiHelper.put('/questions/pyq-bank/bulk-update', { pyqIds, updates });
   },
-
+ /** Alias for backward compatibility with QuestionList.jsx */
+  bulkTranslateQuestions_NEW: async (ids, options = {}) => {
+    return apiHelper.post('/questions/bulk-translate', {
+      ids,
+      sourceLanguage: options.sourceLanguage || null,
+      forceRetranslate: options.forceRetranslate || false
+    });
+  },
   // ═══ Review & Verification APIs (EXISTING — UNCHANGED) ═══
 
   verifyPYQQuestion: async (pyqId, verificationStatus, notes = '', correctnessStatus = null) => {

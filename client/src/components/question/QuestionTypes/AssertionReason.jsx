@@ -122,7 +122,7 @@ const AssertionReason = ({
       {showAnswer && explanation && (
         <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
           <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">
-            {language === 'hi' ? 'व्याख्य��:' : 'Explanation:'}
+            {language === 'hi' ? 'व्याख्या:' : 'Explanation:'}
           </p>
           <p className="text-sm text-blue-700 dark:text-blue-200">{explanation}</p>
         </div>

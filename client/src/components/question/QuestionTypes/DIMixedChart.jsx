@@ -29,7 +29,6 @@ const DIMixedChart = ({
 
   const title       = getBilingualText(data?.title, language);
   const instruction = getBilingualText(data?.instruction, language);
-  // ✅ FIXED
   const labels      = getChartLabels(data?.chartData?.labels, language);
   const datasets    = data?.chartData?.datasets || [];
   const xAxisLabel  = getBilingualText(data?.chartData?.xAxisLabel, language);
@@ -57,13 +56,13 @@ const DIMixedChart = ({
   const getOptionStyle = (index) => {
     if (showAnswer) {
       if (index === question?.correctAnswer)
-        return 'bg-green-50 border-green-500 text-green-800';
+        return 'bg-green-50 dark:bg-green-900/25 border-green-500 dark:border-green-600 text-green-800 dark:text-green-200';
       if (selectedAnswer === index && index !== question?.correctAnswer)
-        return 'bg-red-50 border-red-500 text-red-800';
+        return 'bg-red-50 dark:bg-red-900/25 border-red-500 dark:border-red-600 text-red-800 dark:text-red-200';
     }
     if (selectedAnswer === index)
-      return 'bg-primary-50 border-primary-500 text-primary-800';
-    return 'bg-white border-gray-300 hover:border-gray-400';
+      return 'bg-primary-50 dark:bg-primary-900/25 border-primary-500 dark:border-primary-600 text-primary-800 dark:text-primary-200';
+    return 'bg-white dark:bg-secondary-800 border-gray-300 dark:border-secondary-600 hover:border-gray-400 dark:hover:border-secondary-500';
   };
 
   const renderElement = (ds, index) => {
@@ -95,20 +94,20 @@ const DIMixedChart = ({
   return (
     <div className="space-y-4">
       {showDIData && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <div className="bg-gray-50 dark:bg-secondary-900/50 border border-gray-200 dark:border-secondary-700 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Layers className="w-5 h-5 text-rose-600 flex-shrink-0" />
-            <h4 className="font-semibold text-gray-800">
+            <Layers className="w-5 h-5 text-rose-600 dark:text-rose-400 flex-shrink-0" />
+            <h4 className="font-semibold text-gray-800 dark:text-secondary-100">
               {title || (language === 'hi' ? 'मिश्रित चार्ट' : 'Mixed Chart')}
             </h4>
           </div>
 
           {instruction && (
-            <p className="text-sm text-gray-600 mb-4 italic">{instruction}</p>
+            <p className="text-sm text-gray-600 dark:text-secondary-400 mb-4 italic">{instruction}</p>
           )}
 
           {hasChartData ? (
-            <div className="bg-white rounded-lg p-3 border border-gray-200">
+            <div className="bg-white dark:bg-secondary-800 rounded-lg p-3 border border-gray-200 dark:border-secondary-600">
               <ResponsiveContainer width="100%" height={300}>
                 <ComposedChart
                   data={chartData}
@@ -133,10 +132,11 @@ const DIMixedChart = ({
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
+                      backgroundColor: 'var(--tooltip-bg, white)',
+                      border: '1px solid var(--tooltip-border, #e5e7eb)',
                       borderRadius: '8px',
-                      fontSize: '12px'
+                      fontSize: '12px',
+                      color: 'var(--tooltip-text, #374151)'
                     }}
                   />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -145,7 +145,7 @@ const DIMixedChart = ({
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="flex items-center justify-center py-8 text-gray-400">
+            <div className="flex items-center justify-center py-8 text-gray-400 dark:text-secondary-500">
               <AlertCircle className="w-5 h-5 mr-2" />
               <span className="text-sm">
                 {language === 'hi' ? 'चार्ट डेटा उपलब्ध नहीं' : 'Chart data not available'}
@@ -156,7 +156,7 @@ const DIMixedChart = ({
       )}
 
       {question?.diOrder && (
-        <div className="text-xs font-medium text-rose-700 bg-rose-50 px-3 py-1.5 rounded-full inline-block">
+        <div className="text-xs font-medium text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 px-3 py-1.5 rounded-full inline-block">
           {language === 'hi'
             ? `प्रश्न ${question.diOrder} (डेटा व्याख्या)`
             : `Question ${question.diOrder} (Data Interpretation)`}
@@ -164,7 +164,7 @@ const DIMixedChart = ({
       )}
 
       {questionText && (
-        <div className="text-gray-800 font-medium leading-relaxed">{questionText}</div>
+        <div className="text-gray-800 dark:text-secondary-200 font-medium leading-relaxed">{questionText}</div>
       )}
 
       {options.length > 0 && (
@@ -183,13 +183,13 @@ const DIMixedChart = ({
             >
               <div className="flex-shrink-0">
                 {showAnswer && index === question?.correctAnswer ? (
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
                 ) : selectedAnswer === index ? (
                   <div className="w-5 h-5 rounded-full bg-primary-600 flex items-center justify-center">
                     <div className="w-2 h-2 rounded-full bg-white" />
                   </div>
                 ) : (
-                  <Circle className="w-5 h-5 text-gray-400" />
+                  <Circle className="w-5 h-5 text-gray-400 dark:text-secondary-500" />
                 )}
               </div>
               <div className="flex-1 text-sm">
@@ -202,11 +202,11 @@ const DIMixedChart = ({
       )}
 
       {showAnswer && explanation && (
-        <div className="mt-2 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm font-semibold text-blue-800 mb-1">
+        <div className="mt-2 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <p className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">
             {language === 'hi' ? 'व्याख्या:' : 'Explanation:'}
           </p>
-          <p className="text-sm text-blue-700">{explanation}</p>
+          <p className="text-sm text-blue-700 dark:text-blue-400">{explanation}</p>
         </div>
       )}
     </div>
