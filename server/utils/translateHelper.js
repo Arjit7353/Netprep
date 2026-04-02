@@ -1004,125 +1004,192 @@ class TranslateHelper {
     return obj;
   }
 
-  // ═══════════════════════════════════════════════════
-  //     QUESTION TRANSLATION
-  // ═══════════════════════════════════════════════════
-  async translateQuestion(questionData, sourceLanguage = 'hi') {
-    const tgt = sourceLanguage === 'hi' ? 'en' : 'hi';
-    const texts = [];
-    const map = [];
+ // ═══════════════════════════════════════════════════
+//     QUESTION TRANSLATION — FIXED v7.1
+// ═══════════════════════════════════════════════════
+async translateQuestion(questionData, sourceLanguage = 'hi') {
+  const tgt = sourceLanguage === 'hi' ? 'en' : 'hi';
+  const texts = [];
+  const map = [];
 
-    const addText = (val, field, type) => {
-      if (typeof val === 'string' && val.trim()) {
-        texts.push(val); map.push({ field, type });
-      } else if (val?.[sourceLanguage] && !val?.[tgt]) {
-        texts.push(val[sourceLanguage]); map.push({ field, type: 'bilingual' });
-      }
-    };
-
-    const addArr = (val, field, type) => {
-      if (Array.isArray(val)) {
-        val.forEach((v, i) => { texts.push(v); map.push({ field, type: 'array', index: i }); });
-      } else if (val?.[sourceLanguage] && (!val?.[tgt] || !val[tgt].length)) {
-        val[sourceLanguage].forEach((v, i) => { texts.push(v); map.push({ field, type: 'bilingualArray', index: i }); });
-      }
-    };
-
-    addText(questionData.question, 'question', 'string');
-    addArr(questionData.options, 'options');
-    addText(questionData.explanation, 'explanation', 'string');
-
-    if (questionData.assertion) addText(questionData.assertion, 'assertion', 'string');
-    if (questionData.reason) addText(questionData.reason, 'reason', 'string');
-    if (questionData.assertionReasonData?.assertion?.[sourceLanguage]) {
-      addText(questionData.assertionReasonData.assertion, 'ar_assertion', 'bilingual');
+  const addText = (val, field, type) => {
+    if (typeof val === 'string' && val.trim()) {
+      texts.push(val); map.push({ field, type });
+    } else if (val?.[sourceLanguage]?.trim() && !val?.[tgt]?.trim()) {
+      // ★ FIX: Check .trim() not just existence
+      texts.push(val[sourceLanguage]); map.push({ field, type: 'bilingual' });
     }
-    if (questionData.assertionReasonData?.reason?.[sourceLanguage]) {
-      addText(questionData.assertionReasonData.reason, 'ar_reason', 'bilingual');
+  };
+
+  const addArr = (val, field, type) => {
+    if (Array.isArray(val)) {
+      val.forEach((v, i) => { texts.push(v); map.push({ field, type: 'array', index: i }); });
+    } else if (val?.[sourceLanguage] && Array.isArray(val[sourceLanguage])) {
+      // ★★★ CRITICAL FIX: Don't skip if target has empty strings!
+      // Old: (!val?.[tgt] || !val[tgt].length) — WRONG: ["","","text","text"].length = 4
+      // New: Check if target has MEANINGFUL content for EACH item
+      const srcArr = val[sourceLanguage];
+      const tgtArr = val[tgt] || [];
+
+      // Check per-item: only translate items where source has content but target doesn't
+      const needsTranslation = srcArr.some((srcItem, i) => {
+        const srcHasContent = srcItem && srcItem.trim();
+        const tgtHasContent = tgtArr[i] && tgtArr[i].trim();
+        return srcHasContent && !tgtHasContent;
+      });
+
+      if (needsTranslation || !tgtArr.length) {
+        // Translate ALL source items (to maintain index alignment)
+        srcArr.forEach((v, i) => {
+          const tgtHasContent = tgtArr[i] && tgtArr[i].trim();
+          if (v && v.trim() && !tgtHasContent) {
+            // Source has content, target doesn't → translate
+            texts.push(v);
+            map.push({ field, type: 'bilingualArray', index: i, merge: true });
+          }
+          // If target already has content, keep it (don't re-translate)
+        });
+      }
     }
+  };
 
-    if (questionData.matchData?.listA) addArr(questionData.matchData.listA, 'listA');
-    if (questionData.matchData?.listB) addArr(questionData.matchData.listB, 'listB');
-    if (questionData.sequenceData?.items) addArr(questionData.sequenceData.items, 'seqItems');
-    if (questionData.statementData?.statements) addArr(questionData.statementData.statements, 'stmts');
+  addText(questionData.question, 'question', 'string');
+  addArr(questionData.options, 'options');
+  addText(questionData.explanation, 'explanation', 'string');
 
-    if (texts.length === 0) return questionData;
+  if (questionData.assertion) addText(questionData.assertion, 'assertion', 'string');
+  if (questionData.reason) addText(questionData.reason, 'reason', 'string');
+  if (questionData.assertionReasonData?.assertion?.[sourceLanguage]) {
+    addText(questionData.assertionReasonData.assertion, 'ar_assertion', 'bilingual');
+  }
+  if (questionData.assertionReasonData?.reason?.[sourceLanguage]) {
+    addText(questionData.assertionReasonData.reason, 'ar_reason', 'bilingual');
+  }
 
-    try {
-      const translations = await this.translateBatch(texts, sourceLanguage, tgt);
+  if (questionData.matchData?.listA) addArr(questionData.matchData.listA, 'listA');
+  if (questionData.matchData?.listB) addArr(questionData.matchData.listB, 'listB');
+  if (questionData.sequenceData?.items) addArr(questionData.sequenceData.items, 'seqItems');
+  if (questionData.statementData?.statements) addArr(questionData.statementData.statements, 'stmts');
 
-      let ti = 0;
-      for (const m of map) {
-        const translated = translations[ti++] || '';
+  if (texts.length === 0) return questionData;
 
-        switch (m.field) {
-          case 'question':
-            if (m.type === 'string') questionData.question = { [sourceLanguage]: questionData.question, [tgt]: translated };
-            else questionData.question[tgt] = translated;
-            break;
-          case 'options':
-            if (m.type === 'array') {
-              if (!questionData.options._c) {
-                questionData.options = { [sourceLanguage]: questionData.options, [tgt]: [] };
-                questionData.options._c = true;
-              }
-              questionData.options[tgt].push(translated);
-            } else {
-              if (!questionData.options[tgt]) questionData.options[tgt] = [];
-              questionData.options[tgt].push(translated);
+  try {
+    const translations = await this.translateBatch(texts, sourceLanguage, tgt);
+
+    let ti = 0;
+    for (const m of map) {
+      const translated = translations[ti++] || '';
+
+      switch (m.field) {
+        case 'question':
+          if (m.type === 'string') questionData.question = { [sourceLanguage]: questionData.question, [tgt]: translated };
+          else questionData.question[tgt] = translated;
+          break;
+
+        case 'options':
+          if (m.type === 'array') {
+            if (!questionData.options._c) {
+              questionData.options = { [sourceLanguage]: questionData.options, [tgt]: [] };
+              questionData.options._c = true;
             }
-            break;
-          case 'explanation':
-            if (m.type === 'string') questionData.explanation = { [sourceLanguage]: questionData.explanation, [tgt]: translated };
-            else questionData.explanation[tgt] = translated;
-            break;
-          case 'assertion':
-            if (!questionData.assertionReasonData) questionData.assertionReasonData = {};
-            questionData.assertionReasonData.assertion = { [sourceLanguage]: questionData.assertion, [tgt]: translated };
-            delete questionData.assertion;
-            break;
-          case 'reason':
-            if (!questionData.assertionReasonData) questionData.assertionReasonData = {};
-            questionData.assertionReasonData.reason = { [sourceLanguage]: questionData.reason, [tgt]: translated };
-            delete questionData.reason;
-            break;
-          case 'ar_assertion':
-            questionData.assertionReasonData.assertion[tgt] = translated;
-            break;
-          case 'ar_reason':
-            questionData.assertionReasonData.reason[tgt] = translated;
-            break;
-          case 'listA':
+            questionData.options[tgt].push(translated);
+          } else if (m.merge) {
+            // ★★★ NEW: Merge translated items into existing target array
+            if (!questionData.options[tgt]) questionData.options[tgt] = [];
+            // Ensure array is long enough
+            while (questionData.options[tgt].length <= m.index) {
+              questionData.options[tgt].push('');
+            }
+            questionData.options[tgt][m.index] = translated;
+          } else {
+            if (!questionData.options[tgt]) questionData.options[tgt] = [];
+            questionData.options[tgt].push(translated);
+          }
+          break;
+
+        case 'explanation':
+          if (m.type === 'string') questionData.explanation = { [sourceLanguage]: questionData.explanation, [tgt]: translated };
+          else questionData.explanation[tgt] = translated;
+          break;
+
+        case 'assertion':
+          if (!questionData.assertionReasonData) questionData.assertionReasonData = {};
+          questionData.assertionReasonData.assertion = { [sourceLanguage]: questionData.assertion, [tgt]: translated };
+          delete questionData.assertion;
+          break;
+
+        case 'reason':
+          if (!questionData.assertionReasonData) questionData.assertionReasonData = {};
+          questionData.assertionReasonData.reason = { [sourceLanguage]: questionData.reason, [tgt]: translated };
+          delete questionData.reason;
+          break;
+
+        case 'ar_assertion':
+          questionData.assertionReasonData.assertion[tgt] = translated;
+          break;
+
+        case 'ar_reason':
+          questionData.assertionReasonData.reason[tgt] = translated;
+          break;
+
+        case 'listA':
+          if (m.merge) {
+            if (!questionData.matchData.listA[tgt]) questionData.matchData.listA[tgt] = [];
+            while (questionData.matchData.listA[tgt].length <= m.index) questionData.matchData.listA[tgt].push('');
+            questionData.matchData.listA[tgt][m.index] = translated;
+          } else {
             if (!questionData.matchData.listA[tgt]) questionData.matchData.listA[tgt] = [];
             questionData.matchData.listA[tgt].push(translated);
-            break;
-          case 'listB':
+          }
+          break;
+
+        case 'listB':
+          if (m.merge) {
+            if (!questionData.matchData.listB[tgt]) questionData.matchData.listB[tgt] = [];
+            while (questionData.matchData.listB[tgt].length <= m.index) questionData.matchData.listB[tgt].push('');
+            questionData.matchData.listB[tgt][m.index] = translated;
+          } else {
             if (!questionData.matchData.listB[tgt]) questionData.matchData.listB[tgt] = [];
             questionData.matchData.listB[tgt].push(translated);
-            break;
-          case 'seqItems':
+          }
+          break;
+
+        case 'seqItems':
+          if (m.merge) {
+            if (!questionData.sequenceData.items[tgt]) questionData.sequenceData.items[tgt] = [];
+            while (questionData.sequenceData.items[tgt].length <= m.index) questionData.sequenceData.items[tgt].push('');
+            questionData.sequenceData.items[tgt][m.index] = translated;
+          } else {
             if (!questionData.sequenceData.items[tgt]) questionData.sequenceData.items[tgt] = [];
             questionData.sequenceData.items[tgt].push(translated);
-            break;
-          case 'stmts':
+          }
+          break;
+
+        case 'stmts':
+          if (m.merge) {
+            if (!questionData.statementData.statements[tgt]) questionData.statementData.statements[tgt] = [];
+            while (questionData.statementData.statements[tgt].length <= m.index) questionData.statementData.statements[tgt].push('');
+            questionData.statementData.statements[tgt][m.index] = translated;
+          } else {
             if (!questionData.statementData.statements[tgt]) questionData.statementData.statements[tgt] = [];
             questionData.statementData.statements[tgt].push(translated);
-            break;
-        }
+          }
+          break;
       }
-
-      if (questionData.options?._c) delete questionData.options._c;
-
-      const { question: validated, totalFixes } = this.validateQuestion(questionData);
-      if (totalFixes > 0) console.log(`[Translate] Post-validation fixed ${totalFixes} corruptions`);
-
-    } catch (error) {
-      console.warn('[Translate] translateQuestion failed:', error.message);
-      this.ensureBilingual(questionData, sourceLanguage);
     }
 
-    return questionData;
+    if (questionData.options?._c) delete questionData.options._c;
+
+    const { question: validated, totalFixes } = this.validateQuestion(questionData);
+    if (totalFixes > 0) console.log(`[Translate] Post-validation fixed ${totalFixes} corruptions`);
+
+  } catch (error) {
+    console.warn('[Translate] translateQuestion failed:', error.message);
+    this.ensureBilingual(questionData, sourceLanguage);
   }
+
+  return questionData;
+}
 
   async translateDIData(diData, srcLang = 'hi') {
     const tgt = srcLang === 'hi' ? 'en' : 'hi';

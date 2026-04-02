@@ -1,5 +1,8 @@
 import { OPTION_LABELS, ROMAN_NUMERALS } from './constants';
 
+// ★ Language detection regex — used by smart bilingual functions
+const HINDI_CHAR_RE = /[\u0900-\u097F]/;
+
 export const formatDate = (date, withTime = false) => {
   if (!date) return '';
   const d = new Date(date);
@@ -46,75 +49,187 @@ export const truncateText = (text, maxLength = 100) => {
 };
 
 /**
- * FIXED: getBilingualText
+ * ★★★ SMART getBilingualText v2.0
+ * Detects if text is stored in WRONG language field and auto-swaps
  * Handles: string, {hi, en}, null/undefined
  */
 export const getBilingualText = (textObj, lang = 'hi') => {
   if (!textObj) return '';
   if (typeof textObj === 'string') return textObj;
+
   if (typeof textObj === 'object') {
-    return textObj[lang] || textObj.hi || textObj.en || '';
+    const otherLang = lang === 'hi' ? 'en' : 'hi';
+    const primary = (textObj[lang] || '');
+    const fallback = (textObj[otherLang] || '');
+
+    // If primary is empty, use fallback
+    if (!primary.trim()) return fallback || '';
+    // If fallback is empty, use primary
+    if (!fallback.trim()) return primary;
+
+    // ★ Smart language detection — only for substantial text
+    if (primary.trim().length > 10) {
+      const pHasHindi = HINDI_CHAR_RE.test(primary);
+      const fHasHindi = HINDI_CHAR_RE.test(fallback);
+
+      if (lang === 'hi' && !pHasHindi && fHasHindi) {
+        // Requesting Hindi: primary has NO Hindi but fallback DOES → data swapped
+        return fallback;
+      }
+      if (lang === 'en' && !fHasHindi && pHasHindi) {
+        // Requesting English: primary has Hindi, fallback doesn't → data swapped
+        const hindiChars = (primary.match(/[\u0900-\u097F]/g) || []).length;
+        const englishChars = (primary.match(/[A-Za-z]/g) || []).length;
+        if (hindiChars > englishChars) {
+          return fallback;
+        }
+      }
+    }
+
+    return primary;
   }
   return '';
 };
 
 /**
- * FIXED: getBilingualArray
+ * ★★★ SMART getBilingualArray v2.0
+ * Per-item language detection — picks correct language text for each item
  * Handles:
  *   - Plain array: ['a','b','c']
- *   - Bilingual object: {hi: ['a'], en: ['b']}
+ *   - Bilingual object: {hi: [...], en: [...]}
+ *   - WRONG LANGUAGE in wrong field (English in hi, Hindi in en)
+ *   - Empty strings with fallback
  *   - Null/undefined
  */
 export const getBilingualArray = (arrObj, lang = 'hi') => {
   if (!arrObj) return [];
+
   // Already a plain array
   if (Array.isArray(arrObj)) return arrObj;
+
   // Bilingual object {hi: [...], en: [...]}
   if (typeof arrObj === 'object') {
-    const arr = arrObj[lang] || arrObj.hi || arrObj.en;
-    if (Array.isArray(arr)) return arr;
+    const otherLang = lang === 'hi' ? 'en' : 'hi';
+    const primaryArr = Array.isArray(arrObj[lang]) ? arrObj[lang] : [];
+    const fallbackArr = Array.isArray(arrObj[otherLang]) ? arrObj[otherLang] : [];
+
+    const maxLen = Math.max(primaryArr.length, fallbackArr.length);
+    if (maxLen === 0) return [];
+
+    // ★ Quick scan: does ANY item have wrong language?
+    let hasWrongLangItem = false;
+    for (let i = 0; i < primaryArr.length; i++) {
+      const p = (primaryArr[i] || '').trim();
+      if (!p || p.length <= 5) continue; // Skip empty/very short items
+
+      const pHasHindi = HINDI_CHAR_RE.test(p);
+
+      if (lang === 'hi' && !pHasHindi) {
+        // Want Hindi but item has no Hindi chars — check if it's truly English
+        const englishChars = (p.match(/[A-Za-z]/g) || []).length;
+        if (englishChars > 5) { hasWrongLangItem = true; break; }
+      }
+      if (lang === 'en' && pHasHindi) {
+        // Want English but item has Hindi chars
+        const hindiChars = (p.match(/[\u0900-\u097F]/g) || []).length;
+        const englishChars = (p.match(/[A-Za-z]/g) || []).length;
+        if (hindiChars > englishChars) { hasWrongLangItem = true; break; }
+      }
+    }
+
+    // ★ If no wrong-language items found, simple path (with empty-item fallback)
+    if (!hasWrongLangItem) {
+      if (fallbackArr.length > 0) {
+        const result = [];
+        for (let i = 0; i < maxLen; i++) {
+          const p = primaryArr[i] || '';
+          const f = fallbackArr[i] || '';
+          result.push((p && p.trim()) ? p : (f || p || ''));
+        }
+        return result;
+      }
+      return primaryArr.length > 0 ? primaryArr : fallbackArr;
+    }
+
+    // ★★★ SMART RESOLVE: per-item language detection
+    const result = [];
+    for (let i = 0; i < maxLen; i++) {
+      const p = (primaryArr[i] || '').trim();
+      const f = (fallbackArr[i] || '').trim();
+
+      // Both empty
+      if (!p && !f) { result.push(''); continue; }
+      // Only one exists
+      if (!p) { result.push(f); continue; }
+      if (!f) { result.push(p); continue; }
+
+      // ★ Both exist — pick the one matching requested language
+      const pHasHindi = HINDI_CHAR_RE.test(p);
+      const fHasHindi = HINDI_CHAR_RE.test(f);
+
+      if (lang === 'hi') {
+        // We want Hindi text
+        if (pHasHindi) {
+          result.push(p);       // Primary IS Hindi ✓
+        } else if (fHasHindi) {
+          result.push(f);       // Fallback has Hindi (data was swapped) → use it
+        } else {
+          result.push(p);       // Neither has Hindi (code text like "A-i, B-ii") → keep as-is
+        }
+      } else {
+        // We want English text
+        if (!pHasHindi) {
+          result.push(p);       // Primary IS English (no Hindi chars) ✓
+        } else if (!fHasHindi) {
+          result.push(f);       // Fallback is English → use it
+        } else {
+          // Both have Hindi — pick the one with MORE English
+          const pEn = (p.match(/[A-Za-z]/g) || []).length;
+          const fEn = (f.match(/[A-Za-z]/g) || []).length;
+          result.push(fEn > pEn ? f : p);
+        }
+      }
+    }
+
+    return result;
   }
+
   return [];
 };
 
 /**
- * NEW: getChartLabels
- * Safely extracts chart labels from any format
+ * ★ SMART getChartLabels — with language awareness
  */
 export const getChartLabels = (labelsData, lang = 'hi') => {
   if (!labelsData) return [];
   if (Array.isArray(labelsData)) return labelsData;
   if (typeof labelsData === 'object') {
-    const arr = labelsData[lang] || labelsData.hi || labelsData.en;
-    if (Array.isArray(arr)) return arr;
+    // Use getBilingualArray for language-aware resolution
+    return getBilingualArray(labelsData, lang);
   }
   return [];
 };
 
 /**
- * NEW: getDatasetLabel
- * Safely extracts dataset label (string or bilingual object)
+ * getDatasetLabel — Safely extracts dataset label
  */
 export const getDatasetLabel = (labelData, lang = 'hi', fallback = 'Series') => {
   if (!labelData) return fallback;
   if (typeof labelData === 'string') return labelData;
   if (typeof labelData === 'object') {
-    return labelData[lang] || labelData.hi || labelData.en || fallback;
+    return getBilingualText(labelData, lang) || fallback;
   }
   return fallback;
 };
 
 /**
- * NEW: getPieColors
- * Extracts colors from pie chart dataset (handles both 'color' and 'colors')
+ * getPieColors — Extracts colors from pie chart dataset
  */
 export const getPieColors = (dataset, fallbackColors) => {
   if (!dataset) return fallbackColors;
-  // dataset.colors array (pie chart specific)
   if (Array.isArray(dataset.colors) && dataset.colors.length > 0) {
     return dataset.colors;
   }
-  // dataset.color (single color - not for pie)
   if (dataset.color) return [dataset.color];
   return fallbackColors;
 };

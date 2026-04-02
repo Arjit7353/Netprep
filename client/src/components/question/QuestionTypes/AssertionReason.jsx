@@ -3,6 +3,8 @@ import { CheckCircle, Circle, XCircle } from 'lucide-react';
 import { getBilingualText, getBilingualArray, getOptionLabel } from '../../../utils/helpers';
 import { AR_OPTIONS_HI, AR_OPTIONS_EN } from '../../../utils/constants';
 
+const HINDI_RE = /[\u0900-\u097F]/;
+
 const AssertionReason = ({
   question,
   language = 'hi',
@@ -17,10 +19,52 @@ const AssertionReason = ({
   const reason = getBilingualText(question.assertionReasonData?.reason, language);
   const explanation = getBilingualText(question.explanation, language);
 
-  let options = getBilingualArray(question.options, language);
-  if (!options || options.length === 0) {
-    options = language === 'hi' ? AR_OPTIONS_HI : AR_OPTIONS_EN;
-  }
+  // ★★★ SMART OPTION RESOLUTION for Assertion-Reason ★★★
+  // getBilingualArray already does language detection,
+  // but AR questions have standard defaults as extra fallback
+  const resolveOptions = () => {
+    const rawOptions = getBilingualArray(question.options, language);
+    const defaultOptions = language === 'hi' ? AR_OPTIONS_HI : AR_OPTIONS_EN;
+
+    // Case 1: No options at all
+    if (!rawOptions || rawOptions.length === 0) {
+      return defaultOptions;
+    }
+
+    // Case 2: Check if options have meaningful content in correct language
+    const meaningfulCount = rawOptions.filter(opt => {
+      if (!opt || !opt.trim() || opt.trim().length < 5) return false;
+      if (language === 'hi') return HINDI_RE.test(opt);
+      return !HINDI_RE.test(opt) || (opt.match(/[A-Za-z]/g) || []).length > (opt.match(/[\u0900-\u097F]/g) || []).length;
+    }).length;
+
+    // If less than 2 meaningful options in correct language, use defaults
+    if (meaningfulCount < 2) {
+      return defaultOptions;
+    }
+
+    // Case 3: Some options might still be empty/wrong — fill from defaults
+    if (rawOptions.length >= 4) {
+      return rawOptions.map((opt, i) => {
+        if (opt && opt.trim() && opt.trim().length > 5) {
+          // Check if this option is in the correct language
+          if (language === 'hi' && HINDI_RE.test(opt)) return opt;
+          if (language === 'en' && !HINDI_RE.test(opt)) return opt;
+          // Wrong language but getBilingualArray should have handled it
+          // If still wrong, use default
+          if (language === 'hi' && !HINDI_RE.test(opt) && i < defaultOptions.length) {
+            return defaultOptions[i];
+          }
+        }
+        // Empty or too short — use default
+        return (i < defaultOptions.length) ? defaultOptions[i] : (opt || '');
+      });
+    }
+
+    return rawOptions;
+  };
+
+  const options = resolveOptions();
 
   const handleSelect = (index) => {
     if (!disabled && onAnswerSelect) onAnswerSelect(index);
@@ -44,14 +88,11 @@ const AssertionReason = ({
 
   return (
     <div className="space-y-4">
-      {/* Instruction */}
       {questionText && (
         <div className="text-gray-700 dark:text-secondary-200 font-medium">{questionText}</div>
       )}
 
-      {/* Assertion-Reason Box */}
       <div className="bg-gray-50 dark:bg-secondary-800 rounded-xl border border-gray-200 dark:border-secondary-600 overflow-hidden">
-        {/* Assertion */}
         <div className="p-4 border-b border-gray-200 dark:border-secondary-600">
           <div className="flex items-start gap-3">
             <span className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 dark:bg-blue-700 text-white flex items-center justify-center text-sm font-bold">A</span>
@@ -64,7 +105,6 @@ const AssertionReason = ({
           </div>
         </div>
 
-        {/* Reason */}
         <div className="p-4">
           <div className="flex items-start gap-3">
             <span className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 dark:bg-purple-700 text-white flex items-center justify-center text-sm font-bold">R</span>
@@ -78,7 +118,6 @@ const AssertionReason = ({
         </div>
       </div>
 
-      {/* Options */}
       <div className="space-y-2">
         {options.map((option, index) => (
           <button
@@ -118,7 +157,6 @@ const AssertionReason = ({
         ))}
       </div>
 
-      {/* Explanation */}
       {showAnswer && explanation && (
         <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
           <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">
