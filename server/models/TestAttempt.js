@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const answerSchema = new mongoose.Schema({
-  // ═══ FIX: Changed from ObjectId to Mixed to support PYQ string IDs ═══
   questionId: {
     type: mongoose.Schema.Types.Mixed,
     required: true
@@ -50,6 +49,26 @@ const topicAnalysisSchema = new mongoose.Schema({
   accuracy: { type: Number, default: 0 }
 }, { _id: false });
 
+// ═══ NEW: Snapshot of test data preserved even after test deletion ═══
+const testSnapshotSchema = new mongoose.Schema({
+  title: { type: String, default: 'Unknown Test' },
+  testType: { type: String, default: 'practice' },
+  paper: { type: String, default: 'paper1' },
+  totalQuestions: { type: Number, default: 0 },
+  duration: { type: Number, default: 0 },
+  totalMarks: { type: Number, default: 0 },
+  marksPerQuestion: { type: Number, default: 2 },
+  negativeMarking: { type: Boolean, default: false },
+  negativeMarks: { type: Number, default: 0 },
+  unit: { type: String },
+  chapter: { type: String },
+  topic: { type: String },
+  year: { type: String },
+  session: { type: String },
+  sourceType: { type: String },
+  hasPYQ: { type: Boolean, default: false }
+}, { _id: false });
+
 const testAttemptSchema = new mongoose.Schema({
   testId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -60,6 +79,15 @@ const testAttemptSchema = new mongoose.Schema({
   attemptNumber: {
     type: Number,
     default: 1
+  },
+
+  // ═══ NEW: Preserved test info — survives test deletion ═══
+  testSnapshot: testSnapshotSchema,
+
+  // ═══ NEW: Flag if the original test has been deleted ═══
+  testDeleted: {
+    type: Boolean,
+    default: false
   },
 
   answers: [answerSchema],
@@ -142,17 +170,20 @@ const testAttemptSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// ==================== INSTANCE METHODS ====================
+// ═══ SAFE ID MATCH ═══
+const safeIdMatch = (a, b) => {
+  if (!a || !b) return false;
+  return String(a) === String(b);
+};
 
 /**
  * Initialize answers array from questions
- * ═══ FIX: Filters out null/undefined questions, handles both ObjectId and string _id ═══
  */
 testAttemptSchema.methods.initializeAnswers = function(questions) {
   this.answers = questions
-    .filter(q => q && q._id) // Safety: skip null/missing questions
+    .filter(q => q && q._id)
     .map((question, index) => ({
-      questionId: question._id, // Works for both ObjectId and PYQ string
+      questionId: question._id,
       questionNumber: index + 1,
       selectedAnswer: -1,
       correctAnswer: question.correctAnswer,
@@ -165,11 +196,29 @@ testAttemptSchema.methods.initializeAnswers = function(questions) {
 };
 
 /**
- * ═══ FIX: Safe string comparison for both ObjectId and PYQ string IDs ═══
+ * ═══ NEW: Save a snapshot of the test so results survive test deletion ═══
  */
-const safeIdMatch = (a, b) => {
-  if (!a || !b) return false;
-  return String(a) === String(b);
+testAttemptSchema.methods.saveTestSnapshot = function(test) {
+  const t = test.toObject ? test.toObject() : test;
+  this.testSnapshot = {
+    title: t.title || 'Unknown Test',
+    testType: t.testType || 'practice',
+    paper: t.paper || 'paper1',
+    totalQuestions: t.totalQuestions || 0,
+    duration: t.duration || 0,
+    totalMarks: t.totalMarks || (t.totalQuestions * (t.marksPerQuestion || 2)),
+    marksPerQuestion: t.marksPerQuestion || 2,
+    negativeMarking: t.negativeMarking || false,
+    negativeMarks: t.negativeMarks || 0,
+    unit: t.unit || '',
+    chapter: t.chapter || '',
+    topic: t.topic || '',
+    year: t.year || '',
+    session: t.session || '',
+    sourceType: t.sourceType || 'bank',
+    hasPYQ: t.hasPYQ || false
+  };
+  return this;
 };
 
 /**
@@ -185,8 +234,8 @@ testAttemptSchema.methods.updateAnswer = function(questionId, selectedAnswer, ti
     this.answers[answerIndex].timeTaken += timeTaken;
     this.answers[answerIndex].answeredAt = new Date();
     this.answers[answerIndex].visited = true;
-    
-    this.answers[answerIndex].isCorrect = 
+
+    this.answers[answerIndex].isCorrect =
       selectedAnswer === this.answers[answerIndex].correctAnswer;
   }
 
@@ -261,23 +310,16 @@ testAttemptSchema.methods.getStatusSummary = function() {
  */
 testAttemptSchema.methods.getAnswerStatuses = function() {
   return this.answers.map(answer => {
-    if (!answer.visited) {
-      return 'not_visited';
-    } else if (answer.selectedAnswer !== -1 && answer.markedForReview) {
-      return 'answered_marked';
-    } else if (answer.markedForReview) {
-      return 'marked';
-    } else if (answer.selectedAnswer !== -1) {
-      return 'answered';
-    } else {
-      return 'not_answered';
-    }
+    if (!answer.visited) return 'not_visited';
+    if (answer.selectedAnswer !== -1 && answer.markedForReview) return 'answered_marked';
+    if (answer.markedForReview) return 'marked';
+    if (answer.selectedAnswer !== -1) return 'answered';
+    return 'not_answered';
   });
 };
 
 /**
  * Calculate results after submission
- * ═══ FIX: Uses safeIdMatch for both ObjectId and PYQ string IDs ═══
  */
 testAttemptSchema.methods.calculateResults = async function(questions, test) {
   let correctCount = 0;
@@ -287,9 +329,7 @@ testAttemptSchema.methods.calculateResults = async function(questions, test) {
   const topicMap = new Map();
 
   for (const answer of this.answers) {
-    // ═══ FIX: Use safe string comparison ═══
     const question = questions.find(q => safeIdMatch(q._id, answer.questionId));
-    
     if (!question) continue;
 
     if (answer.selectedAnswer === -1) {
@@ -317,18 +357,14 @@ testAttemptSchema.methods.calculateResults = async function(questions, test) {
 
     const topicStats = topicMap.get(topicKey);
     topicStats.total++;
-    if (answer.selectedAnswer === -1) {
-      topicStats.skipped++;
-    } else if (answer.isCorrect) {
-      topicStats.correct++;
-    } else {
-      topicStats.wrong++;
-    }
+    if (answer.selectedAnswer === -1) topicStats.skipped++;
+    else if (answer.isCorrect) topicStats.correct++;
+    else topicStats.wrong++;
   }
 
   const marksPerQuestion = test.marksPerQuestion || 2;
   const negativeMarks = test.negativeMarking ? (test.negativeMarks || 0) : 0;
-  
+
   this.score = (correctCount * marksPerQuestion) - (wrongCount * negativeMarks);
   this.score = Math.max(0, this.score);
 
@@ -342,8 +378,8 @@ testAttemptSchema.methods.calculateResults = async function(questions, test) {
   this.percentage = this.totalMarks > 0 ? Math.round((this.score / this.totalMarks) * 100) : 0;
 
   const totalTime = this.answers.reduce((sum, a) => sum + (a.timeTaken || 0), 0);
-  this.averageTimePerQuestion = this.answers.length > 0 
-    ? Math.round(totalTime / this.answers.length) 
+  this.averageTimePerQuestion = this.answers.length > 0
+    ? Math.round(totalTime / this.answers.length)
     : 0;
 
   this.topicAnalysis = Array.from(topicMap.values()).map(stats => ({
@@ -357,7 +393,7 @@ testAttemptSchema.methods.calculateResults = async function(questions, test) {
   return this;
 };
 
-// ==================== STATIC METHODS ====================
+// ═══ STATIC METHODS ═══
 
 testAttemptSchema.statics.getRecentAttempts = async function(limit = 10) {
   return this.find({ status: 'completed' })
@@ -387,6 +423,7 @@ testAttemptSchema.index({ testId: 1 });
 testAttemptSchema.index({ status: 1 });
 testAttemptSchema.index({ createdAt: -1 });
 testAttemptSchema.index({ completedAt: -1 });
+testAttemptSchema.index({ testDeleted: 1 });
 
 testAttemptSchema.set('toJSON', { virtuals: true });
 testAttemptSchema.set('toObject', { virtuals: true });

@@ -34,13 +34,9 @@ function mapType(pyqType) {
   return TYPE_MAP[(pyqType || '').toLowerCase()] || 'mcq';
 }
 
-/**
- * Resolve a PYQ synthetic ID into a virtual Question-like object
- */
 async function resolvePYQQuestion(pyqIdStr, pyqDocCache = {}) {
   const parsed = parsePYQId(pyqIdStr);
   if (!parsed) return null;
-
   const { docId, qNo } = parsed;
 
   if (!pyqDocCache[docId]) {
@@ -53,7 +49,6 @@ async function resolvePYQQuestion(pyqIdStr, pyqDocCache = {}) {
   if (!pq) return null;
 
   const qType = mapType(pq.type);
-
   let questionHi, questionEn, optHi, optEn, correctAns, explHi, explEn;
 
   if ((qType === 'passage_based' || pq.type === 'passage' || pq.type === 'comprehension') &&
@@ -107,7 +102,6 @@ async function resolvePYQQuestion(pyqIdStr, pyqDocCache = {}) {
     createdAt: pyqDoc.importedAt || pyqDoc.createdAt
   };
 
-  // Add passage data
   if (qType === 'passage_based' || pq.type === 'passage' || pq.type === 'comprehension') {
     virtualQuestion.passageId = {
       _id: `passage_${docId}_${qNo}`,
@@ -117,7 +111,6 @@ async function resolvePYQQuestion(pyqIdStr, pyqDocCache = {}) {
     virtualQuestion.subQuestions = pq.subQuestions || [];
   }
 
-  // Add type-specific data
   if (pq.assertionHi || pq.assertion) {
     virtualQuestion.assertionReasonData = {
       assertion: { hi: pq.assertionHi || pq.assertion || '', en: pq.assertionEn || '' },
@@ -147,14 +140,9 @@ async function resolvePYQQuestion(pyqIdStr, pyqDocCache = {}) {
   return virtualQuestion;
 }
 
-/**
- * ═══ KEY FIX: Resolve ALL questions from a test (bank + PYQ) ═══
- * Returns array of question objects in original order
- */
 async function resolveTestQuestions(test) {
   const testObj = test.toObject ? test.toObject() : test;
   const questionIds = testObj.questions || [];
-
   if (questionIds.length === 0) return [];
 
   const realIds = [];
@@ -169,7 +157,6 @@ async function resolveTestQuestions(test) {
     }
   });
 
-  // Fetch bank questions
   let realQuestions = [];
   if (realIds.length > 0) {
     realQuestions = await Question.find({ _id: { $in: realIds } })
@@ -178,7 +165,6 @@ async function resolveTestQuestions(test) {
       .lean();
   }
 
-  // Resolve PYQ questions
   let pyqQuestions = [];
   if (pyqSyntheticIds.length > 0) {
     const pyqDocCache = {};
@@ -188,12 +174,10 @@ async function resolveTestQuestions(test) {
     pyqQuestions = resolved.filter(Boolean);
   }
 
-  // Build lookup map
   const questionMap = new Map();
   realQuestions.forEach(q => questionMap.set(q._id.toString(), q));
   pyqQuestions.forEach(q => questionMap.set(String(q._id), q));
 
-  // Return in original order, skip any unresolved
   return questionIds
     .map(qId => {
       const idStr = typeof qId === 'string' ? qId : String(qId);
@@ -232,11 +216,30 @@ const getAttempts = async (req, res, next) => {
       .limit(parseInt(limit))
       .populate('testId', 'title testType paper totalQuestions duration totalMarks');
 
+    // ═══ NEW: Detect deleted tests and fill from snapshot ═══
+    const enrichedAttempts = attempts.map(att => {
+      const obj = att.toObject();
+      if (!obj.testId && obj.testSnapshot) {
+        obj.testDeleted = true;
+        obj.testId = {
+          _id: obj.testId || att._doc?.testId,
+          title: obj.testSnapshot.title,
+          testType: obj.testSnapshot.testType,
+          paper: obj.testSnapshot.paper,
+          totalQuestions: obj.testSnapshot.totalQuestions,
+          duration: obj.testSnapshot.duration,
+          totalMarks: obj.testSnapshot.totalMarks,
+          _isSnapshot: true
+        };
+      }
+      return obj;
+    });
+
     const total = await TestAttempt.countDocuments(filter);
 
     res.json({
       success: true,
-      data: attempts,
+      data: enrichedAttempts,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -254,15 +257,30 @@ const getAttempts = async (req, res, next) => {
 const getRecentAttempts = async (req, res, next) => {
   try {
     const { limit = 10 } = req.query;
-    
+
     const attempts = await TestAttempt.find({ status: 'completed' })
       .sort({ completedAt: -1 })
       .limit(parseInt(limit))
       .populate('testId', 'title testType paper');
 
+    const enrichedAttempts = attempts.map(att => {
+      const obj = att.toObject();
+      if (!obj.testId && obj.testSnapshot) {
+        obj.testDeleted = true;
+        obj.testId = {
+          _id: att._doc?.testId,
+          title: obj.testSnapshot.title,
+          testType: obj.testSnapshot.testType,
+          paper: obj.testSnapshot.paper,
+          _isSnapshot: true
+        };
+      }
+      return obj;
+    });
+
     res.json({
       success: true,
-      data: attempts
+      data: enrichedAttempts
     });
   } catch (error) {
     next(error);
@@ -285,7 +303,9 @@ const getAttemptStats = async (req, res, next) => {
           totalTime: { $sum: '$totalTimeTaken' },
           totalCorrect: { $sum: '$correctCount' },
           totalWrong: { $sum: '$wrongCount' },
-          totalSkipped: { $sum: '$skippedCount' }
+          totalSkipped: { $sum: '$skippedCount' },
+          bestPercentage: { $max: '$percentage' },
+          worstPercentage: { $min: '$percentage' }
         }
       }
     ]);
@@ -310,21 +330,14 @@ const getAttemptStats = async (req, res, next) => {
           totalQuestions: { $sum: '$topicAnalysis.total' }
         }
       },
-      {
-        $match: { _id: { $ne: null } }
-      },
+      { $match: { _id: { $ne: null } } },
       {
         $project: {
           unit: '$_id',
           accuracy: {
             $cond: [
               { $gt: [{ $add: ['$totalCorrect', '$totalWrong'] }, 0] },
-              {
-                $multiply: [
-                  { $divide: ['$totalCorrect', { $add: ['$totalCorrect', '$totalWrong'] }] },
-                  100
-                ]
-              },
+              { $multiply: [{ $divide: ['$totalCorrect', { $add: ['$totalCorrect', '$totalWrong'] }] }, 100] },
               0
             ]
           },
@@ -333,6 +346,13 @@ const getAttemptStats = async (req, res, next) => {
       },
       { $sort: { accuracy: -1 } }
     ]);
+
+    // ═══ NEW: Recent trend (last 10 attempts) ═══
+    const recentTrend = await TestAttempt.find({ status: 'completed' })
+      .sort({ completedAt: -1 })
+      .limit(10)
+      .select('percentage accuracy completedAt')
+      .lean();
 
     res.json({
       success: true,
@@ -347,16 +367,17 @@ const getAttemptStats = async (req, res, next) => {
           skipped: stats[0]?.totalSkipped || 0
         },
         bestAttempt: bestAttempt ? {
-          testTitle: bestAttempt.testId?.title,
+          testTitle: bestAttempt.testId?.title || bestAttempt.testSnapshot?.title || 'Unknown',
           percentage: bestAttempt.percentage,
           date: bestAttempt.completedAt
         } : null,
         worstAttempt: worstAttempt ? {
-          testTitle: worstAttempt.testId?.title,
+          testTitle: worstAttempt.testId?.title || worstAttempt.testSnapshot?.title || 'Unknown',
           percentage: worstAttempt.percentage,
           date: worstAttempt.completedAt
         } : null,
-        topicPerformance
+        topicPerformance,
+        recentTrend: recentTrend.reverse()
       }
     });
   } catch (error) {
@@ -378,9 +399,26 @@ const getAttemptById = async (req, res, next) => {
       });
     }
 
+    const obj = attempt.toObject();
+
+    // ═══ NEW: If test deleted, fill from snapshot ═══
+    if (!obj.testId && obj.testSnapshot) {
+      obj.testDeleted = true;
+      obj.testId = {
+        _id: attempt._doc?.testId,
+        title: obj.testSnapshot.title,
+        testType: obj.testSnapshot.testType,
+        paper: obj.testSnapshot.paper,
+        totalQuestions: obj.testSnapshot.totalQuestions,
+        duration: obj.testSnapshot.duration,
+        totalMarks: obj.testSnapshot.totalMarks,
+        _isSnapshot: true
+      };
+    }
+
     res.json({
       success: true,
-      data: attempt
+      data: obj
     });
   } catch (error) {
     next(error);
@@ -389,7 +427,7 @@ const getAttemptById = async (req, res, next) => {
 
 // @desc    Get attempt with full solution review
 // @route   GET /api/attempts/:id/review
-// ═══ FIX: Resolves PYQ questions instead of relying on populate ═══
+// ═══ FIX: Handles deleted tests gracefully ═══
 const getAttemptReview = async (req, res, next) => {
   try {
     const attempt = await TestAttempt.findById(req.params.id);
@@ -403,17 +441,45 @@ const getAttemptReview = async (req, res, next) => {
 
     const test = await Test.findById(attempt.testId);
 
+    // ═══ NEW: If test is deleted, return result data from snapshot ═══
     if (!test) {
-      return res.status(404).json({
-        success: false,
-        message: 'Test not found for this attempt'
+      const snapshot = attempt.testSnapshot || {};
+      const reviewData = {
+        attempt: {
+          _id: attempt._id,
+          score: attempt.score,
+          totalMarks: attempt.totalMarks,
+          percentage: attempt.percentage,
+          accuracy: attempt.accuracy,
+          correctCount: attempt.correctCount,
+          wrongCount: attempt.wrongCount,
+          skippedCount: attempt.skippedCount,
+          totalTimeTaken: attempt.totalTimeTaken,
+          completedAt: attempt.completedAt,
+          attemptNumber: attempt.attemptNumber
+        },
+        test: {
+          _id: attempt.testId,
+          title: snapshot.title || 'Deleted Test',
+          testType: snapshot.testType || 'practice',
+          paper: snapshot.paper || 'paper1',
+          totalQuestions: snapshot.totalQuestions || attempt.answers?.length || 0,
+          totalMarks: snapshot.totalMarks || attempt.totalMarks,
+          _isDeleted: true
+        },
+        questions: [],
+        topicAnalysis: attempt.topicAnalysis || [],
+        testDeleted: true
+      };
+
+      return res.json({
+        success: true,
+        data: reviewData
       });
     }
 
-    // ═══ FIX: Use resolveTestQuestions instead of populate ═══
     const resolvedQuestions = await resolveTestQuestions(test);
 
-    // Build detailed review data
     const reviewData = {
       attempt: {
         _id: attempt._id,
@@ -425,7 +491,8 @@ const getAttemptReview = async (req, res, next) => {
         wrongCount: attempt.wrongCount,
         skippedCount: attempt.skippedCount,
         totalTimeTaken: attempt.totalTimeTaken,
-        completedAt: attempt.completedAt
+        completedAt: attempt.completedAt,
+        attemptNumber: attempt.attemptNumber
       },
       test: {
         _id: test._id,
@@ -448,7 +515,8 @@ const getAttemptReview = async (req, res, next) => {
           markedForReview: answer?.markedForReview ?? false
         };
       }),
-      topicAnalysis: attempt.topicAnalysis || []
+      topicAnalysis: attempt.topicAnalysis || [],
+      testDeleted: false
     };
 
     res.json({
@@ -463,7 +531,6 @@ const getAttemptReview = async (req, res, next) => {
 
 // @desc    Start new test attempt
 // @route   POST /api/attempts/start
-// ═══ FIX: Resolves PYQ questions properly before initializing answers ═══
 const startAttempt = async (req, res, next) => {
   try {
     const { testId } = req.body;
@@ -475,7 +542,6 @@ const startAttempt = async (req, res, next) => {
       });
     }
 
-    // ═══ FIX: Get test WITHOUT populating questions ═══
     const test = await Test.findById(testId);
 
     if (!test) {
@@ -492,13 +558,11 @@ const startAttempt = async (req, res, next) => {
       });
     }
 
-    // Check for existing in-progress attempt
     const existingAttempt = await TestAttempt.findOne({
       testId,
       status: 'in_progress'
     });
 
-    // ═══ FIX: Resolve ALL questions (bank + PYQ) ═══
     const resolvedQuestions = await resolveTestQuestions(test);
 
     if (resolvedQuestions.length === 0) {
@@ -509,7 +573,6 @@ const startAttempt = async (req, res, next) => {
     }
 
     if (existingAttempt) {
-      // Build test-like response with resolved questions
       const testResponse = test.toObject();
       testResponse.questions = resolvedQuestions;
 
@@ -523,10 +586,8 @@ const startAttempt = async (req, res, next) => {
       });
     }
 
-    // Get attempt count for this test
     const attemptCount = await TestAttempt.countDocuments({ testId });
 
-    // Create new attempt
     const attempt = new TestAttempt({
       testId,
       attemptNumber: attemptCount + 1,
@@ -536,13 +597,14 @@ const startAttempt = async (req, res, next) => {
       startedAt: new Date()
     });
 
-    // ═══ FIX: Initialize answers with resolved questions ═══
+    // ═══ NEW: Save test snapshot at attempt creation ═══
+    attempt.saveTestSnapshot(test);
+
     attempt.initializeAnswers(resolvedQuestions);
     await attempt.save();
 
-    console.log(`[startAttempt] Created attempt ${attempt._id} with ${attempt.answers.length} answers (${resolvedQuestions.filter(q => q._isVirtualPYQ).length} PYQ)`);
+    console.log(`[startAttempt] Created attempt ${attempt._id} with ${attempt.answers.length} answers (${resolvedQuestions.filter(q => q._isVirtualPYQ).length} PYQ), snapshot saved`);
 
-    // Build test response with resolved questions
     const testResponse = test.toObject();
     testResponse.questions = resolvedQuestions;
 
@@ -666,7 +728,6 @@ const markVisited = async (req, res, next) => {
       });
     }
 
-    // ═══ FIX: Use string comparison for both ObjectId and PYQ IDs ═══
     const answerIndex = attempt.answers.findIndex(
       a => a.questionId && String(a.questionId) === String(questionId)
     );
@@ -688,7 +749,6 @@ const markVisited = async (req, res, next) => {
 
 // @desc    Submit test attempt
 // @route   POST /api/attempts/:id/submit
-// ═══ FIX: Resolves PYQ questions for scoring, guards stats update ═══
 const submitAttempt = async (req, res, next) => {
   try {
     const { remainingTime = 0 } = req.body;
@@ -723,7 +783,6 @@ const submitAttempt = async (req, res, next) => {
       });
     }
 
-    // ═══ FIX: Get test and resolve questions (bank + PYQ) ═══
     const test = await Test.findById(attempt.testId);
 
     if (!test) {
@@ -733,13 +792,16 @@ const submitAttempt = async (req, res, next) => {
       });
     }
 
+    // ═══ NEW: Ensure snapshot is saved before submitting ═══
+    if (!attempt.testSnapshot || !attempt.testSnapshot.title) {
+      attempt.saveTestSnapshot(test);
+    }
+
     const resolvedQuestions = await resolveTestQuestions(test);
 
-    // Calculate total time taken
     const totalDuration = test.duration * 60;
     attempt.totalTimeTaken = Math.max(0, totalDuration - remainingTime);
 
-    // ═══ FIX: Pass resolved questions (includes PYQ) to calculateResults ═══
     await attempt.calculateResults(resolvedQuestions, test);
     await attempt.save();
 
@@ -751,29 +813,20 @@ const submitAttempt = async (req, res, next) => {
       pyqCount: resolvedQuestions.filter(q => q._isVirtualPYQ).length
     });
 
-    // Update test stats
     try {
       await test.updateStats(attempt.score);
     } catch (err) {
       console.error('Failed to update test stats:', err);
     }
 
-    // ═══ FIX: Only update question stats for BANK questions, skip PYQ ═══
     for (const answer of attempt.answers) {
       try {
         if (answer.questionId) {
           const qIdStr = String(answer.questionId);
-          // Skip PYQ questions — they don't exist in the Question collection
           if (isPYQSyntheticId(qIdStr)) continue;
-
           await Question.findByIdAndUpdate(
             answer.questionId,
-            {
-              $inc: {
-                timesAttempted: 1,
-                timesCorrect: answer.isCorrect ? 1 : 0
-              }
-            }
+            { $inc: { timesAttempted: 1, timesCorrect: answer.isCorrect ? 1 : 0 } }
           );
         }
       } catch (err) {
@@ -808,35 +861,21 @@ const submitAttempt = async (req, res, next) => {
 const pauseAttempt = async (req, res, next) => {
   try {
     const { remainingTime, currentQuestionIndex } = req.body;
-
     const attempt = await TestAttempt.findById(req.params.id);
 
     if (!attempt) {
-      return res.status(404).json({
-        success: false,
-        message: 'Attempt not found'
-      });
+      return res.status(404).json({ success: false, message: 'Attempt not found' });
     }
 
     if (attempt.status !== 'in_progress') {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot pause non-active attempt'
-      });
+      return res.status(400).json({ success: false, message: 'Cannot pause non-active attempt' });
     }
 
     attempt.remainingTime = remainingTime;
     attempt.currentQuestionIndex = currentQuestionIndex;
     await attempt.save();
 
-    res.json({
-      success: true,
-      message: 'Attempt paused',
-      data: {
-        remainingTime,
-        currentQuestionIndex
-      }
-    });
+    res.json({ success: true, message: 'Attempt paused', data: { remainingTime, currentQuestionIndex } });
   } catch (error) {
     next(error);
   }
@@ -844,46 +883,28 @@ const pauseAttempt = async (req, res, next) => {
 
 // @desc    Resume paused attempt
 // @route   PUT /api/attempts/:id/resume
-// ═══ FIX: Resolves PYQ questions instead of relying on populate ═══
 const resumeAttempt = async (req, res, next) => {
   try {
     const attempt = await TestAttempt.findById(req.params.id);
 
     if (!attempt) {
-      return res.status(404).json({
-        success: false,
-        message: 'Attempt not found'
-      });
+      return res.status(404).json({ success: false, message: 'Attempt not found' });
     }
 
     if (attempt.status !== 'in_progress') {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot resume non-active attempt'
-      });
+      return res.status(400).json({ success: false, message: 'Cannot resume non-active attempt' });
     }
 
-    // ═══ FIX: Resolve questions properly ═══
     const test = await Test.findById(attempt.testId);
     if (!test) {
-      return res.status(404).json({
-        success: false,
-        message: 'Test not found'
-      });
+      return res.status(404).json({ success: false, message: 'Test not found' });
     }
 
     const resolvedQuestions = await resolveTestQuestions(test);
     const testResponse = test.toObject();
     testResponse.questions = resolvedQuestions;
 
-    res.json({
-      success: true,
-      message: 'Attempt resumed',
-      data: {
-        attempt,
-        test: testResponse
-      }
-    });
+    res.json({ success: true, message: 'Attempt resumed', data: { attempt, test: testResponse } });
   } catch (error) {
     next(error);
   }
@@ -896,26 +917,17 @@ const abandonAttempt = async (req, res, next) => {
     const attempt = await TestAttempt.findById(req.params.id);
 
     if (!attempt) {
-      return res.status(404).json({
-        success: false,
-        message: 'Attempt not found'
-      });
+      return res.status(404).json({ success: false, message: 'Attempt not found' });
     }
 
     if (attempt.status === 'completed') {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot abandon completed attempt'
-      });
+      return res.status(400).json({ success: false, message: 'Cannot abandon completed attempt' });
     }
 
     attempt.status = 'abandoned';
     await attempt.save();
 
-    res.json({
-      success: true,
-      message: 'Attempt abandoned'
-    });
+    res.json({ success: true, message: 'Attempt abandoned' });
   } catch (error) {
     next(error);
   }
@@ -928,10 +940,7 @@ const getAttemptStatus = async (req, res, next) => {
     const attempt = await TestAttempt.findById(req.params.id);
 
     if (!attempt) {
-      return res.status(404).json({
-        success: false,
-        message: 'Attempt not found'
-      });
+      return res.status(404).json({ success: false, message: 'Attempt not found' });
     }
 
     res.json({
@@ -955,15 +964,56 @@ const deleteAttempt = async (req, res, next) => {
     const attempt = await TestAttempt.findByIdAndDelete(req.params.id);
 
     if (!attempt) {
-      return res.status(404).json({
-        success: false,
-        message: 'Attempt not found'
-      });
+      return res.status(404).json({ success: false, message: 'Attempt not found' });
+    }
+
+    res.json({ success: true, message: 'Attempt deleted' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ═══ NEW: Backfill snapshots for existing attempts that don't have them ═══
+// @desc    Backfill test snapshots
+// @route   POST /api/attempts/backfill-snapshots
+const backfillSnapshots = async (req, res, next) => {
+  try {
+    const attemptsWithoutSnapshot = await TestAttempt.find({
+      $or: [
+        { testSnapshot: { $exists: false } },
+        { 'testSnapshot.title': { $exists: false } }
+      ],
+      status: 'completed'
+    }).limit(500);
+
+    let updated = 0;
+    let orphaned = 0;
+
+    for (const attempt of attemptsWithoutSnapshot) {
+      const test = await Test.findById(attempt.testId);
+      if (test) {
+        attempt.saveTestSnapshot(test);
+        attempt.testDeleted = false;
+        await attempt.save();
+        updated++;
+      } else {
+        attempt.testDeleted = true;
+        attempt.testSnapshot = {
+          title: 'Deleted Test',
+          testType: 'practice',
+          paper: 'paper1',
+          totalQuestions: attempt.answers?.length || 0,
+          totalMarks: attempt.totalMarks || 0
+        };
+        await attempt.save();
+        orphaned++;
+      }
     }
 
     res.json({
       success: true,
-      message: 'Attempt deleted'
+      message: `Backfill complete: ${updated} updated, ${orphaned} orphaned`,
+      data: { updated, orphaned, total: attemptsWithoutSnapshot.length }
     });
   } catch (error) {
     next(error);
@@ -985,5 +1035,6 @@ module.exports = {
   resumeAttempt,
   abandonAttempt,
   getAttemptStatus,
-  deleteAttempt
+  deleteAttempt,
+  backfillSnapshots
 };

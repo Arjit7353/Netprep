@@ -3,11 +3,30 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
-import { BookOpen, TrendingUp, TrendingDown, Target, Award, AlertTriangle, Zap, Layers, Star } from 'lucide-react';
+import { BookOpen, TrendingUp, TrendingDown, Target, Award, AlertTriangle, Zap, Layers, Star, Archive, Hash } from 'lucide-react';
 
-const TopicAnalysis = ({ answers, questions, topicAnalysis, language = 'hi' }) => {
-  const { unitData, chapterData, weakAreas, strongAreas } = useMemo(() => {
-    if (!answers || !questions || !answers.length) return { unitData: [], chapterData: [], weakAreas: [], strongAreas: [] };
+const TopicAnalysis = ({ answers, questions, topicAnalysis, language = 'hi', testDeleted = false }) => {
+
+  // ═══ PRIMARY: Use topicAnalysis from attempt (works even if test deleted) ═══
+  const fromTopicAnalysis = useMemo(() => {
+    if (!topicAnalysis?.length) return null;
+    const unitData = topicAnalysis.map(ta => ({
+      name: (ta.unit || 'Other').length > 25 ? (ta.unit || 'Other').substring(0, 25) + '...' : (ta.unit || 'Other'),
+      fullName: ta.unit || 'Other',
+      correct: ta.correct || 0,
+      wrong: ta.wrong || 0,
+      skipped: ta.skipped || 0,
+      total: ta.total || 0,
+      accuracy: ta.accuracy || (ta.total > 0 ? Math.round((ta.correct || 0) / ta.total * 100) : 0),
+      avgTime: 0
+    })).sort((a, b) => b.total - a.total);
+
+    return { unitData, chapterData: unitData, weakAreas: [], strongAreas: [] };
+  }, [topicAnalysis]);
+
+  // ═══ SECONDARY: Compute from answers + questions (needs questions) ═══
+  const fromQuestions = useMemo(() => {
+    if (!answers || !questions || !answers.length || !questions.length) return null;
     const uMap = {}, cMap = {};
     answers.forEach((ans, i) => {
       const q = questions[i];
@@ -36,23 +55,108 @@ const TopicAnalysis = ({ answers, questions, topicAnalysis, language = 'hi' }) =
     };
   }, [answers, questions, language]);
 
-  if (unitData.length === 0) return (
-    <div className="bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-16 text-center">
-      <BookOpen className="w-14 h-14 text-gray-300 dark:text-secondary-600 mx-auto mb-4" />
-      <p className="text-gray-500 dark:text-secondary-400 text-lg font-medium">
-        {language === 'hi' ? 'विश्लेषण उपलब्ध नहीं' : 'No analysis available'}
-      </p>
-      <p className="text-gray-400 text-sm mt-1">
-        {language === 'hi' ? 'प्रश्नों में विषय जानकारी नहीं है' : 'Questions don\'t have topic metadata'}
-      </p>
-    </div>
-  );
+  // Pick best available data source
+  const data = fromQuestions || fromTopicAnalysis;
+
+  if (!data || data.unitData.length === 0) {
+    // ═══ Fallback: Show basic stats from answers alone ═══
+    if (answers?.length > 0) {
+      const correct = answers.filter(a => a.isCorrect).length;
+      const wrong = answers.filter(a => !a.isCorrect && a.selectedAnswer !== -1 && a.selectedAnswer !== undefined && a.selectedAnswer !== null).length;
+      const skipped = answers.length - correct - wrong;
+      const accuracy = (correct + wrong) > 0 ? Math.round(correct / (correct + wrong) * 100) : 0;
+
+      return (
+        <div className="space-y-6">
+          {testDeleted && (
+            <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl">
+              <Archive className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+                {language === 'hi'
+                  ? 'मूल टेस्ट हटा दिया गया है। विस्तृत विषय विश्लेषण उपलब्ध नहीं है, लेकिन मूल आंकड़े नीचे दिखाए गए हैं।'
+                  : 'Original test was deleted. Detailed topic analysis is unavailable, but basic stats are shown below.'}
+              </p>
+            </div>
+          )}
+
+          <div className="bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-6">
+            <h4 className="font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
+              <Hash className="w-5 h-5 text-primary-500" />
+              {language === 'hi' ? 'मूल आंकड़े' : 'Basic Statistics'}
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { label: language === 'hi' ? 'कुल' : 'Total', value: answers.length, color: 'text-gray-800 dark:text-white', gradient: 'from-gray-500 to-slate-600' },
+                { label: language === 'hi' ? 'सही' : 'Correct', value: correct, color: 'text-emerald-600', gradient: 'from-emerald-500 to-green-600' },
+                { label: language === 'hi' ? 'गलत' : 'Wrong', value: wrong, color: 'text-red-600', gradient: 'from-red-500 to-rose-600' },
+                { label: language === 'hi' ? 'सटीकता' : 'Accuracy', value: `${accuracy}%`, color: 'text-blue-600', gradient: 'from-blue-500 to-indigo-600' },
+              ].map((s, i) => (
+                <div key={i} className="relative overflow-hidden bg-gray-50 dark:bg-secondary-700/50 rounded-xl p-4 text-center">
+                  <div className={`w-10 h-10 bg-gradient-to-br ${s.gradient} rounded-xl flex items-center justify-center mx-auto mb-2 shadow-md`}>
+                    <Target className="w-5 h-5 text-white" />
+                  </div>
+                  <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mt-1">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Simple accuracy bar */}
+            <div className="mt-6 space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600 dark:text-secondary-300 font-medium">{language === 'hi' ? 'समग्र सटीकता' : 'Overall Accuracy'}</span>
+                <span className="font-bold text-gray-900 dark:text-white">{accuracy}%</span>
+              </div>
+              <div className="h-4 bg-gray-200 dark:bg-secondary-700 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full transition-all duration-1000 ease-out ${accuracy >= 70 ? 'bg-emerald-500' : accuracy >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                  style={{ width: `${accuracy}%` }} />
+              </div>
+              <div className="flex gap-4 text-xs text-gray-500">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" />{correct} {language === 'hi' ? 'सही' : 'correct'}</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" />{wrong} {language === 'hi' ? 'गलत' : 'wrong'}</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400" />{skipped} {language === 'hi' ? 'छोड़े' : 'skipped'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-16 text-center">
+        <BookOpen className="w-14 h-14 text-gray-300 dark:text-secondary-600 mx-auto mb-4" />
+        <p className="text-gray-500 dark:text-secondary-400 text-lg font-medium">
+          {language === 'hi' ? 'विश्लेषण उपलब्ध नहीं' : 'No analysis available'}
+        </p>
+        <p className="text-gray-400 text-sm mt-1">
+          {testDeleted
+            ? (language === 'hi' ? 'मूल टेस्ट हटा दिया गया है' : 'Original test was deleted')
+            : (language === 'hi' ? 'प्रश्नों में विषय जानकारी नहीं है' : 'Questions don\'t have topic metadata')}
+        </p>
+      </div>
+    );
+  }
+
+  const { unitData, chapterData, weakAreas = [], strongAreas = [] } = data;
 
   const overallAcc = unitData.length > 0
-    ? Math.round(unitData.reduce((s, u) => s + u.correct, 0) / unitData.reduce((s, u) => s + u.total, 0) * 100) : 0;
+    ? Math.round(unitData.reduce((s, u) => s + u.correct, 0) / Math.max(unitData.reduce((s, u) => s + u.total, 0), 1) * 100) : 0;
 
   return (
     <div className="space-y-6">
+
+      {/* Deleted test notice */}
+      {testDeleted && (
+        <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl">
+          <Archive className="w-5 h-5 text-amber-600 flex-shrink-0" />
+          <p className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+            {language === 'hi'
+              ? 'विश्लेषण सहेजे गए डेटा पर आधारित है। विस्तृत अध्याय/विषय विश्लेषण सीमित हो सकता है।'
+              : 'Analysis is based on saved data. Detailed chapter/topic breakdown may be limited.'}
+          </p>
+        </div>
+      )}
+
       {/* Overview Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
@@ -145,7 +249,7 @@ const TopicAnalysis = ({ answers, questions, topicAnalysis, language = 'hi' }) =
         </table>
       </div>
 
-      {/* Strong & Weak — Lucide icons only, NO emoji */}
+      {/* Strong & Weak */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {strongAreas.length > 0 && (
           <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800 p-5">
