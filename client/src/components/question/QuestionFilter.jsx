@@ -1,3 +1,8 @@
+// client/src/components/question/QuestionFilter.jsx
+// ════════════════════════════════════════════════════════
+// ENHANCED v2.1 — Translation Status Filter added
+// ════════════════════════════════════════════════════════
+
 import React, { useState, useEffect, forwardRef } from 'react';
 import { 
   Filter, 
@@ -101,6 +106,14 @@ const QuestionFilter = forwardRef(({
     label: labels.en,
     labelHi: labels.hi
   }));
+
+  // ★ NEW: Translation status options
+  const translationStatusOptions = [
+    { value: 'complete', label: 'Complete (Both)', labelHi: 'पूर्ण (दोनों)' },
+    { value: 'hindi_only', label: 'Hindi Only', labelHi: 'केवल हिंदी' },
+    { value: 'english_only', label: 'English Only', labelHi: 'केवल अंग्रेजी' },
+    { value: 'missing', label: 'Missing Translation', labelHi: 'अनुवाद गायब' },
+  ];
 
   const activeFilterCount = Object.values(localFilters).filter(v => v && v !== '').length;
 
@@ -243,7 +256,18 @@ const QuestionFilter = forwardRef(({
               disabled={!localFilters.chapter}
             />
 
-            {/* Date Range */}
+            {/* ★ NEW: Translation Status Filter */}
+            <Dropdown
+              label={language === 'hi' ? 'अनुवाद स्थिति' : 'Translation Status'}
+              value={localFilters.translationStatus || ''}
+              options={translationStatusOptions}
+              onChange={(value) => handleChange('translationStatus', value)}
+              placeholder="All"
+              placeholderHi="सभी"
+              language={language}
+            />
+
+            {/* Date Range — From */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-secondary-300 mb-1">
                 {language === 'hi' ? 'से तारीख' : 'From Date'}
@@ -260,7 +284,11 @@ const QuestionFilter = forwardRef(({
                 />
               </div>
             </div>
+          </div>
 
+          {/* Second row of advanced filters */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+            {/* Date Range — To */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-secondary-300 mb-1">
                 {language === 'hi' ? 'तक तारीख' : 'To Date'}
@@ -277,10 +305,8 @@ const QuestionFilter = forwardRef(({
                 />
               </div>
             </div>
-          </div>
 
-          {/* Source & Year */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            {/* Source */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-secondary-300 mb-1">
                 {language === 'hi' ? 'स्रोत' : 'Source'}
@@ -297,6 +323,7 @@ const QuestionFilter = forwardRef(({
               />
             </div>
 
+            {/* Year */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-secondary-300 mb-1">
                 {language === 'hi' ? 'वर्ष' : 'Year'}

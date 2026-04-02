@@ -1,10 +1,14 @@
 // client/src/services/questionService.js
+// ════════════════════════════════════════════════════════════════
+// EXTREME ADVANCED v4.0 — Full Translation, Sync, Impact Analysis
+// All existing features preserved + New features added
+// ════════════════════════════════════════════════════════════════
 
 import { apiHelper } from './api';
 
 const questionService = {
   // ============================================================
-  // QUESTION APIs
+  // QUESTION APIs (EXISTING — UNCHANGED)
   // ============================================================
 
   getQuestions: async (filters = {}) => {
@@ -56,7 +60,7 @@ const questionService = {
   },
 
   // ============================================================
-  // PYQ QUESTION BANK APIs
+  // PYQ QUESTION BANK APIs (EXISTING — UNCHANGED)
   // ============================================================
 
   getPYQQuestionBank: async (filters = {}) => {
@@ -97,7 +101,7 @@ const questionService = {
     return apiHelper.put('/questions/pyq-bank/bulk-update', { pyqIds, updates });
   },
 
-  // ═══ Review & Verification APIs ═══
+  // ═══ Review & Verification APIs (EXISTING — UNCHANGED) ═══
 
   verifyPYQQuestion: async (pyqId, verificationStatus, notes = '', correctnessStatus = null) => {
     const updates = {
@@ -146,7 +150,7 @@ const questionService = {
   },
 
   // ============================================================
-  // IMPORT APIs
+  // IMPORT APIs (EXISTING — UNCHANGED)
   // ============================================================
 
   importQuestions: async (jsonData, options = {}) => {
@@ -167,16 +171,156 @@ const questionService = {
     return apiHelper.post('/questions/import/validate', jsonData);
   },
 
+  // ============================================================
+  // ★★★ TRANSLATION APIs — EXISTING + ENHANCED ★★★
+  // ============================================================
+
+  /** Translate arbitrary text (Azure) — EXISTING */
   translateText: async (text, from = 'hi', to = 'en') => {
     return apiHelper.post('/translate', { text, from, to });
   },
 
+  /** Batch translate texts — EXISTING */
   translateBatch: async (texts, from = 'hi', to = 'en') => {
     return apiHelper.post('/translate/batch', { texts, from, to });
   },
 
+  /**
+   * ★ NEW: Translate a single question by ID
+   * Auto-detects source language, translates via Azure, syncs to all tests
+   * @param {string} id - Question ID
+   * @param {object} options - { sourceLanguage?, forceRetranslate? }
+   * @returns {Promise} - { success, data, translation: { sourceLanguage, targetLanguage, testsUpdated } }
+   */
+  translateSingleQuestion: async (id, options = {}) => {
+    return apiHelper.post(`/questions/${id}/translate`, {
+      sourceLanguage: options.sourceLanguage || null,
+      forceRetranslate: options.forceRetranslate || false
+    });
+  },
+// ★ ALIAS — so both names work
+  translateQuestion: async (id, options = {}) => {
+    return apiHelper.post(`/questions/${id}/translate`, {
+      sourceLanguage: options.sourceLanguage || null,
+      forceRetranslate: options.forceRetranslate || false
+    });
+  },
+  /**
+   * ★ NEW: Bulk translate multiple questions
+   * Auto-detects language per question, translates missing language, syncs tests
+   * @param {string[]} ids - Array of question IDs (max 50)
+   * @param {object} options - { sourceLanguage?, forceRetranslate? }
+   * @returns {Promise} - { success, data: { translated, skipped, failed, testsUpdated } }
+   */
+  bulkTranslateQuestions: async (ids, options = {}) => {
+    return apiHelper.post('/questions/bulk-translate', {
+      ids,
+      sourceLanguage: options.sourceLanguage || null,
+      forceRetranslate: options.forceRetranslate || false
+    });
+  },
+
+  /**
+   * ★ NEW: Detect language of text
+   * Uses character analysis to determine Hindi/English/Mixed
+   * @param {string} text - Text to detect
+   * @returns {Promise} - { success, data: { language, confidence, isMixed } }
+   */
+  detectLanguage: async (text) => {
+    return apiHelper.post('/translate/detect', { text });
+  },
+
+  /**
+   * ★ NEW: Get translation service status
+   * Shows Azure/Google availability, cache size, stats
+   * @returns {Promise} - { success, data: { primary, azure, google, stats, cacheSize } }
+   */
+  getTranslationServiceStatus: async () => {
+    return apiHelper.get('/translate/status');
+  },
+
+  /**
+   * ★ NEW: Test translation connection
+   * Verifies Azure API key is working
+   * @returns {Promise} - { success, data: { azure, google } }
+   */
+  testTranslationConnection: async () => {
+    return apiHelper.get('/translate/test');
+  },
+
+  /**
+   * ★ NEW: Clear translation cache
+   * Useful when translations seem stale
+   * @returns {Promise} - { success, message }
+   */
+  clearTranslationCache: async () => {
+    return apiHelper.post('/translate/clear-cache');
+  },
+
   // ============================================================
-  // PASSAGE APIs
+  // ★★★ IMPACT ANALYSIS & SYNC APIs — ALL NEW ★★★
+  // ============================================================
+
+  /**
+   * ★ NEW: Get impact analysis for a question
+   * Shows which tests will be affected by editing this question
+   * @param {string} id - Question ID
+   * @returns {Promise} - { success, data: { testsAffected, tests[], translationStatus } }
+   */
+  getImpactAnalysis: async (id) => {
+    return apiHelper.get(`/questions/${id}/impact`);
+  },
+
+  /**
+   * ★ NEW: Get translation status for multiple questions
+   * Shows completeness of Hindi/English for each question
+   * @param {string[]} ids - Array of question IDs (max 200)
+   * @returns {Promise} - { success, data: { [id]: { hasHindi, hasEnglish, completeness, status } } }
+   */
+  getTranslationStatus: async (ids) => {
+    return apiHelper.post('/questions/translation-status', { ids });
+  },
+
+  // ============================================================
+  // ★★★ REPAIR APIs — ALL NEW ★★★
+  // ============================================================
+
+  /**
+   * ★ NEW: Preview which questions need repair
+   * Checks for spacing issues, keyword translation, corruption
+   * @param {object} params - { questionType?, limit? }
+   * @returns {Promise} - { success, data: { totalChecked, totalNeedRepair, items[] } }
+   */
+  getRepairPreview: async (params = {}) => {
+    return apiHelper.get('/translate/repair/preview', params);
+  },
+
+  /**
+   * ★ NEW: Execute repair on questions
+   * Fixes spacing, keywords, corruption in saved questions
+   * @param {object} data - { questionType?, questionIds?, limit?, deep? }
+   * @returns {Promise} - { success, data: { totalChecked, totalRepaired, log[] } }
+   */
+  executeRepair: async (data = {}) => {
+    return apiHelper.post('/translate/repair/execute', data);
+  },
+
+  /**
+   * ★ NEW: Preview PYQ questions needing repair
+   */
+  getPYQRepairPreview: async (params = {}) => {
+    return apiHelper.get('/translate/repair/pyq/preview', params);
+  },
+
+  /**
+   * ★ NEW: Execute repair on PYQ questions
+   */
+  executePYQRepair: async (data = {}) => {
+    return apiHelper.post('/translate/repair/pyq/execute', data);
+  },
+
+  // ============================================================
+  // PASSAGE APIs (EXISTING — UNCHANGED)
   // ============================================================
 
   getPassages: async (filters = {}) => {
@@ -211,7 +355,7 @@ const questionService = {
   },
 
   // ============================================================
-  // DI DATA APIs
+  // DI DATA APIs (EXISTING — UNCHANGED)
   // ============================================================
 
   getDIDataList: async (filters = {}) => {
@@ -246,7 +390,7 @@ const questionService = {
   },
 
   // ============================================================
-  // TEST GENERATION APIs
+  // TEST GENERATION APIs (EXISTING — UNCHANGED)
   // ============================================================
 
   getRandomQuestions: async (config) => {
@@ -258,7 +402,7 @@ const questionService = {
   },
 
   // ============================================================
-  // ANALYTICS APIs
+  // ANALYTICS APIs (EXISTING — UNCHANGED)
   // ============================================================
 
   updateAccuracy: async (id, isCorrect) => {
@@ -295,7 +439,31 @@ const questionService = {
   },
 
   // ============================================================
-  // HELPER METHODS (Client-side utilities)
+  // TEST USAGE & DETAIL APIs (EXISTING — UNCHANGED)
+  // ============================================================
+
+  /** Get test usage for multiple questions */
+  getTestUsage: async (ids) => {
+    return apiHelper.post('/questions/test-usage', { ids });
+  },
+
+  /** Question detail with full metadata + test usage */
+  getQuestionDetail: async (id) => {
+    return apiHelper.get(`/questions/detail/${id}`);
+  },
+
+  /** Bulk update questions (difficulty, tags, etc.) */
+  bulkUpdateQuestions: async (ids, updates) => {
+    return apiHelper.put('/questions/bulk-update', { ids, updates });
+  },
+
+  /** Question analytics (accuracy, attempts, etc.) */
+  getQuestionAnalytics: async (id) => {
+    return apiHelper.get(`/questions/analytics/${id}`);
+  },
+
+  // ============================================================
+  // HELPER METHODS — Client-side utilities (EXISTING — UNCHANGED)
   // ============================================================
 
   getTypeLabel: (type, language = 'hi') => {
@@ -353,40 +521,30 @@ const questionService = {
       case 'match_following': {
         const listA = question.matchData?.listA;
         if (listA) {
-          const items = typeof listA === 'object' && !Array.isArray(listA) ? (listA[language] || listA.hi || listA.en || []) : (Array.isArray(listA) ? listA : []);
+          const items = typeof listA === 'object' && !Array.isArray(listA)
+            ? (listA[language] || listA.hi || listA.en || [])
+            : (Array.isArray(listA) ? listA : []);
           if (items.length > 0) return getText(question.question) || `Match: ${items[0]}...`;
         }
         return getText(question.question) || 'Match Following Question';
       }
-      case 'sequence_order': return getText(question.question) || 'Sequence Order Question';
-      case 'statement_based': return getText(question.question) || 'Statement Based Question';
-      case 'passage_based': return getText(question.question) || 'Passage-based Question';
+      case 'sequence_order':
+        return getText(question.question) || 'Sequence Order Question';
+      case 'statement_based':
+        return getText(question.question) || 'Statement Based Question';
+      case 'passage_based':
+        return getText(question.question) || 'Passage-based Question';
       default:
-        if (question.questionType?.startsWith('di_')) return getText(question.question) || 'Data Interpretation Question';
+        if (question.questionType?.startsWith('di_'))
+          return getText(question.question) || 'Data Interpretation Question';
         return getText(question.question);
     }
   },
-// ═══ ADD TO questionService object ═══
 
-  // Test usage tracking
-  getTestUsage: async (ids) => {
-    return apiHelper.post('/questions/test-usage', { ids });
-  },
+  // ============================================================
+  // COLOR & STYLE HELPERS (EXISTING — UNCHANGED)
+  // ============================================================
 
-  // Question detail with full metadata
-  getQuestionDetail: async (id) => {
-    return apiHelper.get(`/questions/detail/${id}`);
-  },
-
-  // Bulk update questions
-  bulkUpdateQuestions: async (ids, updates) => {
-    return apiHelper.put('/questions/bulk-update', { ids, updates });
-  },
-
-  // Question analytics
-  getQuestionAnalytics: async (id) => {
-    return apiHelper.get(`/questions/analytics/${id}`);
-  },
   getTypeColor: (type) => {
     const colors = {
       mcq: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200' },
@@ -414,7 +572,9 @@ const questionService = {
     return colors[difficulty] || { bg: 'bg-gray-100', text: 'text-gray-700' };
   },
 
-  // ═══ NEW: Verification status helpers ═══
+  // ============================================================
+  // VERIFICATION STATUS HELPERS (EXISTING — UNCHANGED)
+  // ============================================================
 
   getVerificationStatusLabel: (status, language = 'en') => {
     const labels = {
@@ -457,7 +617,113 @@ const questionService = {
     };
     return colors[status] || colors.unknown;
   },
-};
 
+  // ============================================================
+  // ★★★ NEW: TRANSLATION STATUS HELPERS — Client-side ★★★
+  // ============================================================
+
+  /**
+   * ★ NEW: Get translation completeness for a question object (client-side calc)
+   * @param {object} question - Question object with bilingual fields
+   * @returns {object} - { hasHindi, hasEnglish, completeness, status, needsTranslation }
+   */
+  getQuestionTranslationInfo: (question) => {
+    if (!question) return { hasHindi: false, hasEnglish: false, completeness: 0, status: 'missing', needsTranslation: true };
+
+    const hasHi = !!(question.question?.hi?.trim());
+    const hasEn = !!(question.question?.en?.trim());
+    const hiOpts = (question.options?.hi || []).filter(o => o?.trim()).length;
+    const enOpts = (question.options?.en || []).filter(o => o?.trim()).length;
+    const hasExplHi = !!(question.explanation?.hi?.trim());
+    const hasExplEn = !!(question.explanation?.en?.trim());
+
+    let score = 0;
+    const total = 6;
+    if (hasHi) score++;
+    if (hasEn) score++;
+    if (hiOpts >= 4) score++;
+    if (enOpts >= 4) score++;
+    if (hasExplHi) score++;
+    if (hasExplEn) score++;
+
+    const pct = Math.round((score / total) * 100);
+
+    return {
+      hasHindi: hasHi,
+      hasEnglish: hasEn,
+      hindiOptions: hiOpts,
+      englishOptions: enOpts,
+      hasExplanationHi: hasExplHi,
+      hasExplanationEn: hasExplEn,
+      completeness: pct,
+      status: pct >= 90 ? 'complete' : pct >= 50 ? 'partial' : 'missing',
+      needsTranslation: pct < 80
+    };
+  },
+
+  /**
+   * ★ NEW: Get translation status color for badges
+   * @param {string} status - 'complete' | 'partial' | 'missing'
+   * @returns {object} - { bg, text, icon }
+   */
+  getTranslationStatusColor: (status) => {
+    const colors = {
+      complete: { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: '🌐✓', darkBg: 'dark:bg-emerald-900/30', darkText: 'dark:text-emerald-300' },
+      partial: { bg: 'bg-amber-100', text: 'text-amber-700', icon: '🌐⚠', darkBg: 'dark:bg-amber-900/30', darkText: 'dark:text-amber-300' },
+      missing: { bg: 'bg-red-100', text: 'text-red-700', icon: '🌐✗', darkBg: 'dark:bg-red-900/30', darkText: 'dark:text-red-300' },
+    };
+    return colors[status] || colors.missing;
+  },
+
+  /**
+   * ★ NEW: Detect source language from question data (client-side)
+   * @param {object} question - Question object
+   * @returns {string|null} - 'hi' | 'en' | null
+   */
+  detectQuestionLanguage: (question) => {
+    if (!question) return null;
+
+    const hasHi = !!(question.question?.hi?.trim());
+    const hasEn = !!(question.question?.en?.trim());
+
+    if (hasHi && !hasEn) return 'hi';
+    if (hasEn && !hasHi) return 'en';
+
+    if (hasHi && hasEn) {
+      const hiLen = (question.question?.hi || '').length + (question.explanation?.hi || '').length;
+      const enLen = (question.question?.en || '').length + (question.explanation?.en || '').length;
+      return hiLen >= enLen ? 'hi' : 'en';
+    }
+
+    return null;
+  },
+
+  /**
+   * ★ NEW: Format sync info message after question update
+   * @param {object} syncData - { testsUpdated, autoTranslated, sourceLanguage, targetLanguage }
+   * @param {string} language - 'hi' | 'en'
+   * @returns {string} - Formatted message
+   */
+  formatSyncMessage: (syncData, language = 'hi') => {
+    if (!syncData) return '';
+
+    const parts = [];
+
+    if (syncData.autoTranslated) {
+      const dir = syncData.sourceLanguage === 'hi' ? 'हिंदी→English' : 'English→हिंदी';
+      parts.push(language === 'hi' ? `स्वचालित अनुवाद: ${dir}` : `Auto-translated: ${dir}`);
+    }
+
+    if (syncData.testsUpdated > 0) {
+      parts.push(
+        language === 'hi'
+          ? `${syncData.testsUpdated} टेस्ट अपडेट हुए`
+          : `${syncData.testsUpdated} test(s) synced`
+      );
+    }
+
+    return parts.join(' | ');
+  },
+};
 
 export default questionService;

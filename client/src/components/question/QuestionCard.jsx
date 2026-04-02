@@ -1,7 +1,7 @@
 // client/src/components/question/QuestionCard.jsx
 // ════════════════════════════════════════════════════════
-// EXTREME ADVANCED v3.0
-// — Edit button, Test usage tracking, Quality score
+// EXTREME ADVANCED v4.0 — WITH TRANSLATE BUTTON
+// — Edit, Test usage, Quality score, Translation
 // — Inline actions, Copy ID, Verification, Analytics
 // ════════════════════════════════════════════════════════
 
@@ -12,7 +12,8 @@ import {
   Loader, Copy, ExternalLink, Star, AlertTriangle, Shield,
   ChevronDown, ChevronUp, Hash, Activity, Zap, Award,
   ClipboardList, Info, Flag, CheckCircle2, XCircle,
-  Languages, Layers, Target, Sparkles, BarChart3
+  Languages, Layers, Target, Sparkles, BarChart3,
+  RefreshCw // ★ NEW import for translate spinner
 } from 'lucide-react';
 import { QUESTION_TYPE_LABELS, DIFFICULTY_LABELS } from '../../utils/constants';
 import { getBilingualText, formatDate, getQuestionTypeColor, getDifficultyColor, getRelativeTime } from '../../utils/helpers';
@@ -108,6 +109,60 @@ const TestUsageBadge = ({ tests = [], language, onViewTests }) => {
   );
 };
 
+// ═══ ★ NEW: Translate Button Component ═══
+const TranslateButton = ({ question, language, onTranslateComplete }) => {
+  const [translating, setTranslating] = useState(false);
+  const { success: toastSuccess, error: toastError } = useToast();
+
+  const hasHi = !!(question.question?.hi?.trim());
+  const hasEn = !!(question.question?.en?.trim());
+  const needsTranslation = !hasHi || !hasEn;
+
+  const handleTranslate = async (e) => {
+    e.stopPropagation();
+    setTranslating(true);
+    try {
+      const res = await questionService.translateQuestion(question._id, {
+        forceRetranslate: hasHi && hasEn // If both exist, force retranslate
+      });
+      if (res.success) {
+        const dir = res.translation?.sourceLanguage === 'hi' ? 'हिंदी→English' : 'English→हिंदी';
+        toastSuccess(
+          `${language === 'hi' ? 'अनुवाद सफल' : 'Translation done'}: ${dir}` +
+          (res.translation?.testsUpdated > 0 ? ` | ${res.translation.testsUpdated} ${language === 'hi' ? 'टेस्ट अपडेट' : 'tests synced'}` : '')
+        );
+        if (onTranslateComplete) onTranslateComplete(res.data);
+      }
+    } catch (err) {
+      toastError(err.message || 'Translation failed');
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleTranslate}
+      disabled={translating}
+      className={`p-2 rounded-xl transition-all hover:shadow-md group/translate
+        ${needsTranslation
+          ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/40 animate-pulse'
+          : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/40'
+        }`}
+      title={needsTranslation
+        ? (language === 'hi' ? 'अनुवाद करें (गायब भाषा)' : 'Translate (missing language)')
+        : (language === 'hi' ? 'पुनः अनुवाद करें' : 'Re-translate')
+      }
+    >
+      {translating ? (
+        <RefreshCw className="w-4 h-4 animate-spin" />
+      ) : (
+        <Languages className="w-4 h-4 group-hover/translate:scale-110 transition-transform" />
+      )}
+    </button>
+  );
+};
+
 // ═══ MAIN CARD ═══
 const QuestionCard = ({
   question,
@@ -120,11 +175,11 @@ const QuestionCard = ({
   isSelected = false,
   onSelect,
   selectable = false,
-  testUsage = null,        // NEW: array of tests using this question
-  onLoadTestUsage,         // NEW: callback to load test usage
-  showQuality = true,      // NEW: show quality indicator
-  showTestUsage = true,    // NEW: show test usage badge
-  compact = false          // NEW: compact mode
+  testUsage = null,
+  onLoadTestUsage,
+  showQuality = true,
+  showTestUsage = true,
+  compact = false
 }) => {
   const { success: toastSuccess } = useToast();
   const [showPreview, setShowPreview] = useState(false);
@@ -290,6 +345,28 @@ const QuestionCard = ({
                   <span className={`w-5 h-4 text-[8px] font-black rounded flex items-center justify-center ${hasEn ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}>En</span>
                 </div>
 
+                {/* ★ NEW: Translation completeness indicator */}
+                {(() => {
+                  const hiQ = !!(question.question?.hi?.trim());
+                  const enQ = !!(question.question?.en?.trim());
+                  const hiOpt = (question.options?.hi || []).filter(o => o?.trim()).length;
+                  const enOpt = (question.options?.en || []).filter(o => o?.trim()).length;
+                  const complete = hiQ && enQ && hiOpt >= 4 && enOpt >= 4;
+                  const partial = (hiQ || enQ) && !complete;
+
+                  if (complete) return (
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-emerald-100 text-emerald-600" title="Both languages complete">
+                      🌐✓
+                    </span>
+                  );
+                  if (partial) return (
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-amber-100 text-amber-600 animate-pulse" title="Translation incomplete">
+                      🌐⚠
+                    </span>
+                  );
+                  return null;
+                })()}
+
                 {/* PYQ badge */}
                 {question.isPYQ && (
                   <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 flex items-center gap-0.5">
@@ -348,6 +425,18 @@ const QuestionCard = ({
           {/* ═══ ACTION BUTTONS ═══ */}
           {showActions && (
             <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+              {/* ★ NEW: Translate button */}
+              <TranslateButton
+                question={question}
+                language={language}
+                onTranslateComplete={(updatedQ) => {
+                  // Optionally refresh the card data
+                  if (onEdit) {
+                    // Parent can handle refresh
+                  }
+                }}
+              />
+
               {/* Edit button - PROMINENT */}
               {onEdit && (
                 <button

@@ -1,10 +1,15 @@
 // client/src/pages/QuestionBank.jsx
+// ════════════════════════════════════════════════════════
+// ENHANCED v2.0 — WITH BULK TRANSLATE
+// ════════════════════════════════════════════════════════
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Plus, RefreshCw, BookOpen, BarChart2, Layers, Download, Upload,
   Keyboard, Star, Sparkles, Activity, TrendingUp, Zap, Copy,
   CheckCircle2, AlertTriangle, ClipboardList, Hash, Eye,
-  ChevronDown, Tag, Edit2, Trash2, Filter as FilterIcon
+  ChevronDown, Tag, Edit2, Trash2, Filter as FilterIcon,
+  Languages // ★ NEW import
 } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import QuestionList from '../components/question/QuestionList';
@@ -47,6 +52,9 @@ const QuestionBank = () => {
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
   const [bulkEditData, setBulkEditData] = useState({ difficulty: '', tags: '' });
   const [bulkEditLoading, setBulkEditLoading] = useState(false);
+
+  // ★ NEW: Bulk translate state
+  const [bulkTranslateLoading, setBulkTranslateLoading] = useState(false);
 
   const [passages, setPassages] = useState([]);
   const [passagesLoading, setPassagesLoading] = useState(false);
@@ -115,7 +123,11 @@ const QuestionBank = () => {
   const fetchPassages = async (page = 1) => {
     setPassagesLoading(true);
     try {
-      const res = await questionService.getPassages({ page, limit: 10, ...(filters.paper && { paper: filters.paper }), ...(filters.unit && { unit: filters.unit }) });
+      const res = await questionService.getPassages({
+        page, limit: 10,
+        ...(filters.paper && { paper: filters.paper }),
+        ...(filters.unit && { unit: filters.unit })
+      });
       if (res.success) { setPassages(res.data); setPassagesPagination(res.pagination); }
     } catch (err) { showError('Failed to load passages'); }
     finally { setPassagesLoading(false); }
@@ -124,7 +136,10 @@ const QuestionBank = () => {
   const fetchDIData = async (page = 1) => {
     setDiLoading(true);
     try {
-      const res = await questionService.getDIDataList({ page, limit: 10, ...(filters.paper && { paper: filters.paper }) });
+      const res = await questionService.getDIDataList({
+        page, limit: 10,
+        ...(filters.paper && { paper: filters.paper })
+      });
       if (res.success) { setDiDataList(res.data); setDiPagination(res.pagination); }
     } catch (err) { showError('Failed to load DI data'); }
     finally { setDiLoading(false); }
@@ -133,7 +148,10 @@ const QuestionBank = () => {
   const fetchPYQQuestions = async (page = 1) => {
     setPyqLoading(true);
     try {
-      const res = await questionService.getQuestions({ page, limit: 20, isPYQ: true, ...(filters.paper && { paper: filters.paper }) });
+      const res = await questionService.getQuestions({
+        page, limit: 20, isPYQ: true,
+        ...(filters.paper && { paper: filters.paper })
+      });
       if (res.success) {
         setPyqQuestions(res.data || []);
         setPyqPagination(res.pagination);
@@ -161,12 +179,22 @@ const QuestionBank = () => {
     setSelectedIds([]);
   }, []);
 
+  // ★ ENHANCED: handleSubmitQuestion with sync info
   const handleSubmitQuestion = async (questionData) => {
     setFormLoading(true);
     try {
+      let response;
       if (editingQuestion) {
-        await updateQuestion(editingQuestion._id, questionData);
-        success('Question updated successfully');
+        response = await updateQuestion(editingQuestion._id, questionData);
+        const syncInfo = response?.sync;
+        if (syncInfo?.autoTranslated) {
+          success(
+            `Question updated ✓ Auto-translated (${syncInfo.sourceLanguage}→${syncInfo.targetLanguage})` +
+            (syncInfo.testsUpdated > 0 ? ` | ${syncInfo.testsUpdated} tests synced` : '')
+          );
+        } else {
+          success('Question updated' + (syncInfo?.testsUpdated > 0 ? ` | ${syncInfo.testsUpdated} tests synced` : ''));
+        }
       } else {
         await createQuestion(questionData);
         success('Question created successfully');
@@ -232,6 +260,30 @@ const QuestionBank = () => {
     }
   };
 
+  // ★ NEW: Bulk translate handler
+  const handleBulkTranslate = async () => {
+    if (selectedIds.length === 0) return;
+    setBulkTranslateLoading(true);
+    try {
+      const res = await questionService.bulkTranslateQuestions(selectedIds, {
+        forceRetranslate: false
+      });
+      if (res.success) {
+        success(
+          `${res.data?.translated || 0} questions translated` +
+          (res.data?.testsUpdated > 0 ? `, ${res.data.testsUpdated} tests synced` : '') +
+          (res.data?.skipped > 0 ? `, ${res.data.skipped} skipped` : '')
+        );
+        setSelectedIds([]);
+        fetchQuestions(filters);
+      }
+    } catch (err) {
+      showError(err.message || 'Bulk translate failed');
+    } finally {
+      setBulkTranslateLoading(false);
+    }
+  };
+
   const handleRefresh = () => {
     if (activeTab === TAB_ALL) fetchQuestions(filters);
     else if (activeTab === TAB_PYQ) fetchPYQQuestions();
@@ -279,7 +331,6 @@ const QuestionBank = () => {
     { id: TAB_DI, label: { hi: 'डेटा व्याख्या', en: 'Data Interpretation' }, icon: BarChart2, count: stats?.diCount }
   ];
 
-  // Stats config for dark mode
   const statsConfig = [
     { key: 'total', icon: Layers, gradient: 'from-blue-500 to-blue-600', bg: 'bg-blue-50 dark:bg-blue-950/30', border: 'border-blue-200 dark:border-blue-800' },
     { key: 'passage', icon: BookOpen, gradient: 'from-amber-500 to-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/30', border: 'border-amber-200 dark:border-amber-800' },
@@ -319,9 +370,9 @@ const QuestionBank = () => {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={() => setShowKeyboardHelp(true)}
-                  className="p-2.5 bg-gray-100 dark:bg-secondary-700 rounded-xl hover:bg-gray-200 dark:hover:bg-secondary-600 transition-colors" 
+                  className="p-2.5 bg-gray-100 dark:bg-secondary-700 rounded-xl hover:bg-gray-200 dark:hover:bg-secondary-600 transition-colors"
                   title="Keyboard shortcuts (?)"
                 >
                   <Keyboard className="w-4 h-4 text-gray-500 dark:text-secondary-400" />
@@ -367,8 +418,8 @@ const QuestionBank = () => {
                   const Icon = tab.icon;
                   const isActive = activeTab === tab.id;
                   return (
-                    <button 
-                      key={tab.id} 
+                    <button
+                      key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
                       className={`flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-[3px] transition-all whitespace-nowrap
                         ${isActive
@@ -380,8 +431,8 @@ const QuestionBank = () => {
                       {language === 'hi' ? tab.label.hi : tab.label.en}
                       {tab.count !== undefined && tab.count !== null && (
                         <span className={`px-1.5 py-0.5 text-[10px] font-black rounded-full tabular-nums
-                          ${isActive 
-                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300' 
+                          ${isActive
+                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
                             : 'bg-gray-100 text-gray-600 dark:bg-secondary-700 dark:text-secondary-300'
                           }`}>
                           {tab.count}
@@ -406,6 +457,18 @@ const QuestionBank = () => {
                   {selectedIds.length} {tl('चयनित', 'selected')}
                 </span>
                 <div className="flex-1" />
+
+                {/* ★ NEW: Bulk Translate button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={Languages}
+                  onClick={handleBulkTranslate}
+                  loading={bulkTranslateLoading}
+                >
+                  {tl('अनुवाद करें', 'Translate')}
+                </Button>
+
                 <Button variant="outline" size="sm" icon={Edit2} onClick={() => setShowBulkEditModal(true)}>
                   {tl('बल्क संपादन', 'Bulk Edit')}
                 </Button>
@@ -529,10 +592,10 @@ const QuestionBank = () => {
                   <label className="text-sm font-bold text-gray-700 dark:text-secondary-300 mb-1 block">
                     {tl('कठिनाई', 'Difficulty')}
                   </label>
-                  <select 
-                    value={bulkEditData.difficulty} 
+                  <select
+                    value={bulkEditData.difficulty}
                     onChange={e => setBulkEditData(p => ({ ...p, difficulty: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-secondary-600 rounded-xl 
+                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-secondary-600 rounded-xl
                                bg-white dark:bg-secondary-900 text-gray-900 dark:text-white text-sm
                                focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 transition-colors"
                   >
@@ -546,25 +609,25 @@ const QuestionBank = () => {
                   <label className="text-sm font-bold text-gray-700 dark:text-secondary-300 mb-1 block">
                     {tl('टैग जोड़ें (कॉमा)', 'Add Tags (comma)')}
                   </label>
-                  <input 
-                    type="text" 
-                    value={bulkEditData.tags} 
+                  <input
+                    type="text"
+                    value={bulkEditData.tags}
                     onChange={e => setBulkEditData(p => ({ ...p, tags: e.target.value }))}
                     placeholder={tl('टैग1, टैग2', 'tag1, tag2')}
-                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-secondary-600 rounded-xl 
+                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-secondary-600 rounded-xl
                                bg-white dark:bg-secondary-900 text-gray-900 dark:text-white text-sm
                                placeholder-gray-400 dark:placeholder-secondary-500
-                               focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 transition-colors" 
+                               focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 transition-colors"
                   />
                 </div>
               </div>
             </Modal>
 
             {/* ═══ KEYBOARD SHORTCUTS MODAL ═══ */}
-            <Modal 
-              isOpen={showKeyboardHelp} 
+            <Modal
+              isOpen={showKeyboardHelp}
               onClose={() => setShowKeyboardHelp(false)}
-              title={tl('कीबोर्ड शॉर्टकट', 'Keyboard Shortcuts')} 
+              title={tl('कीबोर्ड शॉर्टकट', 'Keyboard Shortcuts')}
               size="sm"
             >
               <div className="space-y-2">

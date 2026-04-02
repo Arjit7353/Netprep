@@ -5,6 +5,7 @@ const translateController = require('../controllers/translateController');
 
 router.post('/', translateController.translateText);
 router.post('/batch', translateController.translateBatch);
+router.post('/detect', translateController.detectLanguage);  // ★ NEW
 router.get('/test', translateController.testConnection);
 router.get('/status', translateController.getStatus);
 router.post('/clear-cache', translateController.clearCache);

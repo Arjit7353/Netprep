@@ -1982,16 +1982,443 @@ const getQuestionAnalytics = async (req, res, next) => {
     next(error);
   }
 };
+// ════════════════════════════════════════════════════════
+// ★★★ NEW: AUTO-TRANSLATE + TEST SYNC on Question Update
+// REPLACE the existing updateQuestion with this enhanced version
+// ════════════════════════════════════════════════════════
 
-// ═══ ADD TO module.exports: ═══
-// getTestUsage,
-// getQuestionDetail,
-// bulkUpdateQuestions,
-// getQuestionAnalytics,
-// ================================================================
-// EXPORTS
-// ================================================================
+const HINDI_DETECT_RE = /[\u0900-\u097F]/;
 
+/**
+ * Detect which language the user edited
+ */
+const detectSourceLanguageFromChanges = (updates, existing) => {
+  // Explicit language flag
+  if (updates.language) return updates.language;
+
+  const checkField = (upd, ext, field) => {
+    if (!upd || !ext) return null;
+    if (typeof upd === 'object') {
+      if (upd.hi && upd.hi !== ext?.hi && HINDI_DETECT_RE.test(upd.hi)) return 'hi';
+      if (upd.en && upd.en !== ext?.en && !HINDI_DETECT_RE.test(upd.en)) return 'en';
+    }
+    if (typeof upd === 'string') {
+      return HINDI_DETECT_RE.test(upd) ? 'hi' : 'en';
+    }
+    return null;
+  };
+
+  const checkArr = (upd, ext) => {
+    if (!upd || !ext) return null;
+    if (typeof upd === 'object' && !Array.isArray(upd)) {
+      if (upd.hi && JSON.stringify(upd.hi) !== JSON.stringify(ext?.hi)) return 'hi';
+      if (upd.en && JSON.stringify(upd.en) !== JSON.stringify(ext?.en)) return 'en';
+    }
+    return null;
+  };
+
+  let detected = checkField(updates.question, existing?.question);
+  if (detected) return detected;
+
+  detected = checkField(updates.explanation, existing?.explanation);
+  if (detected) return detected;
+
+  detected = checkArr(updates.options, existing?.options);
+  if (detected) return detected;
+
+  if (updates.assertionReasonData) {
+    detected = checkField(updates.assertionReasonData?.assertion, existing?.assertionReasonData?.assertion);
+    if (detected) return detected;
+    detected = checkField(updates.assertionReasonData?.reason, existing?.assertionReasonData?.reason);
+    if (detected) return detected;
+  }
+
+  if (updates.matchData) {
+    detected = checkArr(updates.matchData?.listA, existing?.matchData?.listA);
+    if (detected) return detected;
+  }
+
+  if (updates.statementData) {
+    detected = checkArr(updates.statementData?.statements, existing?.statementData?.statements);
+    if (detected) return detected;
+  }
+
+  if (updates.sequenceData) {
+    detected = checkArr(updates.sequenceData?.items, existing?.sequenceData?.items);
+    if (detected) return detected;
+  }
+
+  return null;
+};
+
+/**
+ * Sync question changes to all tests that use this question
+ */
+const syncQuestionToTests = async (questionId) => {
+  const Test = require('../models/Test');
+  const mongoose = require('mongoose');
+  let oid;
+  try { oid = new mongoose.Types.ObjectId(questionId); } catch { oid = null; }
+  const searchIds = oid ? [oid, questionId, String(questionId)] : [questionId, String(questionId)];
+
+  const result = await Test.updateMany(
+    { questions: { $in: searchIds }, status: { $ne: 'archived' } },
+    { $set: { updatedAt: new Date() } }
+  );
+  return result.modifiedCount || 0;
+};
+
+// ═══ REPLACE existing updateQuestion with this ═══
+const updateQuestion_ENHANCED = async (req, res, next) => {
+  try {
+    const updates = req.body;
+    const questionId = req.params.id;
+
+    // 1. Get existing question for change detection
+    const existing = await Question.findById(questionId).lean();
+    if (!existing) return res.status(404).json({ success: false, message: 'Question not found' });
+
+    // 2. Auto-detect source language from changes
+    const detectedLang = detectSourceLanguageFromChanges(updates, existing);
+    let autoTranslated = false;
+
+    // 3. Auto-translate if language detected
+    if (detectedLang) {
+      try {
+        // Merge updates with existing data for complete translation
+        const mergedData = { ...existing, ...updates };
+        await translateHelper.translateQuestion(mergedData, detectedLang);
+
+        // Copy translated fields back to updates
+        if (mergedData.question) updates.question = mergedData.question;
+        if (mergedData.options) updates.options = mergedData.options;
+        if (mergedData.explanation) updates.explanation = mergedData.explanation;
+        if (mergedData.assertionReasonData) updates.assertionReasonData = mergedData.assertionReasonData;
+        if (mergedData.matchData) updates.matchData = mergedData.matchData;
+        if (mergedData.sequenceData) updates.sequenceData = mergedData.sequenceData;
+        if (mergedData.statementData) updates.statementData = mergedData.statementData;
+        autoTranslated = true;
+      } catch (e) {
+        console.warn('[updateQuestion] Auto-translate failed:', e.message);
+      }
+    }
+
+    // 4. Normalize values
+    if (updates.paper) updates.paper = normalizePaperValue(updates.paper);
+    if (updates.difficulty) updates.difficulty = normalizeDifficultyValue(updates.difficulty);
+    delete updates.language; // Don't save the language flag
+
+    // 5. Save question
+    const question = await Question.findByIdAndUpdate(
+      questionId,
+      { ...updates, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    );
+
+    // 6. ★ Sync to all tests using this question
+    const testsUpdated = await syncQuestionToTests(questionId);
+
+    console.log(`[updateQuestion] Q#${question.questionNumber} updated | AutoTranslate: ${autoTranslated} (${detectedLang || 'none'}) | Tests synced: ${testsUpdated}`);
+
+    res.json({
+      success: true,
+      message: 'Question updated',
+      data: question,
+      sync: {
+        testsUpdated,
+        autoTranslated,
+        sourceLanguage: detectedLang,
+        targetLanguage: detectedLang ? (detectedLang === 'hi' ? 'en' : 'hi') : null
+      }
+    });
+  } catch (error) { next(error); }
+};
+
+// ════════════════════════════════════════════════════════
+// ★ NEW: Translate a single question by ID
+// POST /api/questions/:id/translate
+// ════════════════════════════════════════════════════════
+const translateSingleQuestion = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { sourceLanguage, forceRetranslate = false } = req.body;
+
+    const question = await Question.findById(id);
+    if (!question) return res.status(404).json({ success: false, message: 'Question not found' });
+
+    // Auto-detect source language
+    let srcLang = sourceLanguage;
+    if (!srcLang) {
+      const hasHi = !!(
+        question.question?.hi?.trim() ||
+        question.assertionReasonData?.assertion?.hi?.trim() ||
+        (question.options?.hi || []).some(o => o?.trim())
+      );
+      const hasEn = !!(
+        question.question?.en?.trim() ||
+        question.assertionReasonData?.assertion?.en?.trim() ||
+        (question.options?.en || []).some(o => o?.trim())
+      );
+
+      if (hasHi && !hasEn) srcLang = 'hi';
+      else if (hasEn && !hasHi) srcLang = 'en';
+      else if (hasHi && hasEn) {
+        const hiLen = (question.question?.hi || '').length + (question.explanation?.hi || '').length;
+        const enLen = (question.question?.en || '').length + (question.explanation?.en || '').length;
+        srcLang = hiLen >= enLen ? 'hi' : 'en';
+      }
+      else srcLang = 'hi';
+    }
+
+    const tgtLang = srcLang === 'hi' ? 'en' : 'hi';
+    const data = question.toObject();
+
+    // If force retranslate, clear target language fields
+    if (forceRetranslate) {
+      if (data.question) data.question[tgtLang] = '';
+      if (data.options && data.options[tgtLang]) data.options[tgtLang] = [];
+      if (data.explanation) data.explanation[tgtLang] = '';
+      if (data.assertionReasonData?.assertion) data.assertionReasonData.assertion[tgtLang] = '';
+      if (data.assertionReasonData?.reason) data.assertionReasonData.reason[tgtLang] = '';
+      if (data.matchData?.listA) data.matchData.listA[tgtLang] = [];
+      if (data.matchData?.listB) data.matchData.listB[tgtLang] = [];
+      if (data.sequenceData?.items) data.sequenceData.items[tgtLang] = [];
+      if (data.statementData?.statements) data.statementData.statements[tgtLang] = [];
+    }
+
+    // Translate
+    await translateHelper.translateQuestion(data, srcLang);
+
+    // Build update
+    const updateFields = { updatedAt: new Date() };
+    if (data.question) updateFields.question = data.question;
+    if (data.options) {
+      delete data.options._c;
+      updateFields.options = data.options;
+    }
+    if (data.explanation) updateFields.explanation = data.explanation;
+    if (data.assertionReasonData) updateFields.assertionReasonData = data.assertionReasonData;
+    if (data.matchData) updateFields.matchData = data.matchData;
+    if (data.sequenceData) updateFields.sequenceData = data.sequenceData;
+    if (data.statementData) updateFields.statementData = data.statementData;
+
+    const updated = await Question.findByIdAndUpdate(id, updateFields, { new: true });
+
+    // Sync tests
+    const testsUpdated = await syncQuestionToTests(id);
+
+    res.json({
+      success: true,
+      message: `Translated ${srcLang}→${tgtLang}`,
+      data: updated,
+      translation: {
+        sourceLanguage: srcLang,
+        targetLanguage: tgtLang,
+        testsUpdated,
+        forceRetranslate
+      }
+    });
+  } catch (error) { next(error); }
+};
+
+// ════════════════════════════════════════════════════════
+// ★ NEW: Bulk translate multiple questions
+// POST /api/questions/bulk-translate
+// ════════════════════════════════════════════════════════
+const bulkTranslateQuestions = async (req, res, next) => {
+  try {
+    const { ids, sourceLanguage, forceRetranslate = false } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'ids array required' });
+    }
+
+    const limitedIds = ids.slice(0, 50);
+    const questions = await Question.find({ _id: { $in: limitedIds }, isActive: { $ne: false } });
+
+    let translatedCount = 0;
+    let failedCount = 0;
+    let skippedCount = 0;
+    const errors = [];
+
+    for (const question of questions) {
+      try {
+        let srcLang = sourceLanguage;
+        if (!srcLang) {
+          const hasHi = !!(question.question?.hi?.trim());
+          const hasEn = !!(question.question?.en?.trim());
+          if (hasHi && !hasEn) srcLang = 'hi';
+          else if (hasEn && !hasHi) srcLang = 'en';
+          else if (hasHi && hasEn && !forceRetranslate) { skippedCount++; continue; }
+          else srcLang = 'hi';
+        }
+
+        const tgtLang = srcLang === 'hi' ? 'en' : 'hi';
+        const data = question.toObject();
+
+        if (forceRetranslate) {
+          if (data.question) data.question[tgtLang] = '';
+          if (data.options) data.options[tgtLang] = [];
+          if (data.explanation) data.explanation[tgtLang] = '';
+        }
+
+        await translateHelper.translateQuestion(data, srcLang);
+
+        const upd = { updatedAt: new Date() };
+        if (data.question) upd.question = data.question;
+        if (data.options) { delete data.options._c; upd.options = data.options; }
+        if (data.explanation) upd.explanation = data.explanation;
+        if (data.assertionReasonData) upd.assertionReasonData = data.assertionReasonData;
+        if (data.matchData) upd.matchData = data.matchData;
+        if (data.sequenceData) upd.sequenceData = data.sequenceData;
+        if (data.statementData) upd.statementData = data.statementData;
+
+        await Question.findByIdAndUpdate(question._id, upd);
+        translatedCount++;
+      } catch (e) {
+        failedCount++;
+        errors.push({ id: String(question._id), questionNumber: question.questionNumber, error: e.message });
+      }
+    }
+
+    // Sync all affected tests
+    const Test = require('../models/Test');
+    const mongoose = require('mongoose');
+    const allSearchIds = [];
+    limitedIds.forEach(id => {
+      try { allSearchIds.push(new mongoose.Types.ObjectId(id)); } catch {}
+      allSearchIds.push(String(id));
+    });
+
+    const testSync = await Test.updateMany(
+      { questions: { $in: allSearchIds }, status: { $ne: 'archived' } },
+      { $set: { updatedAt: new Date() } }
+    );
+
+    console.log(`[bulkTranslate] ${translatedCount} translated, ${skippedCount} skipped, ${failedCount} failed, ${testSync.modifiedCount} tests synced`);
+
+    res.json({
+      success: true,
+      message: `${translatedCount} translated, ${skippedCount} skipped, ${failedCount} failed`,
+      data: {
+        translated: translatedCount,
+        skipped: skippedCount,
+        failed: failedCount,
+        testsUpdated: testSync.modifiedCount,
+        errors: errors.slice(0, 10)
+      }
+    });
+  } catch (error) { next(error); }
+};
+
+// ════════════════════════════════════════════════════════
+// ★ NEW: Get impact analysis for a question edit
+// GET /api/questions/:id/impact
+// ════════════════════════════════════════════════════════
+const getImpactAnalysis = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const Test = require('../models/Test');
+    const mongoose = require('mongoose');
+
+    let oid;
+    try { oid = new mongoose.Types.ObjectId(id); } catch { oid = null; }
+    const searchIds = oid ? [oid, id, String(id)] : [id, String(id)];
+
+    const tests = await Test.find({
+      questions: { $in: searchIds },
+      status: { $ne: 'archived' }
+    }).select('_id title testType paper status totalQuestions createdAt').lean();
+
+    // Get question translation status
+    const question = await Question.findById(id)
+      .select('question options explanation assertionReasonData questionType questionNumber')
+      .lean();
+
+    let translationStatus = null;
+    if (question) {
+      const hasHi = !!(question.question?.hi?.trim());
+      const hasEn = !!(question.question?.en?.trim());
+      const hiOpts = (question.options?.hi || []).filter(o => o?.trim()).length;
+      const enOpts = (question.options?.en || []).filter(o => o?.trim()).length;
+
+      translationStatus = {
+        hasHindi: hasHi,
+        hasEnglish: hasEn,
+        hindiOptions: hiOpts,
+        englishOptions: enOpts,
+        hasExplanationHi: !!(question.explanation?.hi?.trim()),
+        hasExplanationEn: !!(question.explanation?.en?.trim()),
+        needsTranslation: !hasHi || !hasEn || hiOpts < 4 || enOpts < 4
+      };
+    }
+
+    res.json({
+      success: true,
+      data: {
+        questionNumber: question?.questionNumber,
+        testsAffected: tests.length,
+        tests: tests.map(t => ({
+          _id: t._id, title: t.title, testType: t.testType,
+          paper: t.paper, status: t.status, totalQuestions: t.totalQuestions
+        })),
+        translationStatus
+      }
+    });
+  } catch (error) { next(error); }
+};
+
+// ════════════════════════════════════════════════════════
+// ★ NEW: Get translation status for multiple questions
+// POST /api/questions/translation-status
+// ════════════════════════════════════════════════════════
+const getTranslationStatus = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) {
+      return res.status(400).json({ success: false, message: 'ids array required' });
+    }
+
+    const questions = await Question.find({ _id: { $in: ids.slice(0, 200) } })
+      .select('_id question options explanation assertionReasonData matchData sequenceData statementData questionType')
+      .lean();
+
+    const statusMap = {};
+
+    for (const q of questions) {
+      const hasHi = !!(q.question?.hi?.trim());
+      const hasEn = !!(q.question?.en?.trim());
+      const hiOpts = (q.options?.hi || []).filter(o => o?.trim()).length;
+      const enOpts = (q.options?.en || []).filter(o => o?.trim()).length;
+      const hasExplHi = !!(q.explanation?.hi?.trim());
+      const hasExplEn = !!(q.explanation?.en?.trim());
+
+      // Calculate completeness
+      let score = 0, total = 6;
+      if (hasHi) score++;
+      if (hasEn) score++;
+      if (hiOpts >= 4) score++;
+      if (enOpts >= 4) score++;
+      if (hasExplHi) score++;
+      if (hasExplEn) score++;
+
+      const pct = Math.round((score / total) * 100);
+
+      statusMap[q._id] = {
+        hasHindi: hasHi,
+        hasEnglish: hasEn,
+        hindiOptions: hiOpts,
+        englishOptions: enOpts,
+        hasExplanationHi: hasExplHi,
+        hasExplanationEn: hasExplEn,
+        completeness: pct,
+        status: pct >= 90 ? 'complete' : pct >= 50 ? 'partial' : 'missing',
+        needsTranslation: pct < 80
+      };
+    }
+
+    res.json({ success: true, data: statusMap });
+  } catch (error) { next(error); }
+};
 module.exports = {
   getQuestions,
   getQuestionStats,
@@ -1999,7 +2426,7 @@ module.exports = {
   createQuestion,
   importQuestions,
   validateImport,
-  updateQuestion,
+  updateQuestion: updateQuestion_ENHANCED,  // ★ USE ENHANCED VERSION
   deleteQuestion,
   bulkDeleteQuestions,
   getQuestionsByPassage,
@@ -2010,7 +2437,6 @@ module.exports = {
   getDIDataList,
   createDIData,
   getDIDataById,
-  // PYQ Question Bank endpoints
   getPYQQuestionById,
   updatePYQQuestion,
   getPYQQuestionBank,
@@ -2019,4 +2445,9 @@ module.exports = {
   getQuestionDetail,
   bulkUpdateQuestions,
   getQuestionAnalytics,
+  // ★ NEW EXPORTS
+  translateSingleQuestion,
+  bulkTranslateQuestions,
+  getImpactAnalysis,
+  getTranslationStatus,
 };

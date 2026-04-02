@@ -350,6 +350,41 @@ const repairPYQExecute = async (req, res, next) => {
     });
   } catch (error) { next(error); }
 };
+// ★ NEW: Detect language of text
+const detectLanguage = async (req, res, next) => {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ success: false, message: 'text required' });
+
+    const hindiChars = (text.match(/[\u0900-\u097F]/g) || []).length;
+    const englishChars = (text.match(/[A-Za-z]/g) || []).length;
+    const totalChars = hindiChars + englishChars;
+
+    let language = 'unknown';
+    let confidence = 0;
+
+    if (totalChars === 0) {
+      language = 'unknown';
+    } else if (hindiChars > englishChars) {
+      language = 'hi';
+      confidence = Math.round((hindiChars / totalChars) * 100);
+    } else {
+      language = 'en';
+      confidence = Math.round((englishChars / totalChars) * 100);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        language,
+        confidence,
+        hindiChars,
+        englishChars,
+        isMixed: hindiChars > 0 && englishChars > 0 && Math.min(hindiChars, englishChars) / Math.max(totalChars, 1) > 0.2
+      }
+    });
+  } catch (error) { next(error); }
+};
 
 module.exports = {
   translateText,
@@ -360,5 +395,6 @@ module.exports = {
   repairPreview,
   repairExecute,
   repairPYQPreview,
+   detectLanguage,
   repairPYQExecute
 };
