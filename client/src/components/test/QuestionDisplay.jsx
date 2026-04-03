@@ -12,7 +12,10 @@ import {
   getBilingualText, getBilingualArray, getOptionLabel,
   getRomanNumeral, getChartLabels, getDatasetLabel
 } from '../../utils/helpers';
-import { QUESTION_TYPE_LABELS, CHART_COLORS } from '../../utils/constants';
+import { QUESTION_TYPE_LABELS, CHART_COLORS, AR_OPTIONS_HI, AR_OPTIONS_EN } from '../../utils/constants';
+
+/* ─── Hindi Detection Regex ─── */
+const HINDI_RE = /[\u0900-\u097F]/;
 
 /* ─── Enhanced Custom Tooltip for Charts ─── */
 const CustomTooltip = ({ active, payload, label }) => {
@@ -60,7 +63,6 @@ const OptionButton = ({ index, text, isSelected, disabled, onClick }) => {
         ${disabled ? 'cursor-default' : 'cursor-pointer'}
       `}
     >
-      {/* Option Circle */}
       <div className={`
         w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5
         text-sm font-bold transition-all duration-200
@@ -68,21 +70,15 @@ const OptionButton = ({ index, text, isSelected, disabled, onClick }) => {
           ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-105'
           : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 group-hover:bg-slate-200 dark:group-hover:bg-slate-600'}
       `}>
-        {isSelected ? (
-          <CheckCircle className="w-5 h-5" />
-        ) : (
-          label
-        )}
+        {isSelected ? <CheckCircle className="w-5 h-5" /> : label}
       </div>
 
-      {/* Option Text */}
       <div className={`flex-1 pt-1.5 text-[15px] leading-relaxed transition-colors ${
         isSelected ? 'text-blue-900 dark:text-blue-100 font-medium' : 'text-slate-700 dark:text-slate-300'
       }`}>
         {text}
       </div>
 
-      {/* Selection indicator */}
       {isSelected && (
         <div className="flex-shrink-0 mt-2">
           <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
@@ -90,6 +86,49 @@ const OptionButton = ({ index, text, isSelected, disabled, onClick }) => {
       )}
     </button>
   );
+};
+
+/* ═══════════════ SMART AR OPTIONS RESOLVER ═══════════════ */
+const resolveAROptions = (question, language) => {
+  const defaultOptions = language === 'hi' ? AR_OPTIONS_HI : AR_OPTIONS_EN;
+  const rawOptions = getBilingualArray(question.options, language);
+
+  // No options → use defaults
+  if (!rawOptions || rawOptions.length === 0) return defaultOptions;
+
+  // Per-option language fix
+  const resolved = rawOptions.map((opt, i) => {
+    if (!opt || !opt.trim()) return defaultOptions[i] || '';
+
+    const optText = opt.trim();
+    const hasHindi = HINDI_RE.test(optText);
+
+    if (language === 'hi') {
+      if (hasHindi) return optText; // ✓ Correct
+      // English text in Hindi mode → replace with default
+      const englishChars = (optText.match(/[A-Za-z]/g) || []).length;
+      if (englishChars > 5 && i < defaultOptions.length) return defaultOptions[i];
+      return optText;
+    } else {
+      if (!hasHindi) return optText; // ✓ Correct
+      // Hindi text in English mode → replace with default
+      const hindiChars = (optText.match(/[\u0900-\u097F]/g) || []).length;
+      const englishChars = (optText.match(/[A-Za-z]/g) || []).length;
+      if (hindiChars > englishChars && i < defaultOptions.length) return defaultOptions[i];
+      return optText;
+    }
+  });
+
+  // Final sanity: if majority still wrong language → use pure defaults
+  const correctCount = resolved.filter(opt => {
+    if (!opt || opt.trim().length < 5) return true;
+    const hasHindi = HINDI_RE.test(opt);
+    return language === 'hi' ? hasHindi : !hasHindi;
+  }).length;
+
+  if (correctCount < Math.ceil(resolved.length / 2)) return defaultOptions;
+
+  return resolved;
 };
 
 /* ═══════════════ MAIN QuestionDisplay ═══════════════ */
@@ -105,7 +144,7 @@ const QuestionDisplay = ({
   const questionType = question.questionType;
   const questionText = getBilingualText(question.question, language);
 
-  /* ─── Render Options (shared by all types) ─── */
+  /* ─── Render Options ─── */
   const renderOptions = (options) => (
     <div className="space-y-2.5 mt-5">
       {options.map((option, index) => (
@@ -134,15 +173,14 @@ const QuestionDisplay = ({
     );
   };
 
-    /* ─── Assertion-Reason ─── */
+  /* ─── Assertion-Reason ─── */
   const renderAssertionReason = () => {
     const assertion = getBilingualText(question.assertionReasonData?.assertion, language);
     const reason = getBilingualText(question.assertionReasonData?.reason, language);
-    const options = getBilingualArray(question.options, language);
+    const options = resolveAROptions(question, language); // ★ Smart resolver
 
     return (
       <div className="space-y-4">
-        {/* ═══ FIX: Show proper instruction, not topic/chapter name ═══ */}
         <div className="text-slate-700 dark:text-slate-300 font-medium">
           {language === 'hi'
             ? 'निम्नलिखित दो कथनों पर विचार करें:'
@@ -175,7 +213,8 @@ const QuestionDisplay = ({
       </div>
     );
   };
-  /* ─── Match Following (TABLE) ─── */
+
+  /* ─── Match Following ─── */
   const renderMatchFollowing = () => {
     const listA = getBilingualArray(question.matchData?.listA, language);
     const listB = getBilingualArray(question.matchData?.listB, language);
@@ -184,12 +223,9 @@ const QuestionDisplay = ({
     return (
       <div className="space-y-4">
         <div className="text-slate-800 dark:text-slate-200 text-[17px] leading-[1.7] font-medium">
-          {questionText || (language === 'hi'
-            ? 'सूची-I को सूची-II से सुमेलित कीजिए:'
-            : 'Match List-I with List-II:')}
+          {questionText || (language === 'hi' ? 'सूची-I को सूची-II से सुमेलित कीजिए:' : 'Match List-I with List-II:')}
         </div>
 
-        {/* Premium Match Table */}
         <div className="overflow-x-auto rounded-2xl border-2 border-slate-300 dark:border-slate-600 shadow-sm">
           <table className="w-full">
             <thead>
@@ -234,7 +270,6 @@ const QuestionDisplay = ({
         <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
           {language === 'hi' ? 'सही विकल्प चुनिए:' : 'Choose the correct option:'}
         </p>
-
         {renderOptions(options)}
       </div>
     );
@@ -249,15 +284,12 @@ const QuestionDisplay = ({
     return (
       <div className="space-y-4">
         <div className="text-slate-800 dark:text-slate-200 text-[17px] leading-[1.7] font-medium">
-          {questionText || (language === 'hi'
-            ? 'निम्नलिखित को सही क्रम में व्यवस्थित कीजिए:'
-            : 'Arrange the following in correct order:')}
+          {questionText || (language === 'hi' ? 'निम्नलिखित को सही क्रम में व्यवस्थित कीजिए:' : 'Arrange the following in correct order:')}
         </div>
 
         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 space-y-2">
           {items.map((item, idx) => (
-            <div key={idx}
-              className="flex items-start gap-3 p-3.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+            <div key={idx} className="flex items-start gap-3 p-3.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
               <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-sm">
                 {romanLabels[idx] || idx + 1}
               </span>
@@ -269,7 +301,6 @@ const QuestionDisplay = ({
         <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
           {language === 'hi' ? 'सही क्रम चुनिए:' : 'Choose the correct sequence:'}
         </p>
-
         {renderOptions(options)}
       </div>
     );
@@ -283,15 +314,12 @@ const QuestionDisplay = ({
     return (
       <div className="space-y-4">
         <div className="text-slate-800 dark:text-slate-200 text-[17px] leading-[1.7] font-medium">
-          {questionText || (language === 'hi'
-            ? 'निम्नलिखित कथनों पर विचार कीजिए:'
-            : 'Consider the following statements:')}
+          {questionText || (language === 'hi' ? 'निम्नलिखित कथनों पर विचार कीजिए:' : 'Consider the following statements:')}
         </div>
 
         <div className="bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-200 dark:border-amber-800 p-4 space-y-2.5">
           {statements.map((st, idx) => (
-            <div key={idx}
-              className="flex items-start gap-3 p-3.5 bg-white dark:bg-slate-800 rounded-xl border border-amber-200 dark:border-amber-800/50 shadow-sm">
+            <div key={idx} className="flex items-start gap-3 p-3.5 bg-white dark:bg-slate-800 rounded-xl border border-amber-200 dark:border-amber-800/50 shadow-sm">
               <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-white font-bold flex items-center justify-center text-sm flex-shrink-0 shadow-sm">
                 {idx + 1}
               </span>
@@ -302,36 +330,31 @@ const QuestionDisplay = ({
 
         <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
           {language === 'hi'
-            ? 'उपर्युक्त में से कौन सा/से कथन सही है/हैं?'
+            ? 'उपर्युक��त में से कौन सा/से कथन सही है/हैं?'
             : 'Which of the above statement(s) is/are correct?'}
         </p>
-
         {renderOptions(options)}
       </div>
     );
   };
+
   /* ─── Passage Based ─── */
   const renderPassageBased = () => {
-    // ═══ FIX: Get passage from multiple possible sources ═══
     const passageObj = question.passageId;
     const passageContent = getBilingualText(passageObj?.content, language);
     const passageTitle = passageObj?.title || '';
     const options = getBilingualArray(question.options, language);
-
-    // If no passage from passageId, check if question itself has passage-like content
-    // (happens with PYQ questions where passage wasn't linked properly)
     const hasPassageContent = !!passageContent;
 
     return (
       <div className="space-y-4">
-        {/* Passage Content */}
         {hasPassageContent && (
           <div className="rounded-2xl overflow-hidden border border-teal-200 dark:border-teal-800">
             <div className="px-4 py-2.5 bg-gradient-to-r from-teal-600 to-teal-700 text-white text-sm font-bold flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
               {passageTitle || (language === 'hi' ? 'गद्यांश' : 'Passage')}
             </div>
-            <div className="px-5 py-4 bg-teal-50 dark:bg-teal-900/10 text-slate-800 dark:text-slate-200 leading-[1.8] text-[15px] max-h-[300px] overflow-y-auto scrollbar-thin">
+            <div className="px-5 py-4 bg-teal-50 dark:bg-teal-900/10 text-slate-800 dark:text-slate-200 leading-[1.8] text-[15px] max-h-[300px] overflow-y-auto">
               {passageContent.split('\n').map((p, i) => (
                 <p key={i} className="mb-2 last:mb-0">{p}</p>
               ))}
@@ -339,7 +362,6 @@ const QuestionDisplay = ({
           </div>
         )}
 
-        {/* No passage warning */}
         {!hasPassageContent && (
           <div className="rounded-2xl overflow-hidden border border-amber-200 dark:border-amber-800">
             <div className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-bold flex items-center gap-2">
@@ -347,7 +369,7 @@ const QuestionDisplay = ({
               {language === 'hi' ? 'गद्यांश आधारित' : 'Passage Based'}
             </div>
             <div className="px-5 py-4 bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-300 text-sm">
-              {language === 'hi' 
+              {language === 'hi'
                 ? 'गद्यांश लोड नहीं हुआ। कृपया प्रश्न का उत्तर दिए गए विकल्पों के आधार पर दें।'
                 : 'Passage not loaded. Please answer based on available options.'}
             </div>
@@ -362,17 +384,14 @@ const QuestionDisplay = ({
           </span>
         )}
 
-        {/* Question Text */}
         {questionText && (
           <div className="text-slate-800 dark:text-slate-200 text-[17px] leading-[1.7] font-medium">
             {questionText}
           </div>
         )}
 
-        {/* Options */}
         {options.length > 0 && renderOptions(options)}
 
-        {/* If no question text and no options, show topic as hint */}
         {!questionText && options.length === 0 && (
           <div className="text-slate-500 dark:text-slate-400 text-sm italic">
             {question.topic || question.chapter || (language === 'hi' ? 'प्रश्न डेटा उपलब्ध नहीं' : 'Question data not available')}
@@ -381,6 +400,7 @@ const QuestionDisplay = ({
       </div>
     );
   };
+
   /* ─── DI Table ─── */
   const renderDITable = () => {
     const di = question.diDataId;
@@ -441,7 +461,6 @@ const QuestionDisplay = ({
         <div className="text-slate-800 dark:text-slate-200 text-[17px] leading-[1.7] font-medium">
           {questionText}
         </div>
-
         {renderOptions(options)}
       </div>
     );
@@ -502,7 +521,6 @@ const QuestionDisplay = ({
             )}
           </div>
         )}
-
         <div className="text-slate-800 dark:text-slate-200 text-[17px] leading-[1.7] font-medium">{questionText}</div>
         {renderOptions(options)}
       </div>
@@ -519,7 +537,6 @@ const QuestionDisplay = ({
     const values = ds.data || [];
     const colors = ds.colors || CHART_COLORS;
     const options = getBilingualArray(question.options, language);
-
     const data = labels.map((l, i) => ({ name: l, value: values[i] || 0 }));
 
     return (
@@ -553,7 +570,6 @@ const QuestionDisplay = ({
             )}
           </div>
         )}
-
         <div className="text-slate-800 dark:text-slate-200 text-[17px] leading-[1.7] font-medium">{questionText}</div>
         {renderOptions(options)}
       </div>
@@ -616,7 +632,6 @@ const QuestionDisplay = ({
             )}
           </div>
         )}
-
         <div className="text-slate-800 dark:text-slate-200 text-[17px] leading-[1.7] font-medium">{questionText}</div>
         {renderOptions(options)}
       </div>
@@ -638,14 +653,13 @@ const QuestionDisplay = ({
               <FileText className="w-4 h-4" />
               {title || (language === 'hi' ? 'केसलेट डेटा' : 'Caselet Data')}
             </div>
-            <div className="px-5 py-4 bg-violet-50 dark:bg-violet-900/10 text-slate-800 dark:text-slate-200 leading-[1.8] text-[15px] max-h-[300px] overflow-y-auto scrollbar-thin">
+            <div className="px-5 py-4 bg-violet-50 dark:bg-violet-900/10 text-slate-800 dark:text-slate-200 leading-[1.8] text-[15px] max-h-[300px] overflow-y-auto">
               {caseletText.split('\n').map((p, i) => (
                 <p key={i} className="mb-2 last:mb-0">{p}</p>
               ))}
             </div>
           </div>
         )}
-
         <div className="text-slate-800 dark:text-slate-200 text-[17px] leading-[1.7] font-medium">{questionText}</div>
         {renderOptions(options)}
       </div>
@@ -665,7 +679,7 @@ const QuestionDisplay = ({
       case 'di_pie_chart': return renderDIPieChart();
       case 'di_line_graph': return renderDILineGraph();
       case 'di_caselet': return renderDICaselet();
-      case 'di_mixed': return renderDIBarChart(); // fallback
+      case 'di_mixed': return renderDIBarChart();
       default: return renderMCQ();
     }
   };

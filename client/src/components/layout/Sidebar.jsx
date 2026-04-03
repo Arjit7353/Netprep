@@ -5,7 +5,7 @@ import {
   BarChart3, Settings, ChevronLeft, ChevronRight, X, GraduationCap,
   BookOpen, Database, ScrollText, TrendingUp, Target, Sparkles,
   FlaskConical, Library, Search, ChevronDown, Command,
-  Keyboard, HelpCircle, ArrowRight, Layers, Hash, Zap
+  Keyboard, HelpCircle, ArrowRight, Layers, Hash, Zap, AlertTriangle
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════
@@ -164,8 +164,7 @@ const MENU = [
     id: 'system',
     label: { en: 'System', hi: 'सिस्टम' },
     items: [
-      { id: 'syllabus', label: { en: 'Syllabus', hi: 'पाठ्यक्��म' }, icon: Database, path: '/syllabus' },
-      { id: 'settings', label: { en: 'Settings', hi: 'सेटिंग्स' }, icon: Settings, path: '/settings', shortcut: ',' },
+      { id: 'syllabus', label: { en: 'Syllabus', hi: 'पाठ्यक्��म' }, icon: Database, path: '/syllabus' },      { id: 'reports', label: { en: 'Question Reports', hi: 'प्रश्न रिपोर्ट' }, icon: AlertTriangle, path: '/reports' },      { id: 'settings', label: { en: 'Settings', hi: 'सेटिंग्स' }, icon: Settings, path: '/settings', shortcut: ',' },
     ]
   }
 ];

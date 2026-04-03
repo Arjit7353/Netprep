@@ -18,6 +18,7 @@ import QuestionDisplay from './QuestionDisplay';
 import ExamCalculator from './ExamCalculator';
 import ExamNotepad from './ExamNotepad';
 import Loader from '../common/Loader';
+import ReportIssueModal from './ReportIssueModal';
 import { TEST_TYPE_CONFIG, PAPER_LABELS, QUESTION_TYPE_LABELS } from '../../utils/constants';
 
 /* ═══════════════════════════════════════════════════
@@ -209,6 +210,7 @@ const TestInterface = () => {
   const [submitError, setSubmitError] = useState(null);
   const [qElapsed, setQElapsed] = useState(0);
   const [showMobileTools, setShowMobileTools] = useState(false);
+    const [showReportModal, setShowReportModal] = useState(false);
 
   const qStartRef = useRef(Date.now());
   const questionAreaRef = useRef(null);
@@ -720,12 +722,25 @@ const TestInterface = () => {
                   )}
                 </div>
 
-                {/* Per-Q Timer */}
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
-                  <Clock className={`w-3.5 h-3.5 ${qElapsed > 120 ? 'text-red-500' : qElapsed > 60 ? 'text-amber-500' : 'text-slate-400'}`} />
-                  <span className={`text-xs font-mono font-bold tabular-nums ${qElapsed > 120 ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
-                    {formatQTime(qElapsed)}
-                  </span>
+                {/* Right side: Report + Timer */}
+                <div className="flex items-center gap-2">
+                  {/* Report Issue Button */}
+                  <button
+                    onClick={() => setShowReportModal(true)}
+                    title={t('समस्या रिपोर्ट करें', 'Report Issue')}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-red-200 dark:border-red-800/50 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{t('रिपोर्ट', 'Report')}</span>
+                  </button>
+
+                  {/* Per-Q Timer */}
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <Clock className={`w-3.5 h-3.5 ${qElapsed > 120 ? 'text-red-500' : qElapsed > 60 ? 'text-amber-500' : 'text-slate-400'}`} />
+                    <span className={`text-xs font-mono font-bold tabular-nums ${qElapsed > 120 ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                      {formatQTime(qElapsed)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -924,6 +939,17 @@ const TestInterface = () => {
         isSubmitting={isSubmitting}
         language={language}
         error={submitError}
+      />
+
+      <ReportIssueModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        questionId={currentQuestion?._id || ''}
+        questionSource={String(currentQuestion?._id || '').startsWith('pyq_') ? 'pyq' : 'bank'}
+        testId={test?._id}
+        attemptId={attempt?._id}
+        questionIndex={currentIndex}
+        language={language}
       />
 
       {/* ── Global Animations ── */}

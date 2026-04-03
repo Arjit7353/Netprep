@@ -83,6 +83,8 @@ app.use('/api/translate', require('./routes/translateRoutes'));
 app.use('/api/syllabus', require('./routes/syllabusRoutes'));
 app.use('/api/syllabus', require('./routes/syllabusRoutes'));
 app.use('/api/pyq', require('./routes/pyqRoutes'));  // ✅ NEW: PYQ Analysis Hub
+app.use('/api/reports', require('./routes/reportRoutes'));
+
 
 
 // 404 handler

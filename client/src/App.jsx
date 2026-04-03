@@ -18,6 +18,7 @@ import Results from './pages/Results';
 import ResultDetail from './pages/ResultDetail';
 import SolutionPage from './pages/SolutionPage';
 import ManageSyllabus from './pages/ManageSyllabus';
+import QuestionReports from './pages/QuestionReports';
 import PYQHub from './pages/PYQHub';  // ✅ NEW
 
 
@@ -495,6 +496,17 @@ function App() {
               path="/settings"
               element={
                 <Settings language={language} setLanguage={setLanguage} />
+              }
+            />
+            
+            {/* Question Reports */}
+            <Route
+              path="/reports"
+              element={
+                <QuestionReports
+                  language={language}
+                  setLanguage={setLanguage}
+                />
               }
             />
             

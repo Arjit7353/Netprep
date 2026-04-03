@@ -311,7 +311,7 @@ const Results = () => {
 
   // ===== LIST VIEW =====
   return (
-    <Layout language={language} onLanguageChange={handleLangChange}>
+    <Layout language={language} setLanguage={handleLangChange}>
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* ═══════ HERO ═══════ */}
