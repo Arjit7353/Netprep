@@ -1,503 +1,542 @@
-/* Custom Font Import */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+/* ============================================================================
+   TYPOGRAPHY & FONT SYSTEM
+   
+   This file sets up a professional typography system for NETprep with:
+   - Inter font for English UI, numbers, and UI elements
+   - Noto Sans Devanagari for Hindi/Devanagari text
+   - Optimized text rendering for Web
+   - Dark theme support with proper contrast
+   ============================================================================ */
 
+/* ============================================================================
+   TAILWIND CSS DIRECTIVES
+   ============================================================================ */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Base Styles */
+/* ============================================================================
+   CSS CUSTOM PROPERTIES (CSS Variables)
+   
+   Define font-family stacks and other design tokens for easy reuse
+   ============================================================================ */
+:root {
+  /* Font Stack Variables */
+  --font-family-sans: 'Inter', 'Noto Sans Devanagari', system-ui, -apple-system, sans-serif;
+  --font-family-inter: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-family-devanagari: 'Noto Sans Devanagari', 'Inter', system-ui, sans-serif;
+  --font-family-numeric: 'Inter', 'Noto Sans Devanagari', system-ui, sans-serif;
+  
+  /* Font Weight Variables */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  --font-weight-black: 900;
+}
+
+/* ============================================================================
+   BASE LAYER STYLES
+   
+   Reset and apply foundational styles to HTML, body, and semantic elements
+   ============================================================================ */
 @layer base {
+  /* HTML Root Element */
   html {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: var(--font-family-sans);
+    font-size: 16px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
   }
 
+  /* Body Element */
   body {
-    @apply bg-gray-50 text-gray-900 dark:bg-secondary-900 dark:text-secondary-100 transition-colors duration-300;
+    @apply bg-secondary-900 text-secondary-100 transition-colors duration-300;
+    font-family: var(--font-family-sans);
+    line-height: 1.6;
+    letter-spacing: 0.3px;
   }
 
-  /* Scrollbar Styles */
+  /* All Elements */
+  * {
+    font-family: var(--font-family-sans);
+  }
+
+  /* ============================================================================
+     SCROLLBAR STYLES (Dark Theme)
+     
+     Custom scrollbar for WebKit browsers with dark theme colors
+     ============================================================================ */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-gray-100 dark:bg-secondary-800 rounded-full;
+    @apply bg-secondary-800;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 dark:bg-secondary-600 rounded-full;
+    @apply bg-secondary-600 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400 dark:bg-secondary-500;
+    @apply bg-secondary-500;
   }
 
-  /* Selection */
+  /* ============================================================================
+     TEXT SELECTION STYLES
+     
+     Blue accent color for selected text (matches primary color)
+     ============================================================================ */
   ::selection {
-    @apply bg-primary-100 dark:bg-primary-900 text-primary-900 dark:text-primary-100;
+    @apply bg-primary-500 text-white;
   }
 
-  /* Focus Outline */
+  ::-moz-selection {
+    @apply bg-primary-500 text-white;
+  }
+
+  /* ============================================================================
+     FOCUS & OUTLINE STYLES
+     
+     Accessible focus states with proper ring and offset
+     ============================================================================ */
   *:focus-visible {
-    @apply outline-none ring-2 ring-primary-500 dark:ring-primary-400 ring-offset-2 dark:ring-offset-secondary-900;
+    @apply outline-none ring-2 ring-primary-400 ring-offset-2 ring-offset-secondary-900;
   }
 
-  /* Heading Styles */
+  /* ============================================================================
+     HEADING STYLES (h1 - h6)
+     
+     Professional heading hierarchy with Inter font and proper sizing
+     ============================================================================ */
   h1, h2, h3, h4, h5, h6 {
-    @apply dark:text-white;
+    font-family: var(--font-family-inter);
+    font-weight: 700;
+    @apply text-white;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
   }
 
-  /* Link Styles */
+  h1 {
+    @apply text-4xl md:text-5xl;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl;
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl;
+  }
+
+  h4 {
+    @apply text-xl md:text-2xl;
+  }
+
+  h5 {
+    @apply text-lg;
+  }
+
+  h6 {
+    @apply text-base;
+  }
+
+  /* ============================================================================
+     PARAGRAPH & TEXT STYLES
+     ============================================================================ */
+  p {
+    @apply text-secondary-200 leading-relaxed;
+  }
+
   a {
-    @apply transition-colors;
+    @apply text-primary-400 hover:text-primary-300 transition-colors;
+    font-weight: 500;
+  }
+
+  /* ============================================================================
+     FORM ELEMENTS - Font Override
+     
+     Ensure buttons, inputs, selects, and textareas use Inter font
+     ============================================================================ */
+  button, input, select, textarea {
+    font-family: var(--font-family-sans);
+  }
+
+  button {
+    font-weight: 500;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-secondary-500;
+  }
+
+  /* ============================================================================
+     CODE & PREFORMATTED TEXT
+     ============================================================================ */
+  code, pre {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    @apply bg-secondary-800 text-secondary-100;
+  }
+
+  pre {
+    @apply p-4 rounded-lg overflow-auto;
+  }
+
+  /* ============================================================================
+     LANGUAGE-SPECIFIC TEXT RENDERING
+     
+     Automatically apply appropriate font based on HTML lang attribute
+     ============================================================================ */
+  :lang(hi) {
+    font-family: var(--font-family-devanagari);
+    line-height: 1.9;
+    letter-spacing: 0px;
+  }
+
+  :lang(en) {
+    font-family: var(--font-family-inter);
   }
 }
 
-/* Component Styles */
+/* ============================================================================
+   COMPONENT LAYER STYLES
+   
+   Reusable component classes for typography, forms, and layout
+   ============================================================================ */
 @layer components {
-  /* Card Styles */
+  /* ============================================================================
+     SPECIAL TEXT CLASSES
+     
+     Context-specific typography classes for different content types
+     ============================================================================ */
+
+  /* Question Text - Hindi Questions with Optimal Devanagari Rendering */
+  .question-text {
+    @apply text-lg leading-relaxed;
+    font-family: var(--font-family-devanagari);
+    line-height: 1.9;
+    font-size: 1.05rem;
+    font-weight: 400;
+    letter-spacing: 0px;
+  }
+
+  /* Option Text - Hindi Options with Proper Line Height */
+  .option-text {
+    @apply text-base;
+    font-family: var(--font-family-devanagari);
+    line-height: 1.8;
+    font-weight: 400;
+    letter-spacing: 0px;
+  }
+
+  /* Numeric Text - For Timer, Score, Marks (Tabular Numbers) */
+  /* Tabular numbers ensure digits align vertically for counters & scores */
+  .font-numeric {
+    font-family: var(--font-family-numeric);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    @apply text-white;
+  }
+
+  /* English Only Text - Force Inter Font */
+  .text-english {
+    font-family: var(--font-family-inter);
+    font-weight: 500;
+  }
+
+  /* ============================================================================
+     CARD STYLES
+     ============================================================================ */
   .card {
-    @apply bg-white dark:bg-secondary-800 rounded-xl border border-gray-200 dark:border-secondary-700 shadow-sm dark:shadow-lg transition-colors duration-300;
+    @apply bg-secondary-800 rounded-xl border border-secondary-700 shadow-lg transition-colors duration-300;
   }
 
   .card-hover {
-    @apply card transition-all duration-200 hover:shadow-md dark:hover:shadow-xl hover:border-gray-300 dark:hover:border-secondary-600;
+    @apply card transition-all duration-200 hover:shadow-xl hover:border-secondary-600 hover:bg-secondary-750;
   }
 
-  .card-dark {
-    @apply dark:bg-secondary-800 dark:border-secondary-700;
-  }
-
-  /* Button Base */
+  /* ============================================================================
+     BUTTON STYLES
+     ============================================================================ */
   .btn {
-    @apply inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:ring-offset-secondary-900;
+    @apply inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-secondary-900;
   }
 
   .btn-primary {
-    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 dark:focus:ring-primary-400 dark:hover:bg-primary-700;
+    @apply btn bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 focus:ring-primary-500;
   }
 
   .btn-secondary {
-    @apply btn bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500 dark:bg-secondary-700 dark:text-secondary-200 dark:hover:bg-secondary-600 dark:focus:ring-secondary-500;
-  }
-
-  .btn-ghost {
-    @apply btn bg-transparent text-gray-700 hover:bg-gray-100 dark:text-secondary-300 dark:hover:bg-secondary-700;
+    @apply btn bg-secondary-700 text-secondary-100 hover:bg-secondary-600 active:bg-secondary-700 focus:ring-secondary-500;
   }
 
   .btn-outline {
-    @apply btn border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-secondary-600 dark:text-secondary-300 dark:hover:bg-secondary-700;
+    @apply btn border border-secondary-600 text-secondary-100 hover:bg-secondary-700 active:bg-secondary-600 focus:ring-primary-500;
   }
 
-  /* Input Styles */
+  .btn-ghost {
+    @apply btn bg-transparent text-secondary-300 hover:bg-secondary-700 active:bg-secondary-600 focus:ring-primary-500;
+  }
+
+  /* Button Sizes */
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm;
+  }
+
+  .btn-md {
+    @apply px-4 py-2.5 text-base;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-lg;
+  }
+
+  /* ============================================================================
+     INPUT & FORM STYLES
+     ============================================================================ */
   .input {
-    @apply w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-secondary-600 rounded-lg transition-colors;
-    @apply bg-white dark:bg-secondary-800 text-gray-900 dark:text-white;
-    @apply focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 focus:ring-1 focus:ring-primary-500 dark:focus:ring-primary-400;
-    @apply placeholder:text-gray-400 dark:placeholder:text-secondary-500;
+    @apply w-full px-4 py-2.5 text-base border border-secondary-600 rounded-lg transition-colors;
+    @apply bg-secondary-800 text-secondary-100 font-family[var(--font-family-sans)];
+    @apply focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-secondary-900;
   }
 
-  .input-error {
-    @apply input border-red-300 dark:border-red-600 focus:border-red-500 focus:ring-red-500 dark:focus:border-red-500 dark:focus:ring-red-500;
+  .input:disabled {
+    @apply bg-secondary-700 text-secondary-500 cursor-not-allowed;
   }
 
-  /* Label */
-  .label {
-    @apply block text-sm font-medium text-gray-700 dark:text-secondary-300 mb-1;
+  .textarea {
+    @apply input resize-none;
   }
 
-  /* Badge Styles */
-  .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors duration-300;
+  .select {
+    @apply input appearance-none bg-secondary-800 cursor-pointer;
   }
 
-  .badge-primary {
-    @apply badge bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200;
+  /* ============================================================================
+     TEXT UTILITY CLASSES
+     ============================================================================ */
+  
+  /* Truncate Text */
+  .truncate {
+    @apply overflow-hidden text-overflow-ellipsis whitespace-nowrap;
   }
 
-  .badge-success {
-    @apply badge bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200;
+  .line-clamp-1 {
+    @apply overflow-hidden text-overflow-ellipsis display-webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
   }
 
-  .badge-warning {
-    @apply badge bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-200;
-  }
-
-  .badge-danger {
-    @apply badge bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200;
-  }
-
-  .badge-info {
-    @apply badge bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200;
-  }
-
-  /* Table Styles */
-  .table-container {
-    @apply overflow-x-auto rounded-lg border border-gray-200 dark:border-secondary-700;
-  }
-
-  .table {
-    @apply w-full text-sm text-left;
-  }
-
-  .table th {
-    @apply px-4 py-3 bg-gray-50 dark:bg-secondary-800 font-semibold text-gray-700 dark:text-secondary-200 border-b border-gray-200 dark:border-secondary-700;
-  }
-
-  .table td {
-    @apply px-4 py-3 border-b border-gray-100 dark:border-secondary-700;
-  }
-
-  .table tr:last-child td {
-    @apply border-b-0;
-  }
-
-  .table tr:hover td {
-    @apply bg-gray-50 dark:bg-secondary-700;
-  }
-
-  /* Question Palette Colors (NTA Pattern) */
-  .palette-not-visited {
-    @apply bg-gray-200 dark:bg-secondary-600 border-gray-300 dark:border-secondary-500 text-gray-600 dark:text-secondary-300;
-  }
-
-  .palette-not-answered {
-    @apply bg-red-500 dark:bg-red-600 border-red-600 dark:border-red-700 text-white;
-  }
-
-  .palette-answered {
-    @apply bg-green-500 dark:bg-green-600 border-green-600 dark:border-green-700 text-white;
-  }
-
-  .palette-marked {
-    @apply bg-purple-500 dark:bg-purple-600 border-purple-600 dark:border-purple-700 text-white;
-  }
-
-  .palette-answered-marked {
-    @apply bg-purple-500 dark:bg-purple-600 border-4 border-green-500 dark:border-green-600 text-white;
-  }
-
-  /* Prose for Content */
-  .prose-question {
-    @apply text-gray-800 dark:text-secondary-200 leading-relaxed;
-  }
-
-  .prose-question p {
-    @apply mb-2;
-  }
-
-  .prose-question ul, .prose-question ol {
-    @apply ml-4 mb-2;
-  }
-
-  .prose-question li {
-    @apply mb-1;
-  }
-
-  /* Modal/Dialog Styles */
-  .modal-overlay {
-    @apply bg-black bg-opacity-50 dark:bg-opacity-75;
-  }
-
-  .modal {
-    @apply bg-white dark:bg-secondary-800 rounded-lg shadow-lg dark:shadow-2xl;
-  }
-
-  /* Toast/Notification Styles */
-  .toast-base {
-    @apply bg-white dark:bg-secondary-800 border border-gray-200 dark:border-secondary-700 rounded-lg shadow-lg dark:shadow-xl;
-  }
-
-  .toast-success {
-    @apply toast-base border-l-4 border-l-green-500;
-  }
-
-  .toast-error {
-    @apply toast-base border-l-4 border-l-red-500;
-  }
-
-  .toast-warning {
-    @apply toast-base border-l-4 border-l-yellow-500;
-  }
-
-  .toast-info {
-    @apply toast-base border-l-4 border-l-blue-500;
-  }
-
-  /* Divider Styles */
-  .divider {
-    @apply border-t border-gray-200 dark:border-secondary-700;
-  }
-
-  /* Dropdown Styles */
-  .dropdown-menu {
-    @apply bg-white dark:bg-secondary-800 border border-gray-200 dark:border-secondary-700 rounded-lg shadow-lg dark:shadow-xl;
-  }
-
-  .dropdown-item {
-    @apply px-4 py-2 text-gray-700 dark:text-secondary-300 hover:bg-gray-100 dark:hover:bg-secondary-700 transition-colors;
-  }
-}
-
-/* Utility Styles */
-@layer utilities {
-  /* Text Utilities */
-  .text-balance {
-    text-wrap: balance;
-  }
-
-  /* Hide scrollbar but allow scrolling */
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Gradient Text */
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-800;
-  }
-
-  /* Glass Effect */
-  .glass {
-    @apply bg-white/80 backdrop-blur-md;
-  }
-
-  /* Truncate Multiple Lines */
   .line-clamp-2 {
-    display: -webkit-box;
+    @apply overflow-hidden text-overflow-ellipsis display-webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 
   .line-clamp-3 {
-    display: -webkit-box;
+    @apply overflow-hidden text-overflow-ellipsis display-webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 
-  /* Safe Area Padding */
-  .safe-top {
-    padding-top: env(safe-area-inset-top);
+  /* Text Colors - Semantic */
+  .text-success {
+    @apply text-green-400;
   }
 
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
+  .text-error {
+    @apply text-red-400;
+  }
+
+  .text-warning {
+    @apply text-yellow-400;
+  }
+
+  .text-info {
+    @apply text-blue-400;
+  }
+
+  /* ============================================================================
+     BADGE STYLES
+     ============================================================================ */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary-900 text-primary-200;
+  }
+
+  .badge-secondary {
+    @apply badge bg-secondary-700 text-secondary-200;
+  }
+
+  .badge-success {
+    @apply badge bg-green-900 text-green-200;
+  }
+
+  .badge-error {
+    @apply badge bg-red-900 text-red-200;
+  }
+
+  /* ============================================================================
+     PAGE CONTENT WRAPPER
+     ============================================================================ */
+  .container {
+    @apply mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .prose {
+    @apply max-w-4xl mx-auto;
   }
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
+/* ============================================================================
+   UTILITIES LAYER STYLES
+   
+   Additional utility classes for specific use cases
+   ============================================================================ */
+@layer utilities {
+  /* Font Weight Utilities (using CSS variables) */
+  .font-light {
+    font-weight: var(--font-weight-light);
   }
-  to {
-    opacity: 1;
+
+  .font-normal {
+    font-weight: var(--font-weight-normal);
+  }
+
+  .font-medium {
+    font-weight: var(--font-weight-medium);
+  }
+
+  .font-semibold {
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .font-bold {
+    font-weight: var(--font-weight-bold);
+  }
+
+  .font-extrabold {
+    font-weight: var(--font-weight-extrabold);
+  }
+
+  /* Text Decoration Utilities */
+  .text-underline {
+    text-decoration: underline;
+  }
+
+  .text-line-through {
+    text-decoration: line-through;
+  }
+
+  /* Letter Spacing Utilities */
+  .tracking-tighter {
+    letter-spacing: -0.05em;
+  }
+
+  .tracking-tight {
+    letter-spacing: -0.025em;
+  }
+
+  .tracking-normal {
+    letter-spacing: 0em;
+  }
+
+  .tracking-wide {
+    letter-spacing: 0.025em;
+  }
+
+  .tracking-wider {
+    letter-spacing: 0.05em;
+  }
+
+  .tracking-widest {
+    letter-spacing: 0.1em;
+  }
+
+  /* Gradient Text */
+  .bg-gradient-text {
+    @apply bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent;
+  }
+
+  /* Smooth Transition */
+  .transition-smooth {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Transform Utils */
+  .scale-up {
+    @apply transition-transform hover:scale-105;
+  }
+
+  .scale-down {
+    @apply transition-transform hover:scale-95;
   }
 }
 
-@keyframes fadeOut {
-  from {
-    opacity: 1;
+/* ============================================================================
+   RESPONSIVE TYPOGRAPHY
+   
+   Scale typography appropriately for different screen sizes
+   ============================================================================ */
+@media (max-width: 768px) {
+  /* Adjust heading sizes for mobile */
+  h1 {
+    @apply text-2xl;
   }
-  to {
-    opacity: 0;
+
+  h2 {
+    @apply text-xl;
+  }
+
+  h3 {
+    @apply text-lg;
+  }
+
+  /* Adjust question text for mobile */
+  .question-text {
+    font-size: 0.95rem;
+    line-height: 1.85;
+  }
+
+  /* Smaller input on mobile */
+  .input {
+    @apply text-sm py-2;
   }
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
+/* ============================================================================
+   PRINT STYLES
+   
+   Optimize typography for printing
+   ============================================================================ */
+@media print {
+  html, body {
+    @apply bg-white text-black;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-black;
+    page-break-after: avoid;
   }
-}
 
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
+  p {
+    @apply text-black;
+    line-height: 1.8;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  a {
+    @apply text-blue-600 underline;
   }
-}
-
-@keyframes slideLeft {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideRight {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes scaleOut {
-  from {
-    opacity: 1;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-}
-
-@keyframes bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes ping {
-  75%, 100% {
-    transform: scale(2);
-    opacity: 0;
-  }
-}
-
-@keyframes shake {
-  0%, 100% {
-    transform: translateX(0);
-  }
-  10%, 30%, 50%, 70%, 90% {
-    transform: translateX(-5px);
-  }
-  20%, 40%, 60%, 80% {
-    transform: translateX(5px);
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-/* Animation Classes */
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out forwards;
-}
-
-.animate-fadeOut {
-  animation: fadeOut 0.3s ease-out forwards;
-}
-
-.animate-slideUp {
-  animation: slideUp 0.3s ease-out forwards;
-}
-
-.animate-slideDown {
-  animation: slideDown 0.3s ease-out forwards;
-}
-
-.animate-slideLeft {
-  animation: slideLeft 0.3s ease-out forwards;
-}
-
-.animate-slideRight {
-  animation: slideRight 0.3s ease-out forwards;
-}
-
-.animate-scaleIn {
-  animation: scaleIn 0.2s ease-out forwards;
-}
-
-.animate-scaleOut {
-  animation: scaleOut 0.2s ease-out forwards;
-}
-
-.animate-bounce {
-  animation: bounce 1s infinite;
-}
-
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-.animate-ping {
-  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-.animate-shake {
-  animation: shake 0.5s ease-in-out;
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
 }
 
 .animate-shimmer {
