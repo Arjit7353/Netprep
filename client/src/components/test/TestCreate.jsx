@@ -50,9 +50,9 @@ const QUICK_TEMPLATES = [
   { id: 'pyq_practice', name: 'PYQ Set', nameHi: 'PYQ सेट', desc: 'Previous Year', descHi: 'पिछले वर्ष', icon: Trophy, gradient: 'from-emerald-500 to-teal-500', config: { testType: 'pyq_year', totalQuestions: 30, duration: 40 } }
 ];
 
-const TestCreate = ({ language = 'hi' }) => {
+const TestCreate = ({ language = 'hi', testId }) => {
   const navigate = useNavigate();
-  const { createTest, generateRandomTest, loading } = useTest();
+  const { createTest, generateRandomTest, updateTest, loading } = useTest();
   const { questions: rawQuestions, fetchQuestions, loading: questionsLoading } = useQuestions();
   const toast = useToast();
   const { syllabus: syllabusData, refreshSyllabus } = useSyllabus();
@@ -70,6 +70,8 @@ const TestCreate = ({ language = 'hi' }) => {
   const [questionsPerUnit, setQuestionsPerUnit] = useState({});
   const [errors, setErrors] = useState({});
   const [testNumber, setTestNumber] = useState(1);
+  const [isEditMode, setIsEditMode] = useState(!!testId);
+  const [loadingExistingTest, setLoadingExistingTest] = useState(!!testId);
 
   const [formData, setFormData] = useState({
     testType: 'practice', title: '', description: '', duration: 60,
@@ -96,6 +98,66 @@ const TestCreate = ({ language = 'hi' }) => {
 
   useEffect(() => { refreshSyllabus(); }, []);
   useEffect(() => { fetchPYQFilters('paper2').catch(() => {}); }, []);
+
+  // ═══ LOAD EXISTING TEST FOR EDITING ═══
+  useEffect(() => {
+    if (!testId) return;
+    
+    const loadTest = async () => {
+      try {
+        const baseUrl = import.meta.env.VITE_API_URL || '';
+        const response = await fetch(`${baseUrl}/api/tests/${testId}`, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (!response.ok) {
+          toast.error(t('परीक्षा लोड नहीं हो सकी', 'Failed to load test'));
+          setLoadingExistingTest(false);
+          return;
+        }
+
+        const data = await response.json();
+        const test = data.data || data;
+
+        // Populate form data
+        setFormData({
+          testType: test.testType || 'practice',
+          title: test.title || '',
+          description: test.description || '',
+          duration: test.duration || 60,
+          totalQuestions: test.totalQuestions || 50,
+          marksPerQuestion: test.marksPerQuestion || 2,
+          negativeMarking: test.negativeMarking || false,
+          negativeMarks: test.negativeMarks || 0.5,
+          shuffleQuestions: test.shuffleQuestions !== false,
+          status: test.status || 'active'
+        });
+
+        // Populate questions
+        if (Array.isArray(test.questions) && test.questions.length > 0) {
+          pushSelection(test.questions);
+        }
+
+        // Populate filters based on test metadata
+        const newFilters = {
+          papers: test.paper ? (test.paper === 'combined' ? ['paper1', 'paper2'] : [test.paper]) : [],
+          units: [],
+          chapters: [],
+          topics: [],
+          types: []
+        };
+        setMainFilters(newFilters);
+
+        setLoadingExistingTest(false);
+      } catch (error) {
+        console.error('Failed to load test:', error);
+        toast.error(t('परीक्षा लोड नहीं हो सकी', 'Failed to load test'));
+        setLoadingExistingTest(false);
+      }
+    };
+
+    loadTest();
+  }, [testId]);
 
   // ═══ PYQ MULTI-SELECT OPTIONS ═══
   const pyqYearOptions = useMemo(() => {
@@ -492,14 +554,22 @@ const TestCreate = ({ language = 'hi' }) => {
           questionsPerUnit, totalQuestions: distTotal
         });
       } else {
-        response = await createTest({
+        const testPayload = {
           ...formData, paper, title,
           unit: unitNames, chapter: chapterNames, topic: topicNames,
           questions: questionIds,
           totalQuestions: actualCount
-        });
+        };
+
+        // Call updateTest if in edit mode, otherwise createTest
+        if (isEditMode && testId) {
+          response = await updateTest(testId, testPayload);
+          toast.success(t('परीक्षा अपडेट की गई!', 'Test updated!'));
+        } else {
+          response = await createTest(testPayload);
+          toast.success(t('परीक्षा बनाई गई!', 'Test created!'));
+        }
       }
-      toast.success(t('परीक्षा बनाई गई!', 'Test created!'));
       setCreatedTest(response.data || response);
       setCurrentStep(STEPS.length - 1);
     } catch (err) {
@@ -929,7 +999,7 @@ const TestCreate = ({ language = 'hi' }) => {
                 <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center shadow-lg animate-bounce"><Sparkles className="w-4 h-4 text-white" /></div>
               </div>
               <h2 className="text-4xl font-black text-gray-900 dark:text-white mb-3">{t('बधाई हो!', 'Congratulations!')}</h2>
-              <p className="text-lg text-gray-600 dark:text-gray-300">{t('परीक्षा सफलतापूर्वक बनाई गई', 'Test created successfully!')}</p>
+              <p className="text-lg text-gray-600 dark:text-gray-300">{isEditMode ? t('परीक्षा सफलतापूर्वक अपडेट की गई', 'Test updated successfully!') : t('परीक्षा सफलतापूर्वक बनाई गई', 'Test created successfully!')}</p>
             </div>
             {createdTest && (
               <GlassCard>
@@ -957,7 +1027,16 @@ const TestCreate = ({ language = 'hi' }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+    <>
+      {loadingExistingTest && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 flex flex-col items-center gap-4">
+            <div className="w-12 h-12 rounded-full border-4 border-gray-200 dark:border-gray-600 border-t-primary-500 animate-spin"></div>
+            <p className="text-gray-700 dark:text-gray-200 font-bold">{t('परीक्षा लोड हो रही हैं...', 'Loading test...')}</p>
+          </div>
+        </div>
+      )}
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -966,7 +1045,7 @@ const TestCreate = ({ language = 'hi' }) => {
             </button>
             <div>
               <h1 className="text-3xl font-black text-gray-900 dark:text-white flex items-center gap-3">
-                {t('नई परीक्षा बनाएं', 'Create New Test')}
+                {isEditMode ? t('परीक्षा संपादित करें', 'Edit Test') : t('नई परीक्षा बनाएं', 'Create New Test')}
                 <span className="px-3 py-1 bg-gradient-to-r from-primary-500 to-purple-500 text-white text-xs rounded-full font-bold shadow-lg">PRO</span>
               </h1>
               <p className="text-sm text-gray-500 mt-1">{t('स्टेप बाय स्टेप', 'Step by step')}</p>
@@ -1002,6 +1081,7 @@ const TestCreate = ({ language = 'hi' }) => {
         onToggleQuestion={toggleQuestion} onSelectAll={qs => selectAllFilteredQuestions(qs)} onClearAll={clearAllQuestions} marksPerQuestion={formData.marksPerQuestion || 2} />
       <FloatingActionButton onClick={() => setShowKeyboardHelp(true)} icon={HelpCircle} label={t('सहायता', 'Help')} />
     </div>
+    </>
   );
 };
 
