@@ -1,39 +1,52 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 const useUndoRedo = (initialState = []) => {
-  const [history, setHistory] = useState([initialState]);
-  const [index, setIndex] = useState(0);
+  // ✅ Single state object — history और index एक साथ update होंगे
+  const [state, setState] = useState({
+    history: [initialState],
+    index: 0,
+  });
 
-  // SAFE: Always return initialState type if undefined
-  const current = history[index] !== undefined ? history[index] : initialState;
-  const canUndo = index > 0;
-  const canRedo = index < history.length - 1;
+  const current = state.history[state.index] !== undefined
+    ? state.history[state.index]
+    : initialState;
+
+  const canUndo = state.index > 0;
+  const canRedo = state.index < state.history.length - 1;
 
   const push = useCallback((newState) => {
-    setHistory(prev => {
-      const trimmed = prev.slice(0, index + 1);
+    setState(prev => {
+      // ✅ prev.index use करो — stale closure problem नहीं होगी
+      const trimmed = prev.history.slice(0, prev.index + 1);
       const limited = trimmed.length >= 50 ? trimmed.slice(1) : trimmed;
-      return [...limited, newState];
+      const newHistory = [...limited, newState];
+      return {
+        history: newHistory,
+        index: newHistory.length - 1, // ✅ always correct
+      };
     });
-    setIndex(prev => {
-      // Recalculate based on what history will be
-      return Math.min(prev + 1, 49);
-    });
-  }, [index]);
+  }, []); // ✅ कोई dependency नहीं — हमेशा fresh
 
   const undo = useCallback(() => {
-    if (canUndo) setIndex(prev => prev - 1);
-  }, [canUndo]);
+    setState(prev => {
+      if (prev.index <= 0) return prev;
+      return { ...prev, index: prev.index - 1 };
+    });
+  }, []);
 
   const redo = useCallback(() => {
-    if (canRedo) setIndex(prev => prev + 1);
-  }, [canRedo]);
+    setState(prev => {
+      if (prev.index >= prev.history.length - 1) return prev;
+      return { ...prev, index: prev.index + 1 };
+    });
+  }, []);
 
-  const reset = useCallback((state) => {
-    const resetState = state !== undefined ? state : initialState;
-    setHistory([resetState]);
-    setIndex(0);
-  }, [initialState]);
+  const reset = useCallback((newState) => {
+    setState({
+      history: [newState !== undefined ? newState : initialState],
+      index: 0,
+    });
+  }, []); // ✅ initialState dependency हटाई
 
   return { current, push, undo, redo, canUndo, canRedo, reset };
 };

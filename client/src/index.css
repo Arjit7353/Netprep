@@ -326,23 +326,29 @@
   
   /* Truncate Text */
   .truncate {
-    @apply overflow-hidden text-overflow-ellipsis whitespace-nowrap;
+    @apply overflow-hidden whitespace-nowrap;
+    text-overflow: ellipsis;
   }
 
   .line-clamp-1 {
-    @apply overflow-hidden text-overflow-ellipsis display-webkit-box;
+    @apply overflow-hidden;
+    display: -webkit-box;
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
   }
 
   .line-clamp-2 {
-    @apply overflow-hidden text-overflow-ellipsis display-webkit-box;
+    @apply overflow-hidden;
+    display: -webkit-box;
+    text-overflow: ellipsis;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
   }
 
   .line-clamp-3 {
-    @apply overflow-hidden text-overflow-ellipsis display-webkit-box;
+    @apply overflow-hidden;
+    display: -webkit-box;
+    text-overflow: ellipsis;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
   }

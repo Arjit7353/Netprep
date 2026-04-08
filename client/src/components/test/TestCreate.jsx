@@ -99,18 +99,29 @@ const TestCreate = ({ language = 'hi', testId }) => {
   useEffect(() => { refreshSyllabus(); }, []);
   useEffect(() => { fetchPYQFilters('paper2').catch(() => {}); }, []);
 
+  // ═══ SYNC EDIT MODE WITH TESTID ═══
+  useEffect(() => {
+    setIsEditMode(!!testId);
+  }, [testId]);
+
   // ═══ LOAD EXISTING TEST FOR EDITING ═══
   useEffect(() => {
-    if (!testId) return;
-    
+    if (!testId) {
+      console.log('[TestCreate] No testId provided - creating new test');
+      return;
+    }
+
+    console.log('[TestCreate] Loading test for editing:', testId);
+
     const loadTest = async () => {
       try {
         const baseUrl = import.meta.env.VITE_API_URL || '';
         const response = await fetch(`${baseUrl}/api/tests/${testId}`, {
           headers: { 'Content-Type': 'application/json' }
         });
-        
+
         if (!response.ok) {
+          console.error('[TestCreate] API returned status:', response.status);
           toast.error(t('परीक्षा लोड नहीं हो सकी', 'Failed to load test'));
           setLoadingExistingTest(false);
           return;
@@ -118,8 +129,10 @@ const TestCreate = ({ language = 'hi', testId }) => {
 
         const data = await response.json();
         const test = data.data || data;
+        console.log('[TestCreate] Test loaded:', test.title,
+          'Questions:', test.questions?.length);
 
-        // Populate form data
+        // ✅ Form data populate
         setFormData({
           testType: test.testType || 'practice',
           title: test.title || '',
@@ -133,14 +146,45 @@ const TestCreate = ({ language = 'hi', testId }) => {
           status: test.status || 'active'
         });
 
-        // Populate questions
+        // ✅ Questions — server पहले से populate करके देता है
         if (Array.isArray(test.questions) && test.questions.length > 0) {
-          pushSelection(test.questions);
+          // Check करो कि full objects हैं या सिर्फ IDs
+          const firstQ = test.questions[0];
+          const isFullObject = firstQ &&
+            typeof firstQ === 'object' &&
+            (firstQ.question || firstQ.options || firstQ._id);
+
+          if (isFullObject) {
+            console.log('[TestCreate] Questions are full objects, selecting directly');
+            // ✅ reset use करो — push नहीं, ताकि clean state हो
+            resetSelection(test.questions);
+          } else {
+            // Questions सिर्फ IDs हैं — fetch करो
+            console.log('[TestCreate] Questions are IDs, fetching full data');
+            try {
+              const qRes = await fetch(`${baseUrl}/api/tests/${testId}/questions`, {
+                headers: { 'Content-Type': 'application/json' }
+              });
+              if (qRes.ok) {
+                const qData = await qRes.json();
+                const fullTest = qData.data || qData;
+                if (Array.isArray(fullTest.questions) && fullTest.questions.length > 0) {
+                  resetSelection(fullTest.questions);
+                  console.log('[TestCreate] Full questions loaded:',
+                    fullTest.questions.length);
+                }
+              }
+            } catch (qErr) {
+              console.error('[TestCreate] Failed to fetch full questions:', qErr);
+            }
+          }
         }
 
-        // Populate filters based on test metadata
+        // ✅ Paper filters populate
         const newFilters = {
-          papers: test.paper ? (test.paper === 'combined' ? ['paper1', 'paper2'] : [test.paper]) : [],
+          papers: test.paper
+            ? (test.paper === 'combined' ? ['paper1', 'paper2'] : [test.paper])
+            : [],
           units: [],
           chapters: [],
           topics: [],
@@ -149,15 +193,17 @@ const TestCreate = ({ language = 'hi', testId }) => {
         setMainFilters(newFilters);
 
         setLoadingExistingTest(false);
+        console.log('[TestCreate] Edit mode ready');
+
       } catch (error) {
-        console.error('Failed to load test:', error);
+        console.error('[TestCreate] Error loading test:', error);
         toast.error(t('परीक्षा लोड नहीं हो सकी', 'Failed to load test'));
         setLoadingExistingTest(false);
       }
     };
 
     loadTest();
-  }, [testId]);
+  }, [testId]); // ✅ सिर्फ testId dependency
 
   // ═══ PYQ MULTI-SELECT OPTIONS ═══
   const pyqYearOptions = useMemo(() => {
@@ -506,6 +552,13 @@ const TestCreate = ({ language = 'hi', testId }) => {
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
 
+    console.log('[TestCreate.handleSubmit]', {
+      isEditMode,
+      testId,
+      selectedQuestionsCount: selectedQuestions.length,
+      formTitle: formData.title
+    });
+
     const questionIds = selectedQuestions.map(q => q._id);
     const actualCount = questionIds.length;
 
@@ -561,11 +614,13 @@ const TestCreate = ({ language = 'hi', testId }) => {
           totalQuestions: actualCount
         };
 
-        // Call updateTest if in edit mode, otherwise createTest
-        if (isEditMode && testId) {
+        // Call updateTest if testId exists, otherwise createTest
+        if (testId) {
+          console.log('[TestCreate.handleSubmit] Updating test:', testId);
           response = await updateTest(testId, testPayload);
           toast.success(t('परीक्षा अपडेट की गई!', 'Test updated!'));
         } else {
+          console.log('[TestCreate.handleSubmit] Creating new test');
           response = await createTest(testPayload);
           toast.success(t('परीक्षा बनाई गई!', 'Test created!'));
         }
