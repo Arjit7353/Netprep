@@ -16,8 +16,9 @@ export const useTest = () => {
     setError(null);
     try {
       const response = await testService.getTests(filters);
-      setTests(response.data || []);
-      setPagination(response.pagination || null);
+      const tests = response.data?.data || response.data || [];
+      setTests(Array.isArray(tests) ? tests : []);
+      setPagination(response.data?.pagination || null);
       return response;
     } catch (err) {
       setError(err.message || 'Failed to fetch tests');
@@ -31,7 +32,8 @@ export const useTest = () => {
   const fetchStats = useCallback(async () => {
     try {
       const response = await testService.getStats();
-      setStats(response.data || null);
+      const statsData = response.data?.data || response.data || null;
+      setStats(statsData);
       return response;
     } catch (err) {
       console.error('Failed to fetch stats:', err);
@@ -46,8 +48,9 @@ export const useTest = () => {
       const response = withQuestions 
         ? await testService.getTestWithQuestions(id)
         : await testService.getTestById(id);
-      setCurrentTest(response.data);
-      return response.data;
+      const testData = response.data?.data || response.data;
+      setCurrentTest(testData);
+      return testData;
     } catch (err) {
       setError(err.message || 'Failed to fetch test');
       throw err;
@@ -89,7 +92,8 @@ export const useTest = () => {
     setLoading(true);
     try {
       const response = await testService.updateTest(id, testData);
-      setTests(prev => prev.map(t => t._id === id ? response.data : t));
+      const updatedTest = response.data?.data || response.data;
+      setTests(prev => prev.map(t => t._id === id ? updatedTest : t));
       return response;
     } catch (err) {
       setError(err.message || 'Failed to update test');

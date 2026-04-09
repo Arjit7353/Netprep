@@ -646,7 +646,7 @@ const TestCreate = ({ language = 'hi', testId }) => {
           toast.success(t('परीक्षा बनाई गई!', 'Test created!'));
         }
       }
-      setCreatedTest(response.data || response);
+      setCreatedTest(response.data?.data || response.data || response);
       setCurrentStep(STEPS.length - 1);
     } catch (err) {
       toast.error(err?.message || t('त्रुटि', 'Error'));
