@@ -255,8 +255,95 @@ const getReportById = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Report not found' });
     }
 
-    // Get current full question data
+    // ═══ HELPER: PYQ question को normalize करो ═══
+    const normalizePYQEntry = (qEntry, doc, pyqIdStr) => {
+      if (!qEntry) return null;
+
+      // question type normalize
+      const TYPE_MAP = {
+        'simple_mcq': 'mcq', 'mcq': 'mcq', 'multiple_choice': 'mcq',
+        'assertion_reason': 'assertion_reason', 'ar': 'assertion_reason',
+        'matching': 'match_following', 'match_following': 'match_following',
+        'chronology': 'sequence_order', 'sequence_order': 'sequence_order',
+        'multi_statement': 'statement_based', 'statement_based': 'statement_based',
+        'comprehension': 'passage_based', 'passage_based': 'passage_based',
+        'passage': 'passage_based',
+      };
+      const qType = TYPE_MAP[(qEntry.type || '').toLowerCase()] || 'mcq';
+
+      return {
+        _id: pyqIdStr,
+        questionNumber: qEntry.qNo,
+        questionType: qType,
+        // ✅ Standard format — getBilingualText समझेगा
+        question: {
+          hi: qEntry.questionTextHi || qEntry.questionText || '',
+          en: qEntry.questionTextEn || qEntry.questionText || ''
+        },
+        options: {
+          hi: qEntry.optionsHi || qEntry.options || [],
+          en: qEntry.optionsEn || qEntry.options || []
+        },
+        correctAnswer: qEntry.correctAnswer ?? 0,
+        explanation: {
+          hi: qEntry.explanationHi || qEntry.explanation || '',
+          en: qEntry.explanationEn || qEntry.explanation || ''
+        },
+        // ✅ Type-specific data
+        assertionReasonData: (qEntry.assertionHi || qEntry.assertion) ? {
+          assertion: {
+            hi: qEntry.assertionHi || qEntry.assertion || '',
+            en: qEntry.assertionEn || ''
+          },
+          reason: {
+            hi: qEntry.reasonHi || qEntry.reason || '',
+            en: qEntry.reasonEn || ''
+          }
+        } : undefined,
+        matchData: (qEntry.listAHi?.length || qEntry.listA?.length) ? {
+          listA: {
+            hi: qEntry.listAHi || qEntry.listA || [],
+            en: qEntry.listAEn || []
+          },
+          listB: {
+            hi: qEntry.listBHi || qEntry.listB || [],
+            en: qEntry.listBEn || []
+          },
+          correctMatch: qEntry.correctMatch || []
+        } : undefined,
+        statementData: (qEntry.statementsHi?.length || qEntry.statements?.length) ? {
+          statements: {
+            hi: qEntry.statementsHi || qEntry.statements || [],
+            en: qEntry.statementsEn || []
+          },
+          correctStatements: qEntry.correctStatements || []
+        } : undefined,
+        sequenceData: (qEntry.itemsHi?.length || qEntry.items?.length) ? {
+          items: {
+            hi: qEntry.itemsHi || qEntry.items || [],
+            en: qEntry.itemsEn || []
+          },
+          correctOrder: qEntry.correctOrder || []
+        } : undefined,
+        // Meta
+        paper: doc.paper,
+        unit: qEntry.unitName || qEntry.unitId || '',
+        chapter: qEntry.chapter || '',
+        topic: qEntry.topic || '',
+        subtopic: qEntry.subtopic || '',
+        difficulty: qEntry.difficulty || 'medium',
+        source: `PYQ ${doc.year} ${doc.session || ''}`.trim(),
+        year: doc.year,
+        isPYQ: true,
+        pyqSession: doc.session || '',
+        pyqLabel: doc.displayLabel,
+        _isVirtualPYQ: true
+      };
+    };
+
+    // ═══ CURRENT QUESTION ═══
     let currentQuestion = null;
+
     if (report.questionSource === 'bank') {
       try {
         currentQuestion = await Question.findById(report.questionId)
@@ -265,41 +352,105 @@ const getReportById = async (req, res, next) => {
           .lean();
       } catch {}
     } else {
+      // PYQ question
       try {
         const match = String(report.questionId).match(/^pyq_([a-f0-9]{24})_(\d+)$/i);
         if (match) {
           const PYQAnalysis = require('../models/PYQAnalysis');
           const doc = await PYQAnalysis.findById(match[1]).lean();
           if (doc) {
-            const qEntry = (doc.questionTopicMap || []).find(q => q.qNo === parseInt(match[2]));
+            const qEntry = (doc.questionTopicMap || [])
+              .find(q => q.qNo === parseInt(match[2]));
             if (qEntry) {
-              currentQuestion = { _id: report.questionId, isPYQ: true, pyqLabel: doc.displayLabel, ...qEntry };
+              // ✅ Normalize करो — raw spread नहीं
+              currentQuestion = normalizePYQEntry(qEntry, doc, report.questionId);
             }
           }
         }
-      } catch {}
+      } catch (e) {
+        console.warn('[Report Detail] PYQ currentQuestion failed:', e.message);
+      }
     }
 
-    // Get ALL questions from the test where this question belongs
+    // ═══ ALL TEST QUESTIONS — Bank + PYQ दोनों ═══
     let testQuestions = [];
-    if (report.testId && report.testId.questions) {
-      try {
-        const qIds = report.testId.questions
-          .filter(q => typeof q === 'string' ? !q.startsWith('pyq_') : true)
-          .map(q => {
-            try { return new mongoose.Types.ObjectId(String(q)); } catch { return null; }
-          })
-          .filter(Boolean);
 
-        if (qIds.length > 0) {
-          testQuestions = await Question.find({ _id: { $in: qIds } })
+    if (report.testId && report.testId.questions) {
+      const allQIds = report.testId.questions;
+
+      // Separate bank and PYQ IDs
+      const bankIds = [];
+      const pyqIds = [];
+
+      allQIds.forEach(q => {
+        const idStr = typeof q === 'string' ? q : String(q);
+        if (idStr.startsWith('pyq_')) {
+          pyqIds.push(idStr); // ✅ PYQ IDs collect करो
+        } else {
+          try {
+            bankIds.push(new mongoose.Types.ObjectId(idStr));
+          } catch {}
+        }
+      });
+
+      // ✅ Bank questions fetch
+      let bankQuestions = [];
+      if (bankIds.length > 0) {
+        try {
+          bankQuestions = await Question.find({ _id: { $in: bankIds } })
             .populate('passageId')
             .populate('diDataId')
             .lean();
+        } catch (e) {
+          console.warn('[Report Detail] Bank questions failed:', e.message);
         }
-      } catch (e) {
-        console.warn('[Report Detail] Failed to load test questions:', e.message);
       }
+
+      // ✅ PYQ questions fetch और normalize
+      let pyqQuestions = [];
+      if (pyqIds.length > 0) {
+        try {
+          const PYQAnalysis = require('../models/PYQAnalysis');
+          const pyqDocCache = {};
+
+          for (const pyqIdStr of pyqIds) {
+            const match = pyqIdStr.match(/^pyq_([a-f0-9]{24})_(\d+)$/i);
+            if (!match) continue;
+
+            const docId = match[1];
+            const qNo = parseInt(match[2]);
+
+            // Cache से fetch
+            if (!pyqDocCache[docId]) {
+              pyqDocCache[docId] = await PYQAnalysis.findById(docId).lean();
+            }
+            const doc = pyqDocCache[docId];
+            if (!doc) continue;
+
+            const qEntry = (doc.questionTopicMap || []).find(q => q.qNo === qNo);
+            if (!qEntry) continue;
+
+            // ✅ Normalize करो
+            const normalized = normalizePYQEntry(qEntry, doc, pyqIdStr);
+            if (normalized) pyqQuestions.push(normalized);
+          }
+        } catch (e) {
+          console.warn('[Report Detail] PYQ questions failed:', e.message);
+        }
+      }
+
+      // ✅ Original order maintain करो
+      const bankMap = new Map(bankQuestions.map(q => [q._id.toString(), q]));
+      const pyqMap = new Map(pyqQuestions.map(q => [q._id, q]));
+
+      testQuestions = allQIds.map(q => {
+        const idStr = typeof q === 'string' ? q : String(q);
+        if (idStr.startsWith('pyq_')) {
+          return pyqMap.get(idStr) || null;
+        } else {
+          return bankMap.get(idStr) || null;
+        }
+      }).filter(Boolean);
     }
 
     const affectedTests = await getAffectedTests(report.questionId);

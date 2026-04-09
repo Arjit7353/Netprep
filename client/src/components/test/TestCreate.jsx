@@ -12,7 +12,7 @@ import {
   Zap, Trophy, Lightbulb, Activity, Play, Copy, X, Star,
   Calendar, ScrollText, Tag
 } from 'lucide-react';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTest } from '../../hooks/useTest';
 import { useQuestions } from '../../hooks/useQuestions';
@@ -89,6 +89,9 @@ const TestCreate = ({ language = 'hi', testId }) => {
   });
   const [showPYQFilters, setShowPYQFilters] = useState(false);
 
+  // ✅ Loading ref to block testType effect during initial load
+  const isLoadingRef = useRef(false);
+
   const {
     current: rawSelectedQuestions, push: pushSelection,
     undo: handleUndo, redo: handleRedo, canUndo, canRedo, reset: resetSelection
@@ -114,6 +117,9 @@ const TestCreate = ({ language = 'hi', testId }) => {
     console.log('[TestCreate] Loading test for editing:', testId);
 
     const loadTest = async () => {
+      // ✅ Loading शुरू — testType effect block करो
+      isLoadingRef.current = true;
+
       try {
         const baseUrl = import.meta.env.VITE_API_URL || '';
         const response = await fetch(`${baseUrl}/api/tests/${testId}`, {
@@ -199,6 +205,12 @@ const TestCreate = ({ language = 'hi', testId }) => {
         console.error('[TestCreate] Error loading test:', error);
         toast.error(t('परीक्षा लोड नहीं हो सकी', 'Failed to load test'));
         setLoadingExistingTest(false);
+      } finally {
+        // ✅ Loading खत्म — अब testType effect allow करो
+        // Small delay ताकि React सभी state updates process कर ले
+        setTimeout(() => {
+          isLoadingRef.current = false;
+        }, 100);
       }
     };
 
@@ -395,6 +407,9 @@ const TestCreate = ({ language = 'hi', testId }) => {
 
   // ═══ EFFECTS ═══
   useEffect(() => {
+    // ✅ Edit mode में initial load के दौरान testType effect ignore करो
+    if (isLoadingRef.current) return;
+
     const cfg = TEST_TYPE_CONFIG[formData.testType];
     if (cfg) {
       setFormData(p => ({ ...p, duration: cfg.defaultDuration, totalQuestions: cfg.defaultQuestions, marksPerQuestion: cfg.marksPerQuestion || 2, negativeMarking: cfg.negativeMarking || false, negativeMarks: cfg.negativeMarks || 0.5 }));

@@ -18,7 +18,9 @@ const MatchFollowing = ({
   const explanation = getBilingualText(question.explanation, language);
 
   const handleSelect = (index) => {
-    if (!disabled && onAnswerSelect) onAnswerSelect(index);
+    // ✅ FIX: isPreview mode mein select allow nahi, lekin parent block nahi hoga
+    if (disabled || isPreview) return;
+    if (onAnswerSelect) onAnswerSelect(index);
   };
 
   const getOptionStyle = (index) => {
@@ -38,10 +40,13 @@ const MatchFollowing = ({
   };
 
   return (
+    // ✅ FIX: pointer-events-none hatao - sirf button level pe handle karo
     <div className="space-y-4">
-      {/* Instruction */}
+      {/* Question Text */}
       <div className="text-gray-700 dark:text-secondary-200 font-medium">
-        {questionText || (language === 'hi' ? 'सूची-I को सूची-II से सुमेलित कीजिए:' : 'Match List-I with List-II:')}
+        {questionText || (language === 'hi'
+          ? 'सूची-I को सूची-II से सुमेलित कीजिए:'
+          : 'Match List-I with List-II:')}
       </div>
 
       {/* Match Table */}
@@ -102,7 +107,7 @@ const MatchFollowing = ({
         </div>
       )}
 
-      {/* Option instruction */}
+      {/* Option Instruction */}
       <div className="text-sm text-gray-600 dark:text-secondary-400">
         {language === 'hi'
           ? 'नीचे दिए गए विकल्पों में से सही उत्तर चुनिए:'
@@ -114,9 +119,18 @@ const MatchFollowing = ({
         {options.map((option, index) => (
           <button
             key={index}
-            onClick={() => handleSelect(index)}
-            disabled={disabled || isPreview}
-            className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all duration-200 text-left ${getOptionStyle(index)} ${!disabled && !isPreview ? 'cursor-pointer' : 'cursor-default'}`}
+            type="button"
+            onClick={(e) => {
+              // ✅ FIX: event ko parent tak mat jane do
+              e.stopPropagation();
+              handleSelect(index);
+            }}
+            // ✅ FIX: disabled HTML attribute nahi lagao
+            // sirf onClick mein return karo - taaki parent events block na hon
+            className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all duration-200 text-left
+              ${getOptionStyle(index)}
+              ${(!disabled && !isPreview) ? 'cursor-pointer' : 'cursor-default'}
+            `}
           >
             <div className="flex-shrink-0">
               {showAnswer && index === question.correctAnswer ? (
