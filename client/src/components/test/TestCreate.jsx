@@ -50,6 +50,12 @@ const QUICK_TEMPLATES = [
   { id: 'pyq_practice', name: 'PYQ Set', nameHi: 'PYQ सेट', desc: 'Previous Year', descHi: 'पिछले वर्ष', icon: Trophy, gradient: 'from-emerald-500 to-teal-500', config: { testType: 'pyq_year', totalQuestions: 30, duration: 40 } }
 ];
 
+// ✅ Helper function to get base URL correctly (remove trailing /api)
+const getBaseUrl = () => {
+  const url = import.meta.env.VITE_API_URL || '';
+  return url.replace(/\/api\/?$/, '');
+};
+
 const TestCreate = ({ language = 'hi', testId }) => {
   const navigate = useNavigate();
   const { createTest, generateRandomTest, updateTest, loading } = useTest();
@@ -121,7 +127,7 @@ const TestCreate = ({ language = 'hi', testId }) => {
       isLoadingRef.current = true;
 
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || '';
+        const baseUrl = getBaseUrl();
         const response = await fetch(`${baseUrl}/api/tests/${testId}`, {
           headers: { 'Content-Type': 'application/json' }
         });
