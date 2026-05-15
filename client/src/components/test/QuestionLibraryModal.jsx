@@ -717,28 +717,32 @@ const QuestionLibraryModal = ({
   const selectedIds = useMemo(() => new Set(selectedQuestions.map(q => q._id)), [selectedQuestions]);
 
   useEffect(() => {
-    if (isOpen && paginated.length > 0) {
-      const idsToLoad = paginated.map(q => q._id).filter(id => !testUsageMap[id]);
+    if (isOpen && questions.length > 0) {
+      const idsToLoad = questions.map(q => q._id).filter(id => !testUsageMap[id]);
       if (idsToLoad.length > 0) {
         loadTestUsage(idsToLoad);
       }
     }
-  }, [isOpen, paginated]);
+  }, [isOpen, questions.length]);
 
-  const loadTestUsage = async (ids) => {
+  const loadTestUsage = useCallback(async (ids) => {
     if (!ids || ids.length === 0) return;
     setTestUsageLoading(true);
     try {
-      const res = await questionService.getTestUsage(ids);
-      if (res.success) {
-        setTestUsageMap(prev => ({ ...prev, ...res.data }));
+      const batchSize = 200;
+      for (let i = 0; i < ids.length; i += batchSize) {
+        const batch = ids.slice(i, i + batchSize);
+        const res = await questionService.getTestUsage(batch);
+        if (res.success) {
+          setTestUsageMap(prev => ({ ...prev, ...res.data }));
+        }
       }
     } catch (err) {
       console.error('Test usage load failed:', err);
     } finally {
       setTestUsageLoading(false);
     }
-  };
+  }, []);
 
   const handleShowTestUsage = (question, tests) => {
     setTestUsageQuestion(question);
