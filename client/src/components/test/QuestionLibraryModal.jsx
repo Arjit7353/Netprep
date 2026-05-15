@@ -723,7 +723,7 @@ const QuestionLibraryModal = ({
         loadTestUsage(idsToLoad);
       }
     }
-  }, [isOpen, paginated, testUsageMap]);
+  }, [isOpen, paginated]);
 
   const loadTestUsage = async (ids) => {
     if (!ids || ids.length === 0) return;
