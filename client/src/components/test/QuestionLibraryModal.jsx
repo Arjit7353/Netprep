@@ -717,16 +717,19 @@ const QuestionLibraryModal = ({
   const selectedIds = useMemo(() => new Set(selectedQuestions.map(q => q._id)), [selectedQuestions]);
 
   useEffect(() => {
-    if (isOpen && questions.length > 0) {
-      loadTestUsage(questions.map(q => q._id));
+    if (isOpen && paginated.length > 0) {
+      const idsToLoad = paginated.map(q => q._id).filter(id => !testUsageMap[id]);
+      if (idsToLoad.length > 0) {
+        loadTestUsage(idsToLoad);
+      }
     }
-  }, [isOpen, questions]);
+  }, [isOpen, paginated, testUsageMap]);
 
   const loadTestUsage = async (ids) => {
     if (!ids || ids.length === 0) return;
     setTestUsageLoading(true);
     try {
-      const res = await questionService.getTestUsage(ids.slice(0, 200));
+      const res = await questionService.getTestUsage(ids);
       if (res.success) {
         setTestUsageMap(prev => ({ ...prev, ...res.data }));
       }
