@@ -445,7 +445,8 @@ const TestCreate = ({ language = 'hi', testId }) => {
 
   useEffect(() => {
     if (showQuestionModal) {
-      const apiFilters = { limit: 200, sort: '-createdAt' };
+      // Fetch with a very high limit to get ALL questions (API will return pagination info)
+      const apiFilters = { limit: 99999, sort: '-createdAt' };
       if (mainFilters.papers && mainFilters.papers.length > 0) apiFilters.paper = mainFilters.papers;
       if (mainFilters.types && mainFilters.types.length > 0) apiFilters.questionType = mainFilters.types;
       fetchQuestions(apiFilters);
@@ -1150,7 +1151,7 @@ const TestCreate = ({ language = 'hi', testId }) => {
       <QuestionLibraryModal isOpen={showQuestionModal} onClose={() => setShowQuestionModal(false)}
         questions={questions} questionsLoading={questionsLoading} selectedQuestions={selectedQuestions} onToggleQuestion={toggleQuestion}
         onSelectAll={() => selectAllFilteredQuestions(questions)} onSelectAllFiltered={selectAllFilteredQuestions} onClearAll={clearAllQuestions}
-        onApplyFilters={async f => { await fetchQuestions({ limit: 200, sort: '-createdAt', ...f }); }}
+        onApplyFilters={async f => { await fetchQuestions({ limit: 99999, sort: '-createdAt', ...f }); }}
         language={language} marksPerQuestion={formData.marksPerQuestion || 2}
         getUnitOptions={getUnitOptions} getChapterOptions={getChapterOptions} getTopicOptions={getTopicOptions} getTypeOptions={getTypeOptions} mainFilters={mainFilters} />
       <PYQQuestionLibrary isOpen={showPYQModal} onClose={() => setShowPYQModal(false)} language={language} selectedQuestions={selectedQuestions}

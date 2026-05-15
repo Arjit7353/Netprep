@@ -925,6 +925,38 @@ const QuestionLibraryModal = ({
     setPage(1);
   }, []);
 
+  // ═══ ADVANCED SELECTION HANDLERS ═══
+  const selectByDifficulty = useCallback((difficulty) => {
+    const toAdd = filtered.filter(q => q.difficulty === difficulty && !selectedIds.has(q._id));
+    if (toAdd.length === 0) { flash(t('सभी पहले से चुने हैं', 'All already selected')); return; }
+    onSelectAllFiltered(toAdd);
+    flash(`✓ +${toAdd.length} ${difficulty} ${t('प्रश्न', 'questions')}`);
+  }, [filtered, selectedIds, onSelectAllFiltered, flash, t]);
+
+  const selectByPaper = useCallback((paper) => {
+    const toAdd = filtered.filter(q => q.paper === paper && !selectedIds.has(q._id));
+    if (toAdd.length === 0) { flash(t('सभी पहले से चुने हैं', 'All already selected')); return; }
+    onSelectAllFiltered(toAdd);
+    flash(`✓ +${toAdd.length} ${paper === 'paper1' ? 'Paper 1' : 'Paper 2'} ${t('प्रश्न', 'questions')}`);
+  }, [filtered, selectedIds, onSelectAllFiltered, flash, t]);
+
+  const selectHighQuality = useCallback(() => {
+    const toAdd = filtered.filter(q => {
+      const quality = calcQuality(q);
+      return quality.score >= 70 && !selectedIds.has(q._id);
+    });
+    if (toAdd.length === 0) { flash(t('उच्च गुणवत्ता वाले सभी प्रश्न पहले से चुने हैं', 'All high-quality questions already selected')); return; }
+    onSelectAllFiltered(toAdd);
+    flash(`✓ +${toAdd.length} ${t('उच्च गुणवत्ता प्रश्न', 'high-quality questions')}`);
+  }, [filtered, selectedIds, onSelectAllFiltered, flash, t]);
+
+  const selectPYQOnly = useCallback(() => {
+    const toAdd = filtered.filter(q => q.isPYQ && !selectedIds.has(q._id));
+    if (toAdd.length === 0) { flash(t('सभी PYQ पहले से चुने हैं', 'All PYQ already selected')); return; }
+    onSelectAllFiltered(toAdd);
+    flash(`✓ +${toAdd.length} ${t('PYQ प्रश्न', 'PYQ questions')}`);
+  }, [filtered, selectedIds, onSelectAllFiltered, flash, t]);
+
   if (!isOpen) return null;
 
   return createPortal(
@@ -1067,7 +1099,7 @@ const QuestionLibraryModal = ({
               <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1); }}
                 className="hidden sm:block px-2 py-2.5 border-2 border-gray-200 dark:border-secondary-600 rounded-xl text-xs
                   bg-white dark:bg-secondary-800 text-gray-700 dark:text-secondary-300 w-14 cursor-pointer">
-                {[5, 10, 15, 20, 30, 50].map(o => <option key={o} value={o}>{o}</option>)}
+                {[5, 10, 15, 20, 25, 30, 50].map(o => <option key={o} value={o}>{o}</option>)}
               </select>
               <div className="flex bg-gray-100 dark:bg-secondary-700 rounded-xl p-0.5">
                 {[{ k: 'list', i: List }, { k: 'grid', i: LayoutGrid }].map(v => (
@@ -1235,6 +1267,71 @@ const QuestionLibraryModal = ({
                   )}
                 </div>
               )}
+
+              {/* ═══ ADVANCED SELECTION PANEL ═══ */}
+              <div className="p-3 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20 rounded-xl border border-violet-200 dark:border-violet-800">
+                <p className="text-[11px] font-bold text-violet-700 dark:text-violet-300 mb-2.5">{t('स्मार्ट चयन', 'Smart Selection')}:</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  <button type="button" onClick={() => selectByDifficulty('easy')} disabled={unselCount === 0}
+                    className={`px-2 py-2 text-[10px] font-bold rounded-lg border-2 transition-all flex items-center justify-center gap-1
+                      ${unselCount > 0
+                        ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40'
+                        : 'border-gray-200 dark:border-secondary-600 text-gray-400 dark:text-secondary-500 cursor-not-allowed'
+                      }`}>
+                    <Gauge className="w-3 h-3" />{t('आसान', 'Easy')}
+                  </button>
+                  <button type="button" onClick={() => selectByDifficulty('medium')} disabled={unselCount === 0}
+                    className={`px-2 py-2 text-[10px] font-bold rounded-lg border-2 transition-all flex items-center justify-center gap-1
+                      ${unselCount > 0
+                        ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                        : 'border-gray-200 dark:border-secondary-600 text-gray-400 dark:text-secondary-500 cursor-not-allowed'
+                      }`}>
+                    <Gauge className="w-3 h-3" />{t('मध्यम', 'Medium')}
+                  </button>
+                  <button type="button" onClick={() => selectByDifficulty('hard')} disabled={unselCount === 0}
+                    className={`px-2 py-2 text-[10px] font-bold rounded-lg border-2 transition-all flex items-center justify-center gap-1
+                      ${unselCount > 0
+                        ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40'
+                        : 'border-gray-200 dark:border-secondary-600 text-gray-400 dark:text-secondary-500 cursor-not-allowed'
+                      }`}>
+                    <Gauge className="w-3 h-3" />{t('कठिन', 'Hard')}
+                  </button>
+                  <button type="button" onClick={selectHighQuality} disabled={unselCount === 0}
+                    className={`px-2 py-2 text-[10px] font-bold rounded-lg border-2 transition-all flex items-center justify-center gap-1
+                      ${unselCount > 0
+                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40'
+                        : 'border-gray-200 dark:border-secondary-600 text-gray-400 dark:text-secondary-500 cursor-not-allowed'
+                      }`}>
+                    <Sparkles className="w-3 h-3" />{t('उच्च', 'High Quality')}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mt-2">
+                  <button type="button" onClick={() => selectByPaper('paper1')} disabled={unselCount === 0}
+                    className={`px-2 py-2 text-[10px] font-bold rounded-lg border-2 transition-all flex items-center justify-center gap-1
+                      ${unselCount > 0
+                        ? 'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-300 dark:border-cyan-700 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-100 dark:hover:bg-cyan-900/40'
+                        : 'border-gray-200 dark:border-secondary-600 text-gray-400 dark:text-secondary-500 cursor-not-allowed'
+                      }`}>
+                    <FileText className="w-3 h-3" />{t('पेपर 1', 'Paper 1')}
+                  </button>
+                  <button type="button" onClick={() => selectByPaper('paper2')} disabled={unselCount === 0}
+                    className={`px-2 py-2 text-[10px] font-bold rounded-lg border-2 transition-all flex items-center justify-center gap-1
+                      ${unselCount > 0
+                        ? 'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-300 dark:border-cyan-700 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-100 dark:hover:bg-cyan-900/40'
+                        : 'border-gray-200 dark:border-secondary-600 text-gray-400 dark:text-secondary-500 cursor-not-allowed'
+                      }`}>
+                    <FileText className="w-3 h-3" />{t('पेपर 2', 'Paper 2')}
+                  </button>
+                  <button type="button" onClick={selectPYQOnly} disabled={unselCount === 0}
+                    className={`px-2 py-2 text-[10px] font-bold rounded-lg border-2 transition-all flex items-center justify-center gap-1
+                      ${unselCount > 0
+                        ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                        : 'border-gray-200 dark:border-secondary-600 text-gray-400 dark:text-secondary-500 cursor-not-allowed'
+                      }`}>
+                    <Star className="w-3 h-3" />{t('PYQ', 'PYQ Only')}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
