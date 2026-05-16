@@ -15,6 +15,10 @@ const answerSchema = new mongoose.Schema({
   correctAnswer: {
     type: Number
   },
+  optionsOrder: {
+    type: [Number],
+    default: []
+  },
   isCorrect: {
     type: Boolean,
     default: false
@@ -187,6 +191,7 @@ testAttemptSchema.methods.initializeAnswers = function(questions) {
       questionNumber: index + 1,
       selectedAnswer: -1,
       correctAnswer: question.correctAnswer,
+      optionsOrder: question.optionsOrder || [],
       isCorrect: false,
       timeTaken: 0,
       markedForReview: false,
@@ -335,7 +340,7 @@ testAttemptSchema.methods.calculateResults = async function(questions, test) {
     if (answer.selectedAnswer === -1) {
       skippedCount++;
       answer.isCorrect = false;
-    } else if (answer.selectedAnswer === question.correctAnswer) {
+    } else if (answer.selectedAnswer === answer.correctAnswer) {
       correctCount++;
       answer.isCorrect = true;
     } else {

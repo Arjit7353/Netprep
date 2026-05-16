@@ -95,6 +95,8 @@ async function resolvePYQQuestion(pyqIdStr, pyqDocCache = {}) {
     difficulty: pq.difficulty || 'medium',
     source: `PYQ ${pyqDoc.year} ${pyqDoc.session || ''}`.trim(),
     year: pyqDoc.year,
+    pyqSession: pyqDoc.session,
+    pyqShift: pyqDoc.shift,
     isPYQ: true,
     _isVirtualPYQ: true,
     timesAttempted: 0,
@@ -500,21 +502,28 @@ const getAttemptReview = async (req, res, next) => {
         testType: test.testType,
         paper: test.paper
       },
-      questions: resolvedQuestions.map((question, index) => {
-        const answer = attempt.answers.find(
-          a => a.questionId && String(a.questionId) === String(question._id)
-        );
+      questions: attempt.answers.map((answer, index) => {
+        const question = resolvedQuestions.find(q => String(q._id) === String(answer.questionId));
+        if (!question) return null;
+
+        const qClone = JSON.parse(JSON.stringify(question));
+        if (answer.optionsOrder && answer.optionsOrder.length > 0) {
+            const order = answer.optionsOrder;
+            if (qClone.options?.hi?.length) qClone.options.hi = order.map(i => qClone.options.hi[i]);
+            if (qClone.options?.en?.length) qClone.options.en = order.map(i => qClone.options.en[i]);
+            qClone.correctAnswer = answer.correctAnswer;
+        }
 
         return {
           questionNumber: index + 1,
-          question,
+          question: qClone,
           selectedAnswer: answer?.selectedAnswer ?? -1,
-          correctAnswer: question.correctAnswer,
+          correctAnswer: qClone.correctAnswer,
           isCorrect: answer?.isCorrect ?? false,
           timeTaken: answer?.timeTaken ?? 0,
           markedForReview: answer?.markedForReview ?? false
         };
-      }),
+      }).filter(Boolean),
       topicAnalysis: attempt.topicAnalysis || [],
       testDeleted: false
     };
@@ -573,8 +582,23 @@ const startAttempt = async (req, res, next) => {
     }
 
     if (existingAttempt) {
+      const orderedQuestions = [];
+      for (const ans of existingAttempt.answers) {
+        const q = resolvedQuestions.find(rq => String(rq._id) === String(ans.questionId));
+        if (q) {
+            const qClone = JSON.parse(JSON.stringify(q));
+            if (ans.optionsOrder && ans.optionsOrder.length > 0) {
+                const order = ans.optionsOrder;
+                if (qClone.options?.hi?.length) qClone.options.hi = order.map(i => qClone.options.hi[i]);
+                if (qClone.options?.en?.length) qClone.options.en = order.map(i => qClone.options.en[i]);
+                qClone.correctAnswer = ans.correctAnswer;
+            }
+            orderedQuestions.push(qClone);
+        }
+      }
+
       const testResponse = test.toObject();
-      testResponse.questions = resolvedQuestions;
+      testResponse.questions = orderedQuestions;
 
       return res.json({
         success: true,
@@ -584,6 +608,36 @@ const startAttempt = async (req, res, next) => {
           test: testResponse
         }
       });
+    }
+
+    // ═══ SHUFFLE QUESTIONS ═══
+    for (let i = resolvedQuestions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [resolvedQuestions[i], resolvedQuestions[j]] = [resolvedQuestions[j], resolvedQuestions[i]];
+    }
+
+    // ═══ SHUFFLE OPTIONS ═══
+    for (let q of resolvedQuestions) {
+       let optionsHi = q.options?.hi || [];
+       let optionsEn = q.options?.en || [];
+       let numOptions = Math.max(optionsHi.length, optionsEn.length);
+       
+       if (numOptions > 1 && !['assertion_reason', 'match_following', 'sequence_order', 'statement_based'].includes(q.questionType)) {
+          let order = Array.from({length: numOptions}, (_, i) => i);
+          for (let i = order.length - 1; i > 0; i--) {
+             const j = Math.floor(Math.random() * (i + 1));
+             [order[i], order[j]] = [order[j], order[i]];
+          }
+          
+          q.optionsOrder = order;
+          if (optionsHi.length > 0) q.options.hi = order.map(i => optionsHi[i]);
+          if (optionsEn.length > 0) q.options.en = order.map(i => optionsEn[i]);
+          
+          let newCorrect = order.indexOf(q.correctAnswer);
+          if (newCorrect !== -1) {
+              q.correctAnswer = newCorrect;
+          }
+       }
     }
 
     const attemptCount = await TestAttempt.countDocuments({ testId });

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controller Dashboard - PRSU-CSES</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<div class="wrapper">
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fa-solid fa-building-columns"></i> PRSU-CSES</h3>
+        </div>
+
+        <ul class="list-unstyled components">
+            <p class="text-center" style="font-size: 0.9em; border-bottom: 1px solid #47748b; padding-bottom: 15px; margin-bottom: 15px;">
+                <span id="user-name">Loading...</span><br>
+                <small>Examination Controller</small>
+            </p>
+            <li class="active">
+                <a href="controller-dashboard.html"><i class="fa-solid fa-gauge mr-2"></i> Dashboard</a>
+            </li>
+            <li>
+                <a href="colleges.html"><i class="fa-solid fa-school mr-2"></i> Colleges</a>
+            </li>
+            <li>
+                <a href="subjects.html"><i class="fa-solid fa-book mr-2"></i> Subjects</a>
+            </li>
+            <li>
+                <a href="exams.html"><i class="fa-solid fa-file-signature mr-2"></i> Exams</a>
+            </li>
+            <li>
+                <a href="question-bank.html"><i class="fa-solid fa-database mr-2"></i> Question Bank</a>
+            </li>
+            <li>
+                <a href="reports.html"><i class="fa-solid fa-chart-bar mr-2"></i> Reports</a>
+            </li>
+            <li>
+                <a href="settings.html"><i class="fa-solid fa-cog mr-2"></i> Settings</a>
+            </li>
+            <li>
+                <a href="#" id="logout-btn"><i class="fa-solid fa-sign-out-alt mr-2"></i> Logout</a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Page Content -->
+    <div class="content">
+        <div class="top-navbar">
+            <div>
+                <button type="button" id="sidebarCollapse" class="btn btn-primary">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <span style="font-weight: 600; font-size: 1.2rem; margin-left: 15px;">Controller Overview</span>
+            </div>
+            <div>
+                <span class="mr-3" id="current-time"></span>
+                <i class="fa-solid fa-bell" style="font-size: 1.2rem; cursor: pointer;"></i>
+            </div>
+        </div>
+
+        <div class="dashboard-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px;">
+            <div class="card" style="border-left: 4px solid var(--primary-color);">
+                <div class="card-body">
+                    <h5 style="color: var(--text-secondary); margin-bottom: 10px;">Total Colleges</h5>
+                    <h2 id="stat-colleges">0</h2>
+                </div>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--success-color);">
+                <div class="card-body">
+                    <h5 style="color: var(--text-secondary); margin-bottom: 10px;">Active Exams</h5>
+                    <h2 id="stat-exams">0</h2>
+                </div>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--warning-color);">
+                <div class="card-body">
+                    <h5 style="color: var(--text-secondary); margin-bottom: 10px;">Pending Questions</h5>
+                    <h2 id="stat-questions">0</h2>
+                </div>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--danger-color);">
+                <div class="card-body">
+                    <h5 style="color: var(--text-secondary); margin-bottom: 10px;">Security Alerts</h5>
+                    <h2 id="stat-alerts">0</h2>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+            <div class="card">
+                <div class="card-header">Recent Activities</div>
+                <div class="card-body">
+                    <p>Loading activities...</p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">Upcoming Exams</div>
+                <div class="card-body">
+                    <p>No upcoming exams scheduled.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script>
+    // Auth Check
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    if (!token || (user.role !== 'controller' && user.role !== 'admin')) {
+        window.location.href = 'login.html';
+    }
+
+    document.getElementById('user-name').textContent = user.fullName || 'Controller User';
+
+    document.getElementById('logout-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = 'login.html';
+    });
+
+    document.getElementById('sidebarCollapse').addEventListener('click', function () {
+        document.getElementById('sidebar').classList.toggle('active');
+    });
+
+    // Clock
+    setInterval(() => {
+        document.getElementById('current-time').textContent = new Date().toLocaleString();
+    }, 1000);
+</script>
+
+</body>
+</html>

@@ -465,6 +465,13 @@ const QuestionSolutionCard = ({ question: q, language, index, total, isBookmarke
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2.5 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-[10px] font-bold rounded-md uppercase tracking-wide">{typeLbl}</span>
               <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wide ${difficulty === 'easy' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : difficulty === 'hard' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>{diffLbl}</span>
+              {qData.isPYQ && qData.year && (
+                <span className="px-2.5 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-bold rounded-md tracking-wide">
+                  PYQ {qData.year}
+                  {qData.pyqSession ? ` - ${qData.pyqSession.charAt(0).toUpperCase() + qData.pyqSession.slice(1)}` : ''}
+                  {qData.pyqShift && qData.pyqShift !== 'none' ? ` (${qData.pyqShift.charAt(0).toUpperCase() + qData.pyqShift.slice(1)})` : ''}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">

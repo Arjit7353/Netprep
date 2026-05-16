@@ -1898,19 +1898,77 @@ const bulkUpdateQuestions = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'updates object required' });
     }
 
-    const allowedFields = ['difficulty', 'tags', 'unit', 'chapter', 'topic', 'source', 'year', 'isPYQ'];
+    // ═══ ADVANCED: Bulk editable fields (EXTREME LEVEL) ═══
+    const allowedFields = [
+      // Classification
+      'paper', 'subject', 'unit', 'chapter', 'topic', 'subtopic',
+      // Properties
+      'difficulty', 'importance', 'type',
+      // Content
+      'tags', 'keyTerms', 'source',
+      // Meta
+      'year', 'isPYQ', 'pyqSession', 'pyqShift',
+      // Review status
+      'verificationStatus', 'correctnessStatus', 'reviewNotes',
+      'isFlagged', 'flagReason'
+    ];
+
     const cleanUpdates = { updatedAt: new Date() };
+    const changedFields = [];
 
     for (const field of allowedFields) {
-      if (updates[field] !== undefined) {
-        if (field === 'difficulty') cleanUpdates.difficulty = normalizeDifficultyValue(updates[field]);
-        else if (field === 'tags' && Array.isArray(updates[field])) {
-          // Append tags
-          cleanUpdates.$addToSet = { tags: { $each: updates[field] } };
+      if (updates[field] !== undefined && updates[field] !== '') {
+        changedFields.push(field);
+        
+        if (field === 'difficulty') {
+          cleanUpdates.difficulty = normalizeDifficultyValue(updates[field]);
+        } else if (field === 'importance' && typeof updates[field] === 'number') {
+          cleanUpdates.importance = Math.min(5, Math.max(1, updates[field]));
+        } else if (field === 'tags' && Array.isArray(updates[field])) {
+          // Replace tags entirely
+          cleanUpdates.tags = updates[field].filter(t => t && typeof t === 'string');
+        } else if (field === 'keyTerms' && Array.isArray(updates[field])) {
+          cleanUpdates.keyTerms = updates[field].filter(t => t && typeof t === 'string');
+        } else if (field === 'verificationStatus') {
+          const validStatuses = ['unchecked', 'checked', 'verified', 'approved', 'rejected'];
+          if (validStatuses.includes(updates[field])) {
+            cleanUpdates.verificationStatus = updates[field];
+            if (['verified', 'approved'].includes(updates[field])) {
+              cleanUpdates.reviewedAt = new Date();
+            }
+          }
+        } else if (field === 'correctnessStatus') {
+          const validStatuses = ['unknown', 'correct', 'incorrect', 'partially_correct', 'disputed'];
+          if (validStatuses.includes(updates[field])) {
+            cleanUpdates.correctnessStatus = updates[field];
+          }
+        } else if (field === 'isFlagged' && typeof updates[field] === 'boolean') {
+          cleanUpdates.isFlagged = updates[field];
+          if (updates[field]) {
+            cleanUpdates.flaggedAt = new Date();
+          } else {
+            cleanUpdates.flagReason = '';
+            cleanUpdates.flaggedAt = null;
+          }
+        } else if (field === 'paper' && ['paper1', 'paper2'].includes(updates[field])) {
+          cleanUpdates.paper = updates[field];
+        } else if (field === 'pyqSession' && ['june', 'december', 'november', 'september', ''].includes(updates[field])) {
+          cleanUpdates.pyqSession = updates[field];
+        } else if (field === 'pyqShift' && ['shift1', 'shift2', ''].includes(updates[field])) {
+          cleanUpdates.pyqShift = updates[field];
         } else {
-          cleanUpdates[field] = updates[field];
+          // Simple string fields
+          cleanUpdates[field] = String(updates[field]).trim();
         }
       }
+    }
+
+    if (changedFields.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No valid fields to update',
+        data: { modified: 0, changedFields: [] }
+      });
     }
 
     const result = await Question.updateMany(
@@ -1918,10 +1976,21 @@ const bulkUpdateQuestions = async (req, res, next) => {
       cleanUpdates
     );
 
+    // Also update related tests' updatedAt
+    const Test = require('../models/Test');
+    await Test.updateMany(
+      { questions: { $in: ids }, status: { $ne: 'archived' } },
+      { $set: { updatedAt: new Date() } }
+    );
+
     res.json({
       success: true,
-      message: `${result.modifiedCount} questions updated`,
-      data: { modified: result.modifiedCount }
+      message: `${result.modifiedCount} questions updated · ${changedFields.length} fields changed`,
+      data: {
+        modified: result.modifiedCount,
+        changedFields,
+        updatedFields: changedFields.join(', ')
+      }
     });
   } catch (error) {
     next(error);

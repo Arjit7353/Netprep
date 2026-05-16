@@ -18,6 +18,7 @@ import QuestionForm from '../components/question/QuestionForm';
 import PassageGroupCard from '../components/question/PassageGroupCard';
 import DIGroupCard from '../components/question/DIGroupCard';
 import Button from '../components/common/Button';
+import AdvancedBulkEditModal from '../components/common/AdvancedBulkEditModal';
 import Modal, { ConfirmModal } from '../components/common/Modal';
 import { useQuestions } from '../hooks/useQuestions';
 import { useSyllabus } from '../hooks/useSyllabus';
@@ -50,7 +51,6 @@ const QuestionBank = () => {
   const [testUsageLoading, setTestUsageLoading] = useState(false);
 
   const [showBulkEditModal, setShowBulkEditModal] = useState(false);
-  const [bulkEditData, setBulkEditData] = useState({ difficulty: '', tags: '' });
   const [bulkEditLoading, setBulkEditLoading] = useState(false);
 
   // ★ NEW: Bulk translate state
@@ -179,6 +179,16 @@ const QuestionBank = () => {
     setSelectedIds([]);
   }, []);
 
+  const handleLimitChange = useCallback((newLimit) => {
+    setFilters(prev => ({ ...prev, limit: newLimit, page: 1 }));
+    setSelectedIds([]);
+  }, []);
+
+  const handleSelectAllVisible = useCallback(() => {
+    const allIds = questions.map(q => q._id);
+    setSelectedIds(allIds);
+  }, [questions]);
+
   // ★ ENHANCED: handleSubmitQuestion with sync info
   const handleSubmitQuestion = async (questionData) => {
     setFormLoading(true);
@@ -237,21 +247,21 @@ const QuestionBank = () => {
     }
   };
 
-  const handleBulkEdit = async () => {
+  const handleBulkEdit = async (updates) => {
     if (selectedIds.length === 0) return;
     setBulkEditLoading(true);
     try {
-      const updates = {};
-      if (bulkEditData.difficulty) updates.difficulty = bulkEditData.difficulty;
-      if (bulkEditData.tags) updates.tags = bulkEditData.tags.split(',').map(t => t.trim()).filter(Boolean);
-
       const res = await questionService.bulkUpdateQuestions(selectedIds, updates);
       if (res.success) {
-        success(`${res.data?.modified || selectedIds.length} questions updated`);
+        const changedFields = res.data?.changedFields || [];
+        success(
+          `✓ ${res.data?.modified || selectedIds.length} questions updated` +
+          (changedFields.length > 0 ? ` · ${changedFields.length} fields changed` : '')
+        );
         setShowBulkEditModal(false);
-        setBulkEditData({ difficulty: '', tags: '' });
         setSelectedIds([]);
         fetchQuestions(filters);
+        fetchStats();
       }
     } catch (err) {
       showError(err.message || 'Bulk update failed');
@@ -481,6 +491,43 @@ const QuestionBank = () => {
               </div>
             )}
 
+            {/* ═══ VIEW LIMIT SELECTOR & SELECT ALL ═══ */}
+            <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-secondary-800 rounded-xl border border-gray-200 dark:border-secondary-700">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-gray-600 dark:text-secondary-400 uppercase">
+                  {tl('प्रति पृष्ठ दिखाएं:', 'Show per page:')}
+                </span>
+                <select
+                  value={filters.limit || 20}
+                  onChange={(e) => handleLimitChange(parseInt(e.target.value))}
+                  className="px-3 py-2 border border-gray-300 dark:border-secondary-600 rounded-lg
+                             bg-white dark:bg-secondary-900 text-gray-900 dark:text-white text-sm font-semibold
+                             focus:outline-none focus:ring-2 focus:ring-primary-500/40 transition-all"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={15}>15</option>
+                  <option value={20}>20</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={75}>75</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+
+              <button
+                onClick={handleSelectAllVisible}
+                disabled={questions.length === 0}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg
+                           bg-gradient-to-r from-primary-500 to-violet-500 text-white
+                           hover:from-primary-600 hover:to-violet-600 disabled:opacity-50 disabled:cursor-not-allowed
+                           transition-all shadow-md hover:shadow-lg"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                {tl('सभी चुनें', 'Select All')} ({questions.length})
+              </button>
+            </div>
+
             {/* ═══ FILTERS ═══ */}
             <QuestionFilter
               filters={filters}
@@ -564,64 +611,16 @@ const QuestionBank = () => {
               language={language}
             />
 
-            {/* ═══ BULK EDIT MODAL ═══ */}
-            <Modal
+            {/* ═══ ADVANCED BULK EDIT MODAL ═══ */}
+            <AdvancedBulkEditModal
               isOpen={showBulkEditModal}
               onClose={() => setShowBulkEditModal(false)}
-              title={tl('बल्क संपादन', 'Bulk Edit')}
-              titleHi={`${selectedIds.length} ${tl('प्रश्न', 'questions')}`}
-              size="md"
-              footer={
-                <>
-                  <Button variant="secondary" onClick={() => setShowBulkEditModal(false)}>
-                    {tl('रद्द', 'Cancel')}
-                  </Button>
-                  <Button variant="primary" onClick={handleBulkEdit} loading={bulkEditLoading}>
-                    {tl('अपडेट करें', 'Update')}
-                  </Button>
-                </>
-              }
-            >
-              <div className="space-y-4">
-                <div className="p-3 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-800">
-                  <p className="text-sm font-bold text-primary-700 dark:text-primary-300">
-                    {selectedIds.length} {tl('प्रश्नों को अपडेट किया जाएगा', 'questions will be updated')}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-bold text-gray-700 dark:text-secondary-300 mb-1 block">
-                    {tl('कठिनाई', 'Difficulty')}
-                  </label>
-                  <select
-                    value={bulkEditData.difficulty}
-                    onChange={e => setBulkEditData(p => ({ ...p, difficulty: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-secondary-600 rounded-xl
-                               bg-white dark:bg-secondary-900 text-gray-900 dark:text-white text-sm
-                               focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 transition-colors"
-                  >
-                    <option value="">{tl('बदलें नहीं', 'No change')}</option>
-                    <option value="easy">{tl('आसान', 'Easy')}</option>
-                    <option value="medium">{tl('मध्यम', 'Medium')}</option>
-                    <option value="hard">{tl('कठिन', 'Hard')}</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-bold text-gray-700 dark:text-secondary-300 mb-1 block">
-                    {tl('टैग जोड़ें (कॉमा)', 'Add Tags (comma)')}
-                  </label>
-                  <input
-                    type="text"
-                    value={bulkEditData.tags}
-                    onChange={e => setBulkEditData(p => ({ ...p, tags: e.target.value }))}
-                    placeholder={tl('टैग1, टैग2', 'tag1, tag2')}
-                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-secondary-600 rounded-xl
-                               bg-white dark:bg-secondary-900 text-gray-900 dark:text-white text-sm
-                               placeholder-gray-400 dark:placeholder-secondary-500
-                               focus:outline-none focus:border-primary-500 dark:focus:border-primary-400 transition-colors"
-                  />
-                </div>
-              </div>
-            </Modal>
+              selectedCount={selectedIds.length}
+              onSubmit={handleBulkEdit}
+              loading={bulkEditLoading}
+              syllabus={syllabus}
+              language={language}
+            />
 
             {/* ═══ KEYBOARD SHORTCUTS MODAL ═══ */}
             <Modal
