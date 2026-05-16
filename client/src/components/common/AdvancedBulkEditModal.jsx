@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { X, ChevronRight, Zap, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { X, ChevronRight, Zap, AlertCircle, CheckCircle, Info, Folder, Settings, FileText, Tag, CheckSquare } from 'lucide-react';
 import Button from './Button';
+import SyllabusDropdown from '../syllabus/SyllabusDropdown';
 
 const AdvancedBulkEditModal = ({
   isOpen,
@@ -34,6 +35,8 @@ const AdvancedBulkEditModal = ({
     year: '',
     isPYQ: '',
     pyqSession: '',
+    pyqShift: '',
+    isMemoryBased: '',
     // Review
     verificationStatus: '',
     correctnessStatus: '',
@@ -44,23 +47,7 @@ const AdvancedBulkEditModal = ({
   const [changedFields, setChangedFields] = useState([]);
 
   // ═══ COMPUTE ═══
-  const unitList = useMemo(() => {
-    if (!syllabus || !syllabus.units) return [];
-    return syllabus.units;
-  }, [syllabus]);
-
-  const chapterList = useMemo(() => {
-    if (!bulkEditData.unit || !syllabus) return [];
-    const unit = syllabus.units?.find(u => u.id === bulkEditData.unit);
-    return unit?.chapters || [];
-  }, [bulkEditData.unit, syllabus]);
-
-  const topicList = useMemo(() => {
-    if (!bulkEditData.chapter || !bulkEditData.unit || !syllabus) return [];
-    const unit = syllabus.units?.find(u => u.id === bulkEditData.unit);
-    const chapter = unit?.chapters?.find(c => c.id === bulkEditData.chapter);
-    return chapter?.topics || [];
-  }, [bulkEditData.chapter, bulkEditData.unit, syllabus]);
+  // Removed static syllabus logic as SyllabusDropdown handles dynamic syllabus internally
 
   // ═══ HANDLERS ═══
   const handleFieldChange = (field, value) => {
@@ -80,7 +67,7 @@ const AdvancedBulkEditModal = ({
     setBulkEditData({
       paper: '', unit: '', chapter: '', topic: '', subtopic: '',
       difficulty: '', type: '', importance: '', tags: '', keyTerms: '', source: '',
-      year: '', isPYQ: '', pyqSession: '', verificationStatus: '',
+      year: '', isPYQ: '', pyqSession: '', pyqShift: '', isMemoryBased: '', verificationStatus: '',
       correctnessStatus: '', isFlagged: '', reviewNotes: ''
     });
     setChangedFields([]);
@@ -96,9 +83,7 @@ const AdvancedBulkEditModal = ({
           updates[field] = bulkEditData[field].split(',').map(t => t.trim()).filter(Boolean);
         } else if (field === 'importance') {
           updates[field] = parseInt(bulkEditData[field]) || 3;
-        } else if (field === 'isPYQ') {
-          updates[field] = bulkEditData[field] === 'true';
-        } else if (field === 'isFlagged') {
+        } else if (field === 'isPYQ' || field === 'isFlagged' || field === 'isMemoryBased') {
           updates[field] = bulkEditData[field] === 'true';
         } else {
           updates[field] = bulkEditData[field];
@@ -113,11 +98,11 @@ const AdvancedBulkEditModal = ({
   if (!isOpen) return null;
 
   const tabs = [
-    { id: 'classification', label: tl('वर्गीकरण', 'Classification'), icon: '📁' },
-    { id: 'properties', label: tl('गुण', 'Properties'), icon: '⚙️' },
-    { id: 'content', label: tl('सामग्री', 'Content'), icon: '📄' },
-    { id: 'meta', label: tl('मेटा', 'Meta'), icon: '🏷️' },
-    { id: 'review', label: tl('समीक्षा', 'Review'), icon: '✓' }
+    { id: 'classification', label: tl('वर्गीकरण', 'Classification'), icon: <Folder className="w-4 h-4" /> },
+    { id: 'properties', label: tl('गुण', 'Properties'), icon: <Settings className="w-4 h-4" /> },
+    { id: 'content', label: tl('सामग्री', 'Content'), icon: <FileText className="w-4 h-4" /> },
+    { id: 'meta', label: tl('मेटा', 'Meta'), icon: <Tag className="w-4 h-4" /> },
+    { id: 'review', label: tl('समीक्षा', 'Review'), icon: <CheckSquare className="w-4 h-4" /> }
   ];
 
   const getFieldLabel = (field) => {
@@ -136,6 +121,8 @@ const AdvancedBulkEditModal = ({
       year: tl('वर्ष', 'Year'),
       isPYQ: tl('PYQ है', 'Is PYQ'),
       pyqSession: tl('PYQ सत्र', 'PYQ Session'),
+      pyqShift: tl('PYQ शिफ्ट', 'PYQ Shift'),
+      isMemoryBased: tl('मेमोरी आधारित', 'Memory Based'),
       verificationStatus: tl('सत्यापन स्थिति', 'Verification Status'),
       correctnessStatus: tl('सही स्थिति', 'Correctness Status'),
       isFlagged: tl('ध्वज', 'Flagged'),
@@ -260,7 +247,7 @@ const AdvancedBulkEditModal = ({
               <Zap className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-black">{tl('उन्नत बल्क संपादन', 'Advanced Bulk Edit')} ⚡</h2>
+              <h2 className="text-lg font-black">{tl('उन्नत बल्क संपादन', 'Advanced Bulk Edit')}</h2>
               <p className="text-white/80 text-sm font-medium">{selectedCount} {tl('प्रश्न चयनित', 'questions selected')}</p>
             </div>
           </div>
@@ -300,25 +287,24 @@ const AdvancedBulkEditModal = ({
                 <p className="text-xs text-blue-700 dark:text-blue-300">{tl('प्रश्नों को पुनः वर्गीकृत करें। खाली मान मतलब कोई परिवर्तन नहीं।', 'Reclassify questions. Empty values mean no change.')}</p>
               </div>
 
-              {renderField('paper', 'select', [
-                { value: 'paper1', label: tl('पेपर 1', 'Paper 1') },
-                { value: 'paper2', label: tl('पेपर 2', 'Paper 2') }
-              ])}
-
-              {renderField('unit', 'select', unitList.map(u => ({
-                value: u.id,
-                label: language === 'hi' ? (u.nameHi || u.name) : u.name
-              })))}
-
-              {bulkEditData.unit && renderField('chapter', 'select', chapterList.map(c => ({
-                value: c.id,
-                label: language === 'hi' ? (c.nameHi || c.name) : c.name
-              })))}
-
-              {bulkEditData.chapter && renderField('topic', 'select', topicList.map(t => ({
-                value: t.id,
-                label: language === 'hi' ? (t.nameHi || t.name) : t.name
-              })))}
+              <div className="p-4 rounded-xl border-2 bg-white dark:bg-secondary-900 border-gray-200 dark:border-secondary-700">
+                <SyllabusDropdown 
+                  multiSelect={true}
+                  value={{
+                    paper: bulkEditData.paper,
+                    units: bulkEditData.unit ? bulkEditData.unit.split(', ').map(s => s.trim()).filter(Boolean) : [],
+                    chapters: bulkEditData.chapter ? bulkEditData.chapter.split(', ').map(s => s.trim()).filter(Boolean) : [],
+                    topics: bulkEditData.topic ? bulkEditData.topic.split(', ').map(s => s.trim()).filter(Boolean) : []
+                  }}
+                  onChange={(data) => {
+                    handleFieldChange('paper', data.paper || '');
+                    handleFieldChange('unit', data.units ? data.units.join(', ') : '');
+                    handleFieldChange('chapter', data.chapters ? data.chapters.join(', ') : '');
+                    handleFieldChange('topic', data.topics ? data.topics.join(', ') : '');
+                  }}
+                  language={language}
+                />
+              </div>
 
               {renderField('subtopic', 'text')}
             </div>
@@ -366,18 +352,31 @@ const AdvancedBulkEditModal = ({
           {/* Meta Tab */}
           {activeTab === 'meta' && (
             <div className="space-y-4">
-              {renderField('year', 'text')}
-
               {renderField('isPYQ', 'checkbox', [
                 { value: 'false', label: tl('नहीं', 'No'), color: 'gray-400' },
                 { value: 'true', label: tl('हाँ', 'Yes'), color: 'orange-500' }
               ])}
 
+              {renderField('year', 'select', Array.from({ length: 13 }, (_, i) => ({
+                value: (2024 - i).toString(), label: (2024 - i).toString()
+              })))}
+
               {renderField('pyqSession', 'select', [
-                { value: 'june', label: 'June' },
-                { value: 'december', label: 'December' },
-                { value: 'november', label: 'November' },
-                { value: 'september', label: 'September' }
+                { value: 'june', label: tl('जून', 'June') },
+                { value: 'december', label: tl('दिसंबर', 'December') },
+                { value: 'november', label: tl('नवंबर', 'November') },
+                { value: 'september', label: tl('सितंबर', 'September') }
+              ])}
+
+              {renderField('pyqShift', 'select', [
+                { value: 'shift1', label: tl('शिफ्ट 1', 'Shift 1') },
+                { value: 'shift2', label: tl('शिफ्ट 2', 'Shift 2') },
+                { value: 'none', label: tl('कोई नहीं', 'None') }
+              ])}
+
+              {renderField('isMemoryBased', 'checkbox', [
+                { value: 'false', label: tl('नहीं', 'No'), color: 'gray-400' },
+                { value: 'true', label: tl('हाँ', 'Yes'), color: 'orange-500' }
               ])}
             </div>
           )}

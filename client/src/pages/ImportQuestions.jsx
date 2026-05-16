@@ -63,7 +63,7 @@ const ImportQuestions = () => {
     const entry = { id: Date.now(), timestamp: new Date().toISOString(), mode: importMode, questions: result.data?.questions || 0, passages: result.data?.passages || 0, diData: result.data?.diData || 0, errors: result.data?.errors || 0, paper: activeSyllabus.paper, source: importMode === 'pyq' ? generatePYQSource() : importMode };
     const updated = [entry, ...importHistory].slice(0, 20);
     setImportHistory(updated);
-    try { localStorage.setItem('netprep_import_history', JSON.stringify(updated)); } catch {}
+    try { localStorage.setItem('netprep_import_history', JSON.stringify(updated)); } catch { }
   };
 
   const activeSyllabus = useMemo(() => {
