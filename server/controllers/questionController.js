@@ -3,8 +3,11 @@
 const Question = require('../models/Question');
 const Passage = require('../models/Passage');
 const DIData = require('../models/DIData');
+const PYQAnalysis = require('../models/PYQAnalysis');
 const smartParser = require('../utils/smartParser');
 const translateHelper = require('../utils/translateHelper');
+const smartImportRouter = require('../utils/smartImportRouter');
+const pyqDetector = require('../utils/pyqDetector');
 
 // ================================================================
 // HELPERS
@@ -616,6 +619,405 @@ const validateImport = async (req, res, next) => {
     res.json({ success: true, validation, preview });
   } catch (error) { next(error); }
 };
+
+// ═════════════════════════════════════════════════════════════════
+// SMART IMPORT: Auto-detects PYQ vs Regular Questions
+// Routes intelligently without manual selection
+// Handles multi-year data seamlessly
+// ═════════════════════════════════════════════════════════════════
+
+// @desc    Smart import - auto-detects PYQ or regular questions
+// @route   POST /api/questions/smart-import
+const smartImport = async (req, res, next) => {
+  try {
+    const jsonData = req.body;
+    const skipDuplicates = req.query.skipDuplicates === 'true' || jsonData._skipDuplicates === true;
+    const translateEnabled = req.query.translate !== 'false' && jsonData._translateEnabled !== false;
+
+    console.log('[Smart Import] Starting with:', {
+      hasData: !!jsonData,
+      questionCount: jsonData.questions?.length || 0,
+      skipDuplicates,
+      translateEnabled
+    });
+
+    // ── Step 1: Route determination ──
+    const routing = await smartImportRouter.smartImportRoute(jsonData, {
+      skipDuplicates,
+      translateEnabled
+    });
+
+    if (!routing.success) {
+      console.error('[Smart Import] Routing failed:', routing.errors);
+      return res.status(400).json({
+        success: false,
+        message: 'Import routing failed',
+        reason: routing.reason,
+        errors: routing.errors,
+        warnings: routing.warnings,
+        detection: routing.detection
+      });
+    }
+
+    const summary = smartImportRouter.generateImportSummary(routing);
+    console.log('[Smart Import]', summary);
+
+    // ── Step 2: Route to appropriate handler ──
+
+    if (routing.route === 'pyq') {
+      // Route to PYQ import
+      if (routing.isBatch) {
+        return handleBatchPYQImport(req, res, routing);
+      } else {
+        return handleSinglePYQImport(req, res, routing);
+      }
+    }
+
+    // Route to regular question import
+    return handleRegularQuestionImport(req, res, routing);
+  } catch (error) {
+    console.error('[Smart Import] Fatal error:', error.message);
+    next(error);
+  }
+};
+
+// ────────────────────────────────────────────────────────────────
+// PYQ IMPORT HANDLERS
+// ────────────────────────────────────────────────────────────────
+
+async function handleSinglePYQImport(req, res, routing) {
+  try {
+    // Get PYQ controller import function (lazy load to avoid circular dependency)
+    const pyqController = require('./pyqController');
+
+    console.log('[PYQ Import] Processing single year:', {
+      year: routing.data.year,
+      session: routing.data.session,
+      shift: routing.data.shift
+    });
+
+    // Create mock request/response for PYQ controller
+    const pyqReq = {
+      body: {
+        ...routing.data,
+        translateEnabled: routing.options.translateEnabled
+      }
+    };
+
+    let pyqRes = null;
+    const jsonResponse = { data: null, statusCode: 200 };
+
+    const pyqResProxy = {
+      status: function(code) {
+        jsonResponse.statusCode = code;
+        return this;
+      },
+      json: function(data) {
+        jsonResponse.data = data;
+        return this;
+      }
+    };
+
+    // Call PYQ import
+    await pyqController.importPYQData(pyqReq, pyqResProxy, (err) => {
+      if (err) {
+        jsonResponse.error = err;
+      }
+    });
+
+    // Handle response
+    if (jsonResponse.error) {
+      return res.status(500).json({
+        success: false,
+        message: 'PYQ import failed',
+        error: jsonResponse.error.message
+      });
+    }
+
+    if (jsonResponse.data) {
+      return res.status(jsonResponse.statusCode).json({
+        ...jsonResponse.data,
+        detection: routing.detection,
+        routing: { route: 'pyq', type: 'single_year' }
+      });
+    }
+
+    throw new Error('No response from PYQ import');
+  } catch (error) {
+    console.error('[PYQ Import] Single year error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Single year PYQ import failed',
+      error: error.message
+    });
+  }
+}
+
+async function handleBatchPYQImport(req, res, routing) {
+  try {
+    console.log('[Batch PYQ Import] Processing', routing.batches.length, 'batch(es)');
+
+    const pyqController = require('./pyqController');
+    const batchResults = {
+      success: true,
+      total: routing.batches.length,
+      successful: 0,
+      failed: 0,
+      outcomes: [],
+      message: ''
+    };
+
+    // ── Process each batch ──
+    for (const [idx, batch] of routing.batches.entries()) {
+      try {
+        console.log(`[Batch PYQ Import] Batch ${idx + 1}/${routing.batches.length}: ${batch.year} ${batch.session}`);
+
+        const pyqReq = {
+          body: {
+            ...batch,
+            translateEnabled: routing.options.translateEnabled
+          }
+        };
+
+        const jsonResponse = { data: null, statusCode: 200 };
+        const pyqResProxy = {
+          status: function(code) {
+            jsonResponse.statusCode = code;
+            return this;
+          },
+          json: function(data) {
+            jsonResponse.data = data;
+            return this;
+          }
+        };
+
+        await pyqController.importPYQData(pyqReq, pyqResProxy, (err) => {
+          if (err) jsonResponse.error = err;
+        });
+
+        if (jsonResponse.error || jsonResponse.statusCode >= 400) {
+          batchResults.failed++;
+          batchResults.outcomes.push({
+            batch: idx + 1,
+            year: batch.year,
+            session: batch.session,
+            shift: batch.shift,
+            status: 'failed',
+            message: jsonResponse.data?.message || jsonResponse.error?.message || 'Unknown error'
+          });
+          console.log(`[Batch PYQ Import] ✗ Batch ${idx + 1} failed`);
+        } else {
+          batchResults.successful++;
+          batchResults.outcomes.push({
+            batch: idx + 1,
+            year: batch.year,
+            session: batch.session,
+            shift: batch.shift,
+            status: 'success',
+            message: jsonResponse.data?.message || 'Imported successfully',
+            data: jsonResponse.data?.data
+          });
+          console.log(`[Batch PYQ Import] ✓ Batch ${idx + 1} succeeded`);
+        }
+      } catch (batchErr) {
+        batchResults.failed++;
+        batchResults.outcomes.push({
+          batch: idx + 1,
+          year: routing.batches[idx].year,
+          session: routing.batches[idx].session,
+          shift: routing.batches[idx].shift,
+          status: 'failed',
+          message: batchErr.message
+        });
+        console.error(`[Batch PYQ Import] ✗ Batch ${idx + 1} error:`, batchErr.message);
+      }
+    }
+
+    batchResults.success = batchResults.failed === 0;
+    batchResults.message =
+      `Imported ${batchResults.successful}/${batchResults.total} year-session combinations` +
+      (batchResults.failed > 0 ? ` (${batchResults.failed} failed)` : '');
+
+    const statusCode = batchResults.success ? 201 : 207; // 207 Multi-Status if partial failure
+    return res.status(statusCode).json({
+      success: batchResults.success,
+      message: batchResults.message,
+      data: batchResults,
+      detection: routing.detection,
+      routing: { route: 'pyq', type: 'multi_year' }
+    });
+  } catch (error) {
+    console.error('[Batch PYQ Import] Fatal error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Batch PYQ import failed',
+      error: error.message
+    });
+  }
+}
+
+// ────────────────────────────────────────────────────────────────
+// REGULAR QUESTION IMPORT HANDLER
+// ────────────────────────────────────────────────────────────────
+
+async function handleRegularQuestionImport(req, res, routing) {
+  try {
+    console.log('[Question Import] Processing regular questions:', routing.data.questions?.length);
+
+    // Use existing import logic
+    const jsonData = routing.data;
+    const skipDuplicates = routing.options.skipDuplicates || false;
+
+    console.log('[Import] Start:', { skipDuplicates, count: jsonData.questions?.length || 0 });
+
+    const validation = smartParser.validateJSONStructure(jsonData);
+    if (!validation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid JSON',
+        errors: validation.errors,
+        warnings: validation.warnings
+      });
+    }
+
+    let parseResult;
+    try {
+      parseResult = await smartParser.parseJSONImport(jsonData);
+    } catch (e) {
+      return res.status(400).json({
+        success: false,
+        message: 'Parse failed: ' + e.message,
+        errors: [e.message]
+      });
+    }
+
+    const savedQuestions = [],
+      savedPassages = [],
+      savedDIData = [],
+      saveErrors = [],
+      skippedQuestions = [];
+    const gPassage = {},
+      gDI = {};
+
+    // Passages
+    for (const pd of parseResult.passages) {
+      try {
+        const gid = pd._groupId;
+        delete pd._groupId;
+        if (!pd.content) pd.content = { hi: '', en: '' };
+        pd.paper = normalizePaperValue(pd.paper);
+        const p = await Passage.create(pd);
+        savedPassages.push(p);
+        if (gid) gPassage[gid] = p._id;
+      } catch (e) {
+        saveErrors.push({ type: 'passage', error: e.message });
+      }
+    }
+
+    // DI Data
+    for (const dd of parseResult.diDataItems) {
+      try {
+        const gid = dd._groupId;
+        delete dd._groupId;
+        if (!dd.title) dd.title = { hi: 'DI', en: 'DI' };
+        dd.paper = normalizePaperValue(dd.paper);
+        const d = await DIData.create(dd);
+        savedDIData.push(d);
+        if (gid) gDI[gid] = d._id;
+      } catch (e) {
+        saveErrors.push({ type: 'diData', error: e.message });
+      }
+    }
+
+    // Questions
+    for (const qd of parseResult.questions) {
+      try {
+        if (qd._passageGroupId) {
+          const pid = gPassage[qd._passageGroupId];
+          if (pid) qd.passageId = pid;
+          delete qd._passageGroupId;
+        }
+        if (qd._diGroupId) {
+          const did = gDI[qd._diGroupId];
+          if (did) qd.diDataId = did;
+          delete qd._diGroupId;
+        }
+
+        const isSubQ = !!qd.passageId || !!qd.diDataId;
+        if (skipDuplicates && !isSubQ) {
+          if (await isDuplicateQuestion(qd)) {
+            const dupText = extractUniqueText(qd);
+            skippedQuestions.push({
+              type: qd.questionType,
+              reason: 'duplicate',
+              question: dupText.substring(0, 100)
+            });
+            continue;
+          }
+        }
+
+        normalizeBeforeSave(qd);
+        delete qd._idx;
+        delete qd._src;
+
+        savedQuestions.push(await Question.create(qd));
+      } catch (e) {
+        console.error('[Import] Save error:', e.message, '| Type:', qd.questionType, '| Paper:', qd.paper, '| Difficulty:', qd.difficulty);
+        saveErrors.push({
+          type: 'question',
+          questionType: qd.questionType,
+          error: e.message,
+          question: extractQuestionText(qd).substring(0, 100)
+        });
+      }
+    }
+
+    // Update counts
+    for (const p of savedPassages) {
+      try {
+        const c = await Question.countDocuments({ passageId: p._id, isActive: { $ne: false } });
+        await Passage.findByIdAndUpdate(p._id, { questionCount: c });
+      } catch (e) {}
+    }
+    for (const d of savedDIData) {
+      try {
+        const c = await Question.countDocuments({ diDataId: d._id, isActive: { $ne: false } });
+        await DIData.findByIdAndUpdate(d._id, { questionCount: c });
+      } catch (e) {}
+    }
+
+    const totalErrors = [...parseResult.errors, ...saveErrors];
+    console.log(`[Import] Done: ${savedQuestions.length} saved, ${skippedQuestions.length} skipped, ${totalErrors.length} errors`);
+
+    if (totalErrors.length > 0) {
+      console.log('[Import] Error details:', totalErrors.slice(0, 5));
+    }
+
+    res.status(201).json({
+      success: true,
+      message:
+        `Import: ${savedQuestions.length} saved` +
+        (skippedQuestions.length > 0 ? `, ${skippedQuestions.length} skipped` : '') +
+        (totalErrors.length > 0 ? `, ${totalErrors.length} errors` : ''),
+      data: {
+        questions: savedQuestions.length,
+        passages: savedPassages.length,
+        diData: savedDIData.length,
+        skipped: skippedQuestions.length,
+        errors: totalErrors.length,
+        stats: parseResult.stats
+      },
+      skipped: skippedQuestions.length > 0 ? skippedQuestions : undefined,
+      errors: totalErrors.length > 0 ? totalErrors : undefined,
+      warnings: validation.warnings.length > 0 ? validation.warnings : undefined,
+      detection: routing.detection,
+      routing: { route: 'questions' }
+    });
+  } catch (error) {
+    console.error('[Question Import] Error:', error.message);
+    next(error);
+  }
+}
 
 // @desc    Import questions from JSON
 // @route   POST /api/questions/import
@@ -2519,4 +2921,6 @@ module.exports = {
   bulkTranslateQuestions,
   getImpactAnalysis,
   getTranslationStatus,
+  // ★ NEW: Smart import with auto-detection
+  smartImport
 };

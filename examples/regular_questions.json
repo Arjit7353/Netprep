@@ -1,0 +1,22 @@
+{
+  "language": "hi",
+  "unit": "General Knowledge",
+  "chapter": "Indian History",
+  "topic": "Independence Movement",
+  "questions": [
+    {
+      "type": "mcq",
+      "question": "भारत की आजादी किस वर्ष मिली?",
+      "options": ["1947", "1945", "1950", "1952"],
+      "correct": 0,
+      "explanation": "भारत को 15 अगस्त 1947 को आजादी मिली।"
+    },
+    {
+      "type": "mcq",
+      "question": "भारतीय संविधान कब लागू हुआ?",
+      "options": ["1947", "1948", "1949", "1950"],
+      "correct": 3,
+      "explanation": "भारतीय संविधान 26 जनवरी 1950 को लागू हुआ।"
+    }
+  ]
+}

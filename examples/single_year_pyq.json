@@ -1,0 +1,43 @@
+{
+  "year": 2023,
+  "session": "june",
+  "shift": "shift1",
+  "paper": "paper1",
+  "language": "hi",
+  "unit": "Logical Reasoning",
+  "chapter": "Argument Analysis",
+  "source": "UGC NET Previous Year Questions",
+  "questions": [
+    {
+      "type": "statement_based",
+      "question": "निम्नलिखित तर्क में किया गया/किये गए तर्कदोष बताइये-\n\"सभी रूसी क्रांतिकारी थे।\nसभी अराजकतावादी क्रांतिकारी थे।\nइसलिये सभी अराजकतावादी रूसी थे।\"",
+      "statements": [
+        "चार पदों का तर्कदोष",
+        "अवैध प्रक्रिया का तर्कदोष",
+        "अवितरित मध्य का तर्कदोष",
+        "व्यावर्तक आधारवाक्यों का तर्कदोष"
+      ],
+      "correctStatements": [2],
+      "options": [
+        "केवल 1 और 2",
+        "केवल 2 और 3",
+        "केवल 3",
+        "केवल 3 और 4"
+      ],
+      "correct": 2,
+      "explanation": "उपर्युक्त तर्क में 'अवितरित मध्य का तर्कदोष' (Fallacy of Undistributed Middle) विद्यमान है।"
+    },
+    {
+      "type": "mcq",
+      "question": "निम्नलिखित कथनों में कौन-सा अनाकारिक तर्कदोष है?",
+      "options": [
+        "रेड हेरिंग",
+        "अविचारित सामान्यीकरण",
+        "आत्माश्रय दोष",
+        "विग्रह दोष"
+      ],
+      "correct": 2,
+      "explanation": "विग्रह दोष (Fallacy of Division) में समूह का गुण व्यक्तिगत सदस्य पर लागू किया जाता है।"
+    }
+  ]
+}

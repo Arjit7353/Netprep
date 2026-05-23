@@ -1,0 +1,65 @@
+{
+  "language": "hi",
+  "paper": "paper1",
+  "unit": "Logical Reasoning",
+  "source": "UGC NET Previous Year Questions",
+  "multiYear": true,
+  "batches": [
+    {
+      "year": 2023,
+      "session": "june",
+      "shift": "shift1",
+      "questions": [
+        {
+          "type": "mcq",
+          "question": "2023 June Shift 1 - Question 1",
+          "options": ["A", "B", "C", "D"],
+          "correct": 0,
+          "explanation": "Explanation for 2023 June Shift 1"
+        }
+      ]
+    },
+    {
+      "year": 2023,
+      "session": "june",
+      "shift": "shift2",
+      "questions": [
+        {
+          "type": "mcq",
+          "question": "2023 June Shift 2 - Question 1",
+          "options": ["A", "B", "C", "D"],
+          "correct": 1,
+          "explanation": "Explanation for 2023 June Shift 2"
+        }
+      ]
+    },
+    {
+      "year": 2023,
+      "session": "december",
+      "shift": "shift1",
+      "questions": [
+        {
+          "type": "mcq",
+          "question": "2023 December Shift 1 - Question 1",
+          "options": ["A", "B", "C", "D"],
+          "correct": 2,
+          "explanation": "Explanation for 2023 December Shift 1"
+        }
+      ]
+    },
+    {
+      "year": 2022,
+      "session": "june",
+      "shift": "shift1",
+      "questions": [
+        {
+          "type": "mcq",
+          "question": "2022 June Shift 1 - Question 1",
+          "options": ["A", "B", "C", "D"],
+          "correct": 3,
+          "explanation": "Explanation for 2022 June Shift 1"
+        }
+      ]
+    }
+  ]
+}

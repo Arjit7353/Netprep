@@ -10,6 +10,7 @@ router.get('/stats', questionController.getQuestionStats);
 
 // Import routes
 router.post('/import', questionController.importQuestions);
+router.post('/smart-import', questionController.smartImport);
 router.post('/import/validate', questionController.validateImport);
 
 // PYQ routes
