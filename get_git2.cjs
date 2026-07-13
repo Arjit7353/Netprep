@@ -1,1 +1,0 @@
-const { execSync } = require('child_process'); const fs = require('fs'); const out = execSync('"C:/Program Files/Git/cmd/git.exe" show 895c053:client/src/components/test/TestCardPro.jsx', { encoding: 'buffer' }); fs.writeFileSync('temp_testcard.jsx', out);

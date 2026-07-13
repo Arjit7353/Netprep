@@ -80,12 +80,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip dev server requests
-  if (url.hostname === 'localhost' && url.port === '5173') {
-    // Allow Vite HMR to work
-    if (url.pathname.includes('/@') || url.pathname.includes('/__')) {
-      return;
-    }
+  // Skip all dev server / localhost requests to prevent aggressive caching during development
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+    return;
   }
 
   // API requests - Network First

@@ -34,27 +34,27 @@ import pyqService from '../services/pyqService';
 
 const PAPER_CONFIGS = {
   paper1: {
-    title: { en: 'Paper 1', hi: 'à¤ªà¥‡à¤ªà¤° 1' },
-    subtitle: { en: 'General Paper on Teaching & Research Aptitude', hi: 'à¤¶à¤¿à¤•à¥ à¤·à¤£ à¤”à¤° à¤¶à¥‹à¤§ à¤…à¤­à¤¿à¤µà¥ƒà¤¤à¥ à¤¤à¤¿ à¤ªà¤° à¤¸à¤¾à¤®à¤¾à¤¨à¥ à¤¯ à¤ªà¥‡à¤ªà¤°' },
-    description: { en: '10 Units | Teaching, Research, Communication, ICT, Reasoning, Environment', hi: '10 à¤‡à¤•à¤¾à¤‡à¤¯à¤¾à¤‚ | à¤¶à¤¿à¤•à¥ à¤·à¤£, à¤¶à¥‹à¤§, à¤¸à¤‚à¤ªà¥ à¤°à¥‡à¤·à¤£, ICT, à¤¤à¤°à¥ à¤•, à¤ªà¤°à¥ à¤¯à¤¾à¤µà¤°à¤£' },
+    title: { en: 'Paper 1', hi: 'पेपर 1' },
+    subtitle: { en: 'General Paper on Teaching & Research Aptitude', hi: 'शिक्षण और शोध अभिवृत्ति पर सामान्य पेपर' },
+    description: { en: '10 Units | Teaching, Research, Communication, ICT, Reasoning, Environment', hi: '10 इकाइयां | शिक्षण, शोध, संप्रेषण, ICT, तर्क, पर्यावरण' },
     gradient: 'from-sky-500 via-blue-500 to-indigo-600',
     lightBg: 'from-sky-50 to-blue-50 dark:from-sky-950/40 dark:to-blue-950/40',
     icon: GraduationCap,
     pattern: 'radial-gradient(circle at 80% 20%, rgba(56,189,248,0.12) 0%, transparent 50%)',
   },
   paper2: {
-    title: { en: 'Paper 2', hi: 'à¤ªà¥‡à¤ªà¤° 2' },
-    subtitle: { en: 'History (Subject Code: 06)', hi: 'à¤‡à¤¤à¤¿à¤¹à¤¾à¤¸ (à¤µà¤¿à¤·à¤¯ à¤•à¥‹à¤¡: 06)' },
-    description: { en: '10 Units | Ancient, Medieval, Modern India & Historiography', hi: '10 à¤‡à¤•à¤¾à¤‡à¤¯à¤¾à¤‚ | à¤ªà¥ à¤°à¤¾à¤šà¥€à¤¨, à¤®à¤§à¥ à¤¯à¤•à¤¾à¤²à¥€à¤¨, à¤†à¤§à¥ à¤¨à¤¿à¤• à¤­à¤¾à¤°à¤¤ à¤”à¤° à¤‡à¤¤à¤¿à¤¹à¤¾à¤¸ à¤²à¥‡à¤–à¤¨' },
+    title: { en: 'Paper 2', hi: 'पेपर 2' },
+    subtitle: { en: 'History (Subject Code: 06)', hi: 'इतिहास (विषय कोड: 06)' },
+    description: { en: '10 Units | Ancient, Medieval, Modern India & Historiography', hi: '10 इकाइयां | प्राचीन, मध्यकालीन, आधुनिक भारत और इतिहास लेखन' },
     gradient: 'from-amber-500 via-orange-500 to-red-500',
     lightBg: 'from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40',
     icon: BookOpen,
     pattern: 'radial-gradient(circle at 80% 20%, rgba(251,191,36,0.12) 0%, transparent 50%)',
   },
   combined: {
-    title: { en: 'Combined Mock', hi: 'à¤¸à¤‚à¤¯à¥ à¤•à¥ à¤¤ à¤®à¥‰à¤•' },
-    subtitle: { en: 'Paper 1 + Paper 2 Combined Tests', hi: 'à¤ªà¥‡à¤ªà¤° 1 + à¤ªà¥‡à¤ªà¤° 2 à¤¸à¤‚à¤¯à¥ à¤•à¥ à¤¤ à¤ªà¤°à¥€à¤•à¥ à¤·à¤¾à¤ à¤‚' },
-    description: { en: '150 Questions | 3 Hours | Full NTA Pattern', hi: '150 à¤ªà¥ à¤°à¤¶à¥ à¤¨ | 3 à¤˜à¤‚à¤Ÿà¥‡ | à¤ªà¥‚à¤°à¥ à¤£ NTA à¤ªà¥ˆà¤Ÿà¤°à¥ à¤¨' },
+    title: { en: 'Combined Mock', hi: 'संयुक्त मॉक' },
+    subtitle: { en: 'Paper 1 + Paper 2 Combined Tests', hi: 'पेपर 1 + पेपर 2 संयुक्त परीक्षाएं' },
+    description: { en: '150 Questions | 3 Hours | Full NTA Pattern', hi: '150 प्रश्न | 3 घंटे | पूर्ण NTA पैटर्न' },
     gradient: 'from-violet-500 via-purple-500 to-fuchsia-600',
     lightBg: 'from-violet-50 to-purple-50 dark:from-violet-950/40 dark:to-purple-950/40',
     icon: Trophy,
@@ -91,14 +91,14 @@ const TYPE_GRADIENTS = {
 // SOURCE TYPE ICONS
 const SOURCE_ICONS = { bank: Database, pyq: Star, mixed: GitMerge };
 const SOURCE_LABELS = {
-  bank: { en: 'Bank', hi: 'à¤¬à¥ˆà¤‚à¤•' },
-  pyq: { en: 'PYQ Only', hi: 'à¤•à¥‡à¤µà¤² PYQ' },
-  mixed: { en: 'Mixed', hi: 'à¤®à¤¿à¤¶à¥ à¤°à¤¿à¤¤' }
+  bank: { en: 'Bank', hi: 'बैंक' },
+  pyq: { en: 'PYQ Only', hi: 'केवल PYQ' },
+  mixed: { en: 'Mixed', hi: 'मिश्रित' }
 };
 
 const extractUnitNumber = (unitStr) => {
   if (!unitStr) return null;
-  const m = unitStr.match(/(?:UNIT|à¤‡à¤•à¤¾à¤ˆ)\s*([IVXLCDM]+|\d+)/i);
+  const m = unitStr.match(/(?:UNIT|इकाई)\s*([IVXLCDM]+|\d+)/i);
   return m ? m[1].toUpperCase() : null;
 };
 
@@ -249,34 +249,34 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
   }, [filterOptions]);
 
   const T = {
-    title: { en: 'Test Library', hi: 'à¤Ÿà¥‡à¤¸à¥à¤Ÿ à¤²à¤¾à¤‡à¤¬à¥à¤°à¥‡à¤°à¥€' },
-    subtitle: { en: 'Your complete test preparation hub', hi: 'à¤†à¤ªà¤•à¤¾ à¤¸à¤‚à¤ªà¥‚à¤°à¥à¤£ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤¤à¥ˆà¤¯à¤¾à¤°à¥€ à¤•à¥‡à¤‚à¤¦à¥à¤°' },
-    create: { en: 'Create Test', hi: 'à¤Ÿà¥‡à¤¸à¥à¤Ÿ à¤¬à¤¨à¤¾à¤à¤‚' },
-    viewAll: { en: 'View All Tests', hi: 'à¤¸à¤­à¥€ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚ à¤¦à¥‡à¤–à¥‡à¤‚' },
-    browseBy: { en: 'Browse by Paper', hi: 'à¤ªà¥‡à¤ªà¤° à¤•à¥‡ à¤…à¤¨à¥à¤¸à¤¾à¤° à¤¬à¥à¤°à¤¾à¤‰à¤œà¤¼ à¤•à¤°à¥‡à¤‚' },
-    byType: { en: 'Quick Access by Type', hi: 'à¤ªà¥à¤°à¤•à¤¾à¤° à¤¸à¥‡ à¤¤à¥à¤µà¤°à¤¿à¤¤ à¤ªà¤¹à¥à¤‚à¤š' },
-    units: { en: 'Units', hi: 'à¤‡à¤•à¤¾à¤‡à¤¯à¤¾à¤‚' },
-    chapters: { en: 'Chapters', hi: 'à¤…à¤§à¥à¤¯à¤¾à¤¯' },
-    tests: { en: 'tests', hi: 'à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚' },
-    found: { en: 'tests found', hi: 'à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚ à¤®à¤¿à¤²à¥€à¤‚' },
-    noTests: { en: 'No tests found', hi: 'à¤•à¥‹à¤ˆ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤¨à¤¹à¥€à¤‚' },
-    noUnits: { en: 'No units found', hi: 'à¤•à¥‹à¤ˆ à¤‡à¤•à¤¾à¤ˆ à¤¨à¤¹à¥€à¤‚' },
-    select: { en: 'Select', hi: 'à¤šà¥à¤¨à¥‡à¤‚' },
-    search: { en: 'Search tests by name, chapter, topic, PYQ year...', hi: 'à¤¨à¤¾à¤®, à¤…à¤§à¥à¤¯à¤¾à¤¯, à¤µà¤¿à¤·à¤¯, PYQ à¤µà¤°à¥à¤· à¤¸à¥‡ à¤–à¥‹à¤œà¥‡à¤‚...' },
-    showing: { en: 'Showing', hi: 'à¤¦à¤¿à¤–à¤¾à¤ à¤—à¤' },
-    of: { en: 'of', hi: 'à¤®à¥‡à¤‚ à¤¸à¥‡' },
-    allTests: { en: 'All Tests', hi: 'à¤¸à¤­à¥€ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚' },
-    pyqTests: { en: 'PYQ Tests', hi: 'PYQ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚' },
-    pyqDesc: { en: 'All tests containing PYQ questions â€” any test type (DPP, Practice, etc.)', hi: 'PYQ à¤ªà¥à¤°à¤¶à¥à¤¨à¥‹à¤‚ à¤µà¤¾à¤²à¥€ à¤¸à¤­à¥€ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚ â€” à¤•à¥‹à¤ˆ à¤­à¥€ à¤ªà¥à¤°à¤•à¤¾à¤° (DPP, Practice, à¤†à¤¦à¤¿)' },
-    createPyqTest: { en: 'Create PYQ Test', hi: 'PYQ à¤Ÿà¥‡à¤¸à¥à¤Ÿ à¤¬à¤¨à¤¾à¤à¤‚' },
-    topics: { en: 'Topics', hi: 'à¤µà¤¿à¤·à¤¯' },
-    allPyqTests: { en: 'All PYQ Tests', hi: 'à¤¸à¤­à¥€ PYQ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚' },
-    testsInUnit: { en: 'Tests in this unit', hi: 'à¤‡à¤¸ à¤‡à¤•à¤¾à¤ˆ à¤•à¥€ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚' },
-    testsInChapter: { en: 'Tests in this chapter', hi: 'à¤‡à¤¸ à¤…à¤§à¥à¤¯à¤¾à¤¯ à¤•à¥€ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚' },
-    noPyqTests: { en: 'No PYQ tests created yet. Create one from the PYQ question bank!', hi: 'à¤…à¤­à¥€ à¤¤à¤• à¤•à¥‹à¤ˆ PYQ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤¨à¤¹à¥€à¤‚ à¤¬à¤¨à¤¾à¤ˆ à¤—à¤ˆà¥¤ PYQ à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¬à¥ˆà¤‚à¤• à¤¸à¥‡ à¤¬à¤¨à¤¾à¤à¤‚!' },
-    pyqOnly: { en: 'PYQ Only', hi: 'à¤•à¥‡à¤µà¤² PYQ' },
-    mixed: { en: 'Mixed (Bank + PYQ)', hi: 'à¤®à¤¿à¤¶à¥à¤°à¤¿à¤¤ (à¤¬à¥ˆà¤‚à¤• + PYQ)' },
-    bankOnly: { en: 'Bank Only', hi: 'à¤•à¥‡à¤µà¤² à¤¬à¥ˆà¤‚à¤•' },
+    title: { en: 'Test Library', hi: 'टेस्ट लाइब्रेरी' },
+    subtitle: { en: 'Your complete test preparation hub', hi: 'आपका संपूर्ण परीक्षा तैयारी केंद्र' },
+    create: { en: 'Create Test', hi: 'टेस्ट बनाएं' },
+    viewAll: { en: 'View All Tests', hi: 'सभी परीक्षाएं देखें' },
+    browseBy: { en: 'Browse by Paper', hi: 'पेपर के अनुसार ब्राउज़ करें' },
+    byType: { en: 'Quick Access by Type', hi: 'प्रकार से त्वरित पहुंच' },
+    units: { en: 'Units', hi: 'इकाइयां' },
+    chapters: { en: 'Chapters', hi: 'अध्याय' },
+    tests: { en: 'tests', hi: 'परीक्षाएं' },
+    found: { en: 'tests found', hi: 'परीक्षाएं मिलीं' },
+    noTests: { en: 'No tests found', hi: 'कोई परीक्षा नहीं' },
+    noUnits: { en: 'No units found', hi: 'कोई इकाई नहीं' },
+    select: { en: 'Select', hi: 'चुनें' },
+    search: { en: 'Search tests by name, chapter, topic, PYQ year...', hi: 'नाम, अध्याय, विषय, PYQ वर्ष से खोजें...' },
+    showing: { en: 'Showing', hi: 'दिखाए गए' },
+    of: { en: 'of', hi: 'में से' },
+    allTests: { en: 'All Tests', hi: 'सभी परीक्षाएं' },
+    pyqTests: { en: 'PYQ Tests', hi: 'PYQ परीक्षाएं' },
+    pyqDesc: { en: 'All tests containing PYQ questions â€” any test type (DPP, Practice, etc.)', hi: 'PYQ प्रश्नों वाली सभी परीक्षाएं — कोई भी प्रकार (DPP, Practice, आदि)' },
+    createPyqTest: { en: 'Create PYQ Test', hi: 'PYQ टेस्ट बनाएं' },
+    topics: { en: 'Topics', hi: 'विषय' },
+    allPyqTests: { en: 'All PYQ Tests', hi: 'सभी PYQ परीक्षाएं' },
+    testsInUnit: { en: 'Tests in this unit', hi: 'इस इकाई की परीक्षाएं' },
+    testsInChapter: { en: 'Tests in this chapter', hi: 'इस अध्याय की परीक्षाएं' },
+    noPyqTests: { en: 'No PYQ tests created yet. Create one from the PYQ question bank!', hi: 'अभी तक कोई PYQ परीक्षा नहीं बनाई गई। PYQ प्रश्न बैंक से बनाएं!' },
+    pyqOnly: { en: 'PYQ Only', hi: 'केवल PYQ' },
+    mixed: { en: 'Mixed (Bank + PYQ)', hi: 'मिश्रित (बैंक + PYQ)' },
+    bankOnly: { en: 'Bank Only', hi: 'केवल बैंक' },
   };
 
   // â•â•â• LOAD PYQ FILTER DATA â•â•â•
@@ -444,7 +444,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
 
   const handleDelete = async (id, e) => {
     e?.stopPropagation();
-    if (!window.confirm(language === 'hi' ? 'à¤•à¥à¤¯à¤¾ à¤†à¤ª à¤‡à¤¸ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤•à¥‹ à¤¸à¤‚à¤—à¥à¤°à¤¹à¥€à¤¤ à¤•à¤°à¤¨à¤¾ à¤šà¤¾à¤¹à¤¤à¥‡ à¤¹à¥ˆà¤‚?' : 'Archive this test?')) return;
+    if (!window.confirm(language === 'hi' ? 'क्या आप इस परीक्षा को संग्रहीत करना चाहते हैं?' : 'Archive this test?')) return;
     try {
       const svc = (await import('../services/testService')).default;
       await svc.deleteTest(id);
@@ -454,7 +454,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
   };
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(language === 'hi' ? `${selectedTests.size} à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚ à¤¸à¤‚à¤—à¥à¤°à¤¹à¥€à¤¤ à¤•à¤°à¥‡à¤‚?` : `Archive ${selectedTests.size} tests?`)) return;
+    if (!window.confirm(language === 'hi' ? `${selectedTests.size} परीक्षाएं संग्रहीत करें?` : `Archive ${selectedTests.size} tests?`)) return;
     try { await bulkDelete(); } catch { }
   };
 
