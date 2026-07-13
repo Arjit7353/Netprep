@@ -1,0 +1,1 @@
+const fs = require('fs'); const txt = fs.readFileSync('client/src/pages/TestListPage.jsx', 'utf8'); const buf = Buffer.from(txt, 'latin1'); const restored = buf.toString('utf8'); console.log(restored.substring(0, 1000));
