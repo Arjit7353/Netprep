@@ -43,6 +43,15 @@ const SequenceOrder = ({
     return romanNumerals[num] || (num + 1).toString();
   };
 
+  const formatOption = (optStr) => {
+    if (typeof optStr !== 'string') return optStr;
+    // Replace standalone digits [1-9] with their corresponding Roman numeral
+    return optStr.replace(/\b([1-9])\b/g, (match, p1) => {
+      const numIndex = parseInt(p1, 10) - 1;
+      return toRoman(numIndex);
+    });
+  };
+
   return (
     <div className="space-y-4">
       {/* Instruction */}
@@ -127,7 +136,7 @@ const SequenceOrder = ({
 
             <div className="flex-1">
               <span className="font-medium mr-2">({getOptionLabel(index)})</span>
-              <span className="text-sm">{option}</span>
+              <span className="text-sm tracking-wide font-medium">{formatOption(option)}</span>
             </div>
           </button>
         ))}

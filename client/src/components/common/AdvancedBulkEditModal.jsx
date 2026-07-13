@@ -294,19 +294,20 @@ const AdvancedBulkEditModal = ({
                     paper: bulkEditData.paper,
                     units: bulkEditData.unit ? bulkEditData.unit.split(', ').map(s => s.trim()).filter(Boolean) : [],
                     chapters: bulkEditData.chapter ? bulkEditData.chapter.split(', ').map(s => s.trim()).filter(Boolean) : [],
-                    topics: bulkEditData.topic ? bulkEditData.topic.split(', ').map(s => s.trim()).filter(Boolean) : []
+                    topics: bulkEditData.topic ? bulkEditData.topic.split(', ').map(s => s.trim()).filter(Boolean) : [],
+                    subtopics: bulkEditData.subtopic ? bulkEditData.subtopic.split(', ').map(s => s.trim()).filter(Boolean) : []
                   }}
                   onChange={(data) => {
                     handleFieldChange('paper', data.paper || '');
                     handleFieldChange('unit', data.units ? data.units.join(', ') : '');
                     handleFieldChange('chapter', data.chapters ? data.chapters.join(', ') : '');
                     handleFieldChange('topic', data.topics ? data.topics.join(', ') : '');
+                    handleFieldChange('subtopic', data.subtopics ? data.subtopics.join(', ') : '');
                   }}
                   language={language}
                 />
               </div>
 
-              {renderField('subtopic', 'text')}
             </div>
           )}
 

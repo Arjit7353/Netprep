@@ -244,6 +244,7 @@ const SyllabusDropdown = ({
   showUnit = true,
   showChapter = true,
   showTopic = true,
+  showSubtopic = true,
   required = false,
   disabled = false,
   multiSelect = false,
@@ -255,6 +256,7 @@ const SyllabusDropdown = ({
     getUnits, 
     getChapters, 
     getTopics,
+    getSubtopics,
     fetchSyllabus 
   } = useSyllabus();
 
@@ -263,11 +265,13 @@ const SyllabusDropdown = ({
   const [selectedUnit, setSelectedUnit] = useState(value.unit || '');
   const [selectedChapter, setSelectedChapter] = useState(value.chapter || '');
   const [selectedTopic, setSelectedTopic] = useState(value.topic || '');
+  const [selectedSubtopic, setSelectedSubtopic] = useState(value.subtopic || '');
 
   // ── Multi-select state ──
   const [selectedUnits, setSelectedUnits] = useState(value.units || []);
   const [selectedChapters, setSelectedChapters] = useState(value.chapters || []);
   const [selectedTopics, setSelectedTopics] = useState(value.topics || []);
+  const [selectedSubtopics, setSelectedSubtopics] = useState(value.subtopics || []);
 
   // Sync from parent
   useEffect(() => {
@@ -276,12 +280,14 @@ const SyllabusDropdown = ({
       if (value.unit !== undefined) setSelectedUnit(value.unit || '');
       if (value.chapter !== undefined) setSelectedChapter(value.chapter || '');
       if (value.topic !== undefined) setSelectedTopic(value.topic || '');
+      if (value.subtopic !== undefined) setSelectedSubtopic(value.subtopic || '');
     } else {
       if (value.units) setSelectedUnits(value.units);
       if (value.chapters) setSelectedChapters(value.chapters);
       if (value.topics) setSelectedTopics(value.topics);
+      if (value.subtopics) setSelectedSubtopics(value.subtopics);
     }
-  }, [value.paper, value.unit, value.chapter, value.topic, value.units, value.chapters, value.topics, multiSelect]);
+  }, [value.paper, value.unit, value.chapter, value.topic, value.subtopic, value.units, value.chapters, value.topics, value.subtopics, multiSelect]);
 
   // Get current syllabus based on selected paper
   const currentSyllabus = useMemo(() => {
@@ -356,18 +362,48 @@ const SyllabusDropdown = ({
     return topics;
   }, [selectedPaper, multiSelect, selectedUnit, selectedUnits, selectedChapter, selectedChapters, getTopics]);
 
+  // Generate subtopic options
+  const subtopicOptions = useMemo(() => {
+    if (!selectedPaper || !showSubtopic) return [];
+    const activeUnits = multiSelect ? selectedUnits : (selectedUnit ? [selectedUnit] : []);
+    const activeChapters = multiSelect ? selectedChapters : (selectedChapter ? [selectedChapter] : []);
+    const activeTopics = multiSelect ? selectedTopics : (selectedTopic ? [selectedTopic] : []);
+    if (activeUnits.length === 0 || activeChapters.length === 0 || activeTopics.length === 0) return [];
+    
+    const subtopics = [];
+    activeUnits.forEach((uName) => {
+      activeChapters.forEach((cName) => {
+        activeTopics.forEach((tName) => {
+          const topicSubtopics = getSubtopics(selectedPaper, uName, cName, tName);
+          topicSubtopics.forEach((st) => {
+            if (!subtopics.find((x) => x.value === st.name)) {
+              subtopics.push({ 
+                value: st.name, 
+                label: st.name, 
+                labelHi: st.nameHi || st.name,
+                id: st.id || st.name
+              });
+            }
+          });
+        });
+      });
+    });
+    return subtopics;
+  }, [selectedPaper, multiSelect, selectedUnit, selectedUnits, selectedChapter, selectedChapters, selectedTopic, selectedTopics, getSubtopics, showSubtopic]);
+
   // ── EMIT helpers ──
-  const emitSingle = useCallback((paper, unit, chapter, topic) => {
-    onChange({ paper, unit, chapter, topic });
+  const emitSingle = useCallback((paper, unit, chapter, topic, subtopic) => {
+    onChange({ paper, unit, chapter, topic, subtopic });
   }, [onChange]);
 
-  const emitMulti = useCallback((paper, units, chapters, topics) => {
+  const emitMulti = useCallback((paper, units, chapters, topics, subtopics) => {
     onChange({
       paper,
-      units, chapters, topics,
+      units, chapters, topics, subtopics,
       unit: units[0] || '',
       chapter: chapters[0] || '',
       topic: topics[0] || '',
+      subtopic: subtopics[0] || '',
     });
   }, [onChange]);
 
@@ -375,11 +411,11 @@ const SyllabusDropdown = ({
   const handlePaperChange = (paper) => {
     setSelectedPaper(paper);
     if (multiSelect) {
-      setSelectedUnits([]); setSelectedChapters([]); setSelectedTopics([]);
-      emitMulti(paper, [], [], []);
+      setSelectedUnits([]); setSelectedChapters([]); setSelectedTopics([]); setSelectedSubtopics([]);
+      emitMulti(paper, [], [], [], []);
     } else {
-      setSelectedUnit(''); setSelectedChapter(''); setSelectedTopic('');
-      emitSingle(paper, '', '', '');
+      setSelectedUnit(''); setSelectedChapter(''); setSelectedTopic(''); setSelectedSubtopic('');
+      emitSingle(paper, '', '', '', '');
     }
   };
 
@@ -388,18 +424,26 @@ const SyllabusDropdown = ({
     setSelectedUnit(unit); 
     setSelectedChapter(''); 
     setSelectedTopic(''); 
-    emitSingle(selectedPaper, unit, '', ''); 
+    setSelectedSubtopic('');
+    emitSingle(selectedPaper, unit, '', '', ''); 
   };
   
   const handleChapterChange = (ch) => { 
     setSelectedChapter(ch); 
     setSelectedTopic(''); 
-    emitSingle(selectedPaper, selectedUnit, ch, ''); 
+    setSelectedSubtopic('');
+    emitSingle(selectedPaper, selectedUnit, ch, '', ''); 
   };
   
   const handleTopicChange = (t) => { 
     setSelectedTopic(t); 
-    emitSingle(selectedPaper, selectedUnit, selectedChapter, t); 
+    setSelectedSubtopic('');
+    emitSingle(selectedPaper, selectedUnit, selectedChapter, t, ''); 
+  };
+
+  const handleSubtopicChange = (st) => {
+    setSelectedSubtopic(st);
+    emitSingle(selectedPaper, selectedUnit, selectedChapter, selectedTopic, st);
   };
 
   // ── Handlers: multi select ──
@@ -422,7 +466,20 @@ const SyllabusDropdown = ({
     });
     const newTopics = selectedTopics.filter((t) => validTopicNames.includes(t));
     setSelectedTopics(newTopics);
-    emitMulti(selectedPaper, units, newChapters, newTopics);
+
+    const validSubtopicNames = [];
+    units.forEach((uName) => {
+      newChapters.forEach((cName) => {
+        newTopics.forEach((tName) => {
+          const topicSubtopics = getSubtopics(selectedPaper, uName, cName, tName);
+          topicSubtopics.forEach((st) => validSubtopicNames.push(st.name));
+        });
+      });
+    });
+    const newSubtopics = selectedSubtopics.filter((st) => validSubtopicNames.includes(st));
+    setSelectedSubtopics(newSubtopics);
+
+    emitMulti(selectedPaper, units, newChapters, newTopics, newSubtopics);
   };
 
   const handleChaptersChange = (chapters) => {
@@ -436,18 +493,50 @@ const SyllabusDropdown = ({
     });
     const newTopics = selectedTopics.filter((t) => validTopicNames.includes(t));
     setSelectedTopics(newTopics);
-    emitMulti(selectedPaper, selectedUnits, chapters, newTopics);
+
+    const validSubtopicNames = [];
+    selectedUnits.forEach((uName) => {
+      chapters.forEach((cName) => {
+        newTopics.forEach((tName) => {
+          const topicSubtopics = getSubtopics(selectedPaper, uName, cName, tName);
+          topicSubtopics.forEach((st) => validSubtopicNames.push(st.name));
+        });
+      });
+    });
+    const newSubtopics = selectedSubtopics.filter((st) => validSubtopicNames.includes(st));
+    setSelectedSubtopics(newSubtopics);
+
+    emitMulti(selectedPaper, selectedUnits, chapters, newTopics, newSubtopics);
   };
 
   const handleTopicsChange = (topics) => {
     setSelectedTopics(topics);
-    emitMulti(selectedPaper, selectedUnits, selectedChapters, topics);
+    
+    const validSubtopicNames = [];
+    selectedUnits.forEach((uName) => {
+      selectedChapters.forEach((cName) => {
+        topics.forEach((tName) => {
+          const topicSubtopics = getSubtopics(selectedPaper, uName, cName, tName);
+          topicSubtopics.forEach((st) => validSubtopicNames.push(st.name));
+        });
+      });
+    });
+    const newSubtopics = selectedSubtopics.filter((st) => validSubtopicNames.includes(st));
+    setSelectedSubtopics(newSubtopics);
+
+    emitMulti(selectedPaper, selectedUnits, selectedChapters, topics, newSubtopics);
+  };
+
+  const handleSubtopicsChange = (subtopics) => {
+    setSelectedSubtopics(subtopics);
+    emitMulti(selectedPaper, selectedUnits, selectedChapters, selectedTopics, subtopics);
   };
 
   // ── Chip remove helpers ──
   const removeUnit = (val) => handleUnitsChange(selectedUnits.filter((v) => v !== val));
   const removeChapter = (val) => handleChaptersChange(selectedChapters.filter((v) => v !== val));
   const removeTopic = (val) => handleTopicsChange(selectedTopics.filter((v) => v !== val));
+  const removeSubtopic = (val) => handleSubtopicsChange(selectedSubtopics.filter((v) => v !== val));
 
   // ── Render: SINGLE select (legacy) ──
   const renderSingleSelect = ({ label: lbl, labelHi: lHi, value: val, options: opts, onChange: oc, disabled: sd, placeholder: ph, placeholderHi: phHi }) => (
@@ -463,7 +552,7 @@ const SyllabusDropdown = ({
         className="w-full px-3 py-2 border border-gray-300 dark:border-secondary-600 rounded-lg
           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
           disabled:bg-gray-100 dark:disabled:bg-secondary-800 disabled:cursor-not-allowed
-          text-sm bg-white dark:bg-secondary-800 dark:text-secondary-200"
+          text-sm text-gray-900 bg-white dark:bg-secondary-800 dark:text-secondary-200"
       >
         <option value="">{syllabusLoading ? (language === 'hi' ? 'लोड हो रहा है...' : 'Loading...') : (language === 'hi' ? phHi : ph)}</option>
         {opts.map((o) => (
@@ -476,7 +565,7 @@ const SyllabusDropdown = ({
   );
 
   // ── Total selection count (multi) ──
-  const totalSelected = selectedUnits.length + selectedChapters.length + selectedTopics.length;
+  const totalSelected = selectedUnits.length + selectedChapters.length + selectedTopics.length + selectedSubtopics.length;
 
   // ── Breadcrumb (single mode) ──
   const renderBreadcrumb = () => {
@@ -514,6 +603,15 @@ const SyllabusDropdown = ({
             <span className="px-2 py-0.5 bg-white dark:bg-secondary-800 rounded border border-gray-200 dark:border-secondary-700 truncate max-w-[140px] flex items-center gap-1 text-xs">
               {selectedTopic.substring(0, 25)}
               <button onClick={() => handleTopicChange('')} className="text-gray-400 hover:text-gray-600"><X className="w-3 h-3" /></button>
+            </span>
+          </>
+        )}
+        {showSubtopic && selectedSubtopic && (
+          <>
+            <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+            <span className="px-2 py-0.5 bg-white dark:bg-secondary-800 rounded border border-gray-200 dark:border-secondary-700 truncate max-w-[140px] flex items-center gap-1 text-xs">
+              {selectedSubtopic.substring(0, 25)}
+              <button onClick={() => handleSubtopicChange('')} className="text-gray-400 hover:text-gray-600"><X className="w-3 h-3" /></button>
             </span>
           </>
         )}
@@ -625,6 +723,25 @@ const SyllabusDropdown = ({
             placeholder: 'Select Topic', placeholderHi: 'विषय चुनें',
           })
         )}
+
+        {/* Subtopic */}
+        {showSubtopic && (
+          multiSelect ? (
+            <MultiSelectDropdown
+              label="Subtopics" labelHi="उपविषय" language={language}
+              options={subtopicOptions} selected={selectedSubtopics}
+              onChange={handleSubtopicsChange}
+              disabled={multiSelect ? selectedTopics.length === 0 : !selectedTopic}
+              placeholder="Select Subtopics" placeholderHi="उपविषय चुनें"
+              icon={FileText} color="amber" loading={syllabusLoading}
+            />
+          ) : renderSingleSelect({
+            label: 'Subtopic', labelHi: 'उपविषय',
+            value: selectedSubtopic, options: subtopicOptions,
+            onChange: handleSubtopicChange, disabled: !selectedTopic,
+            placeholder: 'Select Subtopic', placeholderHi: 'उपविषय चुनें',
+          })
+        )}
       </div>
 
       {/* Chips (multi mode) */}
@@ -642,6 +759,12 @@ const SyllabusDropdown = ({
             items={selectedTopics.map((v) => ({ value: v, label: topicOptions.find((o) => o.value === v)?.[language === 'hi' ? 'labelHi' : 'label'] || v }))}
             onRemove={removeTopic} color="violet" icon={Tag}
           />
+          {showSubtopic && (
+            <SelectionChips
+              items={selectedSubtopics.map((v) => ({ value: v, label: subtopicOptions.find((o) => o.value === v)?.[language === 'hi' ? 'labelHi' : 'label'] || v }))}
+              onRemove={removeSubtopic} color="amber" icon={FileText}
+            />
+          )}
         </div>
       )}
     </div>

@@ -375,9 +375,7 @@ function App() {
     <ThemeProvider>
       <ToastProvider>
         <div className="font-sans antialiased">
-          {showLoader && (
-            <AdvancedLoader serverReady={serverReady && minTimePassed} />
-          )}
+          {/* showLoader removed to fix loading screen issue */}
           <Routes>
           <Route path="/pyq/*" element={<PYQHub language={language} setLanguage={setLanguage} />} />
 

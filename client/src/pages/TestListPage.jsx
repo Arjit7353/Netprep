@@ -1,9 +1,9 @@
 // client/src/pages/TestListPage.jsx
-// ═══════════════════════════════════════════════════════
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
 // UPGRADED: PYQ tests detected by hasPYQ flag (not just testType)
 // Tests with PYQ questions show in PYQ section regardless of type
 // Smart unit matching uses pyqUnits field
-// ═══════════════════════════════════════════════════════
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -28,33 +28,33 @@ import useTestList from '../hooks/useTestList';
 import { TEST_TYPE_CONFIG } from '../utils/constants';
 import pyqService from '../services/pyqService';
 
-// ═══════════════════════════════════════════════════════
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
 //                    CONFIGURATIONS
-// ═══════════════════════════════════════════════════════
+// â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• 
 
 const PAPER_CONFIGS = {
   paper1: {
-    title: { en: 'Paper 1', hi: 'पेपर 1' },
-    subtitle: { en: 'General Paper on Teaching & Research Aptitude', hi: 'शिक्षण और शोध अभिवृत्ति पर सामान्य पेपर' },
-    description: { en: '10 Units | Teaching, Research, Communication, ICT, Reasoning, Environment', hi: '10 इकाइयां | शिक्षण, शोध, संप्रेषण, ICT, तर्क, पर्यावरण' },
+    title: { en: 'Paper 1', hi: 'à¤ªà¥‡à¤ªà¤° 1' },
+    subtitle: { en: 'General Paper on Teaching & Research Aptitude', hi: 'à¤¶à¤¿à¤•à¥ à¤·à¤£ à¤”à¤° à¤¶à¥‹à¤§ à¤…à¤­à¤¿à¤µà¥ƒà¤¤à¥ à¤¤à¤¿ à¤ªà¤° à¤¸à¤¾à¤®à¤¾à¤¨à¥ à¤¯ à¤ªà¥‡à¤ªà¤°' },
+    description: { en: '10 Units | Teaching, Research, Communication, ICT, Reasoning, Environment', hi: '10 à¤‡à¤•à¤¾à¤‡à¤¯à¤¾à¤‚ | à¤¶à¤¿à¤•à¥ à¤·à¤£, à¤¶à¥‹à¤§, à¤¸à¤‚à¤ªà¥ à¤°à¥‡à¤·à¤£, ICT, à¤¤à¤°à¥ à¤•, à¤ªà¤°à¥ à¤¯à¤¾à¤µà¤°à¤£' },
     gradient: 'from-sky-500 via-blue-500 to-indigo-600',
     lightBg: 'from-sky-50 to-blue-50 dark:from-sky-950/40 dark:to-blue-950/40',
     icon: GraduationCap,
     pattern: 'radial-gradient(circle at 80% 20%, rgba(56,189,248,0.12) 0%, transparent 50%)',
   },
   paper2: {
-    title: { en: 'Paper 2', hi: 'पेपर 2' },
-    subtitle: { en: 'History (Subject Code: 06)', hi: 'इतिहास (विषय कोड: 06)' },
-    description: { en: '10 Units | Ancient, Medieval, Modern India & Historiography', hi: '10 इकाइयां | प्राचीन, मध्यकालीन, आधुनिक भारत और इतिहास लेखन' },
+    title: { en: 'Paper 2', hi: 'à¤ªà¥‡à¤ªà¤° 2' },
+    subtitle: { en: 'History (Subject Code: 06)', hi: 'à¤‡à¤¤à¤¿à¤¹à¤¾à¤¸ (à¤µà¤¿à¤·à¤¯ à¤•à¥‹à¤¡: 06)' },
+    description: { en: '10 Units | Ancient, Medieval, Modern India & Historiography', hi: '10 à¤‡à¤•à¤¾à¤‡à¤¯à¤¾à¤‚ | à¤ªà¥ à¤°à¤¾à¤šà¥€à¤¨, à¤®à¤§à¥ à¤¯à¤•à¤¾à¤²à¥€à¤¨, à¤†à¤§à¥ à¤¨à¤¿à¤• à¤­à¤¾à¤°à¤¤ à¤”à¤° à¤‡à¤¤à¤¿à¤¹à¤¾à¤¸ à¤²à¥‡à¤–à¤¨' },
     gradient: 'from-amber-500 via-orange-500 to-red-500',
     lightBg: 'from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40',
     icon: BookOpen,
     pattern: 'radial-gradient(circle at 80% 20%, rgba(251,191,36,0.12) 0%, transparent 50%)',
   },
   combined: {
-    title: { en: 'Combined Mock', hi: 'संयुक्त मॉक' },
-    subtitle: { en: 'Paper 1 + Paper 2 Combined Tests', hi: 'पेपर 1 + पेपर 2 संयुक्त परीक्षाएं' },
-    description: { en: '150 Questions | 3 Hours | Full NTA Pattern', hi: '150 प्रश्न | 3 घंटे | पूर्ण NTA पैटर्न' },
+    title: { en: 'Combined Mock', hi: 'à¤¸à¤‚à¤¯à¥ à¤•à¥ à¤¤ à¤®à¥‰à¤•' },
+    subtitle: { en: 'Paper 1 + Paper 2 Combined Tests', hi: 'à¤ªà¥‡à¤ªà¤° 1 + à¤ªà¥‡à¤ªà¤° 2 à¤¸à¤‚à¤¯à¥ à¤•à¥ à¤¤ à¤ªà¤°à¥€à¤•à¥ à¤·à¤¾à¤ à¤‚' },
+    description: { en: '150 Questions | 3 Hours | Full NTA Pattern', hi: '150 à¤ªà¥ à¤°à¤¶à¥ à¤¨ | 3 à¤˜à¤‚à¤Ÿà¥‡ | à¤ªà¥‚à¤°à¥ à¤£ NTA à¤ªà¥ˆà¤Ÿà¤°à¥ à¤¨' },
     gradient: 'from-violet-500 via-purple-500 to-fuchsia-600',
     lightBg: 'from-violet-50 to-purple-50 dark:from-violet-950/40 dark:to-purple-950/40',
     icon: Trophy,
@@ -91,14 +91,14 @@ const TYPE_GRADIENTS = {
 // SOURCE TYPE ICONS
 const SOURCE_ICONS = { bank: Database, pyq: Star, mixed: GitMerge };
 const SOURCE_LABELS = {
-  bank: { en: 'Bank', hi: 'बैंक' },
-  pyq: { en: 'PYQ Only', hi: 'केवल PYQ' },
-  mixed: { en: 'Mixed', hi: 'मिश्रित' }
+  bank: { en: 'Bank', hi: 'à¤¬à¥ˆà¤‚à¤•' },
+  pyq: { en: 'PYQ Only', hi: 'à¤•à¥‡à¤µà¤² PYQ' },
+  mixed: { en: 'Mixed', hi: 'à¤®à¤¿à¤¶à¥ à¤°à¤¿à¤¤' }
 };
 
 const extractUnitNumber = (unitStr) => {
   if (!unitStr) return null;
-  const m = unitStr.match(/(?:UNIT|इकाई)\s*([IVXLCDM]+|\d+)/i);
+  const m = unitStr.match(/(?:UNIT|à¤‡à¤•à¤¾à¤ˆ)\s*([IVXLCDM]+|\d+)/i);
   return m ? m[1].toUpperCase() : null;
 };
 
@@ -117,7 +117,7 @@ const unitMatchesId = (testUnit, pyqUnitId, testPyqUnits) => {
     }
   }
 
-  // ═══ NEW: Check pyqUnits array ═══
+  // â• â• â•  NEW: Check pyqUnits array â• â• â• 
   if (Array.isArray(testPyqUnits) && testPyqUnits.length > 0) {
     for (const pu of testPyqUnits) {
       const puNum = extractUnitNumber(pu);
@@ -131,9 +131,74 @@ const unitMatchesId = (testUnit, pyqUnitId, testPyqUnits) => {
   return false;
 };
 
-// ═══════════════════════════════════════════════════════
+const FolderCard = ({ title, subtitle, count, icon: Icon, color = 'blue', onClick }) => {
+  const colorMap = {
+    blue: 'from-blue-500 to-blue-600 shadow-blue-500/30',
+    amber: 'from-amber-500 to-amber-600 shadow-amber-500/30',
+    purple: 'from-purple-500 to-purple-600 shadow-purple-500/30',
+    green: 'from-emerald-500 to-emerald-600 shadow-emerald-500/30',
+    rose: 'from-rose-500 to-rose-600 shadow-rose-500/30',
+    gray: 'from-gray-600 to-gray-700 shadow-gray-500/30'
+  };
+  
+  const bg = colorMap[color] || colorMap.gray;
+  
+  return (
+    <button 
+      onClick={onClick} 
+      className="group relative w-full flex items-center gap-4 p-4 sm:p-5 rounded-2xl bg-white dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80 transition-all duration-300 hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-gray-900/50 hover:-translate-y-1 hover:border-transparent dark:hover:border-transparent overflow-hidden text-left backdrop-blur-sm"
+    >
+      {/* Subtle hover gradient overlay */}
+      <div className={`absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 bg-gradient-to-r ${bg}`} />
+      
+      {/* Glowing Left Icon */}
+      <div className={`relative flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br ${bg} shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+        <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+        {Icon ? <Icon className="w-7 h-7 sm:w-8 sm:h-8 text-white drop-shadow-sm relative z-10" /> : <FolderOpen className="w-7 h-7 sm:w-8 sm:h-8 text-white drop-shadow-sm relative z-10" />}
+      </div>
+      
+      {/* Content */}
+      <div className="flex-1 min-w-0 py-1">
+        <h3 className="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+          {title}
+        </h3>
+        {subtitle && (
+          <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 truncate mt-0.5">
+            {subtitle}
+          </p>
+        )}
+      </div>
+      
+      {/* Count Badge */}
+      {count !== undefined && (
+        <div className="flex-shrink-0 flex flex-col items-center justify-center min-w-[2.5rem] px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200/80 dark:border-gray-600/50 transition-all group-hover:bg-white dark:group-hover:bg-gray-600 shadow-sm group-hover:shadow group-hover:scale-110">
+          <span className="text-xs sm:text-sm font-black text-gray-800 dark:text-gray-100 leading-none">{count}</span>
+        </div>
+      )}
+    </button>
+  );
+  
+  return (
+    <button onClick={onClick} className={`w-full relative flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md text-left ${colorMap[color] || colorMap.gray}`}>
+      <div className={`p-3 rounded-xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 flex-shrink-0`}>
+        {Icon ? <Icon className={`w-7 h-7 ${iconColorMap[color]}`} fill="currentColor" fillOpacity={0.2} /> : <FolderOpen className={`w-7 h-7 ${iconColorMap[color]}`} fill="currentColor" fillOpacity={0.2} />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">{title}</h3>
+        {subtitle && <p className="text-xs mt-0.5 text-gray-500 dark:text-gray-400 truncate">{subtitle}</p>}
+      </div>
+      {count !== undefined && (
+        <div className="flex-shrink-0 flex items-center justify-center min-w-[2.5rem] h-7 px-2 rounded-full bg-white dark:bg-gray-800 text-[11px] font-black shadow-sm border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-300">
+          {count}
+        </div>
+      )}
+    </button>
+  );
+};
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 //                    MAIN COMPONENT
-// ═══════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalLanguage }) => {
   const navigate = useNavigate();
@@ -159,13 +224,13 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
   const [heroSearch, setHeroSearch] = useState('');
   const [showBatchExport, setShowBatchExport] = useState(false);
 
-  // ═══ PYQ CATEGORY STATE ═══
+  // â•â•â• PYQ CATEGORY STATE â•â•â•
   const [pyqFilterData, setPyqFilterData] = useState(null);
   const [pyqLoading, setPyqLoading] = useState(false);
   const [pyqSelectedUnit, setPyqSelectedUnit] = useState(null);
   const [pyqSelectedChapter, setPyqSelectedChapter] = useState(null);
 
-  // ═══ PYQ Tests — ALL tests containing PYQ questions (hasPYQ=true) ═══
+  // â•â•â• PYQ Tests â€” ALL tests containing PYQ questions (hasPYQ=true) â•â•â•
   const [allPyqTests, setAllPyqTests] = useState([]);
   const [pyqTestsLoading, setPyqTestsLoading] = useState(false);
 
@@ -173,7 +238,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
   const countsByType = filterOptions?.countsByType || {};
   const totalActive = Object.values(countsByPaper).reduce((s, c) => s + c, 0);
 
-  // ═══ TOTAL PYQ-containing tests (any type) ═══
+  // â•â•â• TOTAL PYQ-containing tests (any type) â•â•â•
   const totalPyqTests = useMemo(() => {
     return allPyqTests.length || pyqTestsCount || (countsByType['pyq_year'] || 0);
   }, [allPyqTests, pyqTestsCount, countsByType]);
@@ -184,37 +249,37 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
   }, [filterOptions]);
 
   const T = {
-    title: { en: 'Test Library', hi: 'टेस्ट लाइब्रेरी' },
-    subtitle: { en: 'Your complete test preparation hub', hi: 'आपका संपूर्ण परीक्षा तैयारी केंद्र' },
-    create: { en: 'Create Test', hi: 'टेस्ट बनाएं' },
-    viewAll: { en: 'View All Tests', hi: 'सभी परीक्षाएं देखें' },
-    browseBy: { en: 'Browse by Paper', hi: 'पेपर के अनुसार ब्राउज़ करें' },
-    byType: { en: 'Quick Access by Type', hi: 'प्रकार से त्वरित पहुंच' },
-    units: { en: 'Units', hi: 'इकाइयां' },
-    chapters: { en: 'Chapters', hi: 'अध्याय' },
-    tests: { en: 'tests', hi: 'परीक्षाएं' },
-    found: { en: 'tests found', hi: 'परीक्षाएं मिलीं' },
-    noTests: { en: 'No tests found', hi: 'कोई परीक्षा नहीं' },
-    noUnits: { en: 'No units found', hi: 'कोई इकाई नहीं' },
-    select: { en: 'Select', hi: 'चुनें' },
-    search: { en: 'Search tests by name, chapter, topic, PYQ year...', hi: 'नाम, अध्याय, विषय, PYQ वर्ष से खोजें...' },
-    showing: { en: 'Showing', hi: 'दिखाए गए' },
-    of: { en: 'of', hi: 'में से' },
-    allTests: { en: 'All Tests', hi: 'सभी परीक्षाएं' },
-    pyqTests: { en: 'PYQ Tests', hi: 'PYQ परीक्षाएं' },
-    pyqDesc: { en: 'All tests containing PYQ questions — any test type (DPP, Practice, etc.)', hi: 'PYQ प्रश्नों वाली सभी परीक्षाएं — कोई भी प्रकार (DPP, Practice, आदि)' },
-    createPyqTest: { en: 'Create PYQ Test', hi: 'PYQ टेस्ट बनाएं' },
-    topics: { en: 'Topics', hi: 'विषय' },
-    allPyqTests: { en: 'All PYQ Tests', hi: 'सभी PYQ परीक्षाएं' },
-    testsInUnit: { en: 'Tests in this unit', hi: 'इस इकाई की परीक्षाएं' },
-    testsInChapter: { en: 'Tests in this chapter', hi: 'इस अध्याय की परीक्षाएं' },
-    noPyqTests: { en: 'No PYQ tests created yet. Create one from the PYQ question bank!', hi: 'अभी तक कोई PYQ परीक्षा नहीं बनाई गई। PYQ प्रश्न बैंक से बनाएं!' },
-    pyqOnly: { en: 'PYQ Only', hi: 'केवल PYQ' },
-    mixed: { en: 'Mixed (Bank + PYQ)', hi: 'मिश्रित (बैंक + PYQ)' },
-    bankOnly: { en: 'Bank Only', hi: 'केवल बैंक' },
+    title: { en: 'Test Library', hi: 'à¤Ÿà¥‡à¤¸à¥à¤Ÿ à¤²à¤¾à¤‡à¤¬à¥à¤°à¥‡à¤°à¥€' },
+    subtitle: { en: 'Your complete test preparation hub', hi: 'à¤†à¤ªà¤•à¤¾ à¤¸à¤‚à¤ªà¥‚à¤°à¥à¤£ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤¤à¥ˆà¤¯à¤¾à¤°à¥€ à¤•à¥‡à¤‚à¤¦à¥à¤°' },
+    create: { en: 'Create Test', hi: 'à¤Ÿà¥‡à¤¸à¥à¤Ÿ à¤¬à¤¨à¤¾à¤à¤‚' },
+    viewAll: { en: 'View All Tests', hi: 'à¤¸à¤­à¥€ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚ à¤¦à¥‡à¤–à¥‡à¤‚' },
+    browseBy: { en: 'Browse by Paper', hi: 'à¤ªà¥‡à¤ªà¤° à¤•à¥‡ à¤…à¤¨à¥à¤¸à¤¾à¤° à¤¬à¥à¤°à¤¾à¤‰à¤œà¤¼ à¤•à¤°à¥‡à¤‚' },
+    byType: { en: 'Quick Access by Type', hi: 'à¤ªà¥à¤°à¤•à¤¾à¤° à¤¸à¥‡ à¤¤à¥à¤µà¤°à¤¿à¤¤ à¤ªà¤¹à¥à¤‚à¤š' },
+    units: { en: 'Units', hi: 'à¤‡à¤•à¤¾à¤‡à¤¯à¤¾à¤‚' },
+    chapters: { en: 'Chapters', hi: 'à¤…à¤§à¥à¤¯à¤¾à¤¯' },
+    tests: { en: 'tests', hi: 'à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚' },
+    found: { en: 'tests found', hi: 'à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚ à¤®à¤¿à¤²à¥€à¤‚' },
+    noTests: { en: 'No tests found', hi: 'à¤•à¥‹à¤ˆ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤¨à¤¹à¥€à¤‚' },
+    noUnits: { en: 'No units found', hi: 'à¤•à¥‹à¤ˆ à¤‡à¤•à¤¾à¤ˆ à¤¨à¤¹à¥€à¤‚' },
+    select: { en: 'Select', hi: 'à¤šà¥à¤¨à¥‡à¤‚' },
+    search: { en: 'Search tests by name, chapter, topic, PYQ year...', hi: 'à¤¨à¤¾à¤®, à¤…à¤§à¥à¤¯à¤¾à¤¯, à¤µà¤¿à¤·à¤¯, PYQ à¤µà¤°à¥à¤· à¤¸à¥‡ à¤–à¥‹à¤œà¥‡à¤‚...' },
+    showing: { en: 'Showing', hi: 'à¤¦à¤¿à¤–à¤¾à¤ à¤—à¤' },
+    of: { en: 'of', hi: 'à¤®à¥‡à¤‚ à¤¸à¥‡' },
+    allTests: { en: 'All Tests', hi: 'à¤¸à¤­à¥€ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚' },
+    pyqTests: { en: 'PYQ Tests', hi: 'PYQ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚' },
+    pyqDesc: { en: 'All tests containing PYQ questions â€” any test type (DPP, Practice, etc.)', hi: 'PYQ à¤ªà¥à¤°à¤¶à¥à¤¨à¥‹à¤‚ à¤µà¤¾à¤²à¥€ à¤¸à¤­à¥€ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚ â€” à¤•à¥‹à¤ˆ à¤­à¥€ à¤ªà¥à¤°à¤•à¤¾à¤° (DPP, Practice, à¤†à¤¦à¤¿)' },
+    createPyqTest: { en: 'Create PYQ Test', hi: 'PYQ à¤Ÿà¥‡à¤¸à¥à¤Ÿ à¤¬à¤¨à¤¾à¤à¤‚' },
+    topics: { en: 'Topics', hi: 'à¤µà¤¿à¤·à¤¯' },
+    allPyqTests: { en: 'All PYQ Tests', hi: 'à¤¸à¤­à¥€ PYQ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚' },
+    testsInUnit: { en: 'Tests in this unit', hi: 'à¤‡à¤¸ à¤‡à¤•à¤¾à¤ˆ à¤•à¥€ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚' },
+    testsInChapter: { en: 'Tests in this chapter', hi: 'à¤‡à¤¸ à¤…à¤§à¥à¤¯à¤¾à¤¯ à¤•à¥€ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚' },
+    noPyqTests: { en: 'No PYQ tests created yet. Create one from the PYQ question bank!', hi: 'à¤…à¤­à¥€ à¤¤à¤• à¤•à¥‹à¤ˆ PYQ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤¨à¤¹à¥€à¤‚ à¤¬à¤¨à¤¾à¤ˆ à¤—à¤ˆà¥¤ PYQ à¤ªà¥à¤°à¤¶à¥à¤¨ à¤¬à¥ˆà¤‚à¤• à¤¸à¥‡ à¤¬à¤¨à¤¾à¤à¤‚!' },
+    pyqOnly: { en: 'PYQ Only', hi: 'à¤•à¥‡à¤µà¤² PYQ' },
+    mixed: { en: 'Mixed (Bank + PYQ)', hi: 'à¤®à¤¿à¤¶à¥à¤°à¤¿à¤¤ (à¤¬à¥ˆà¤‚à¤• + PYQ)' },
+    bankOnly: { en: 'Bank Only', hi: 'à¤•à¥‡à¤µà¤² à¤¬à¥ˆà¤‚à¤•' },
   };
 
-  // ═══ LOAD PYQ FILTER DATA ═══
+  // â•â•â• LOAD PYQ FILTER DATA â•â•â•
   const loadPYQFilterData = useCallback(async () => {
     setPyqLoading(true);
     try {
@@ -227,13 +292,13 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
     }
   }, []);
 
-  // ═══ LOAD ALL PYQ TESTS — hasPYQ=true (ANY test type) ═══
+  // â•â•â• LOAD ALL PYQ TESTS â€” hasPYQ=true (ANY test type) â•â•â•
   const loadAllPyqTests = useCallback(async () => {
     setPyqTestsLoading(true);
     try {
       const testSvc = (await import('../services/testService')).default;
       const res = await testSvc.getTests({
-        hasPYQ: 'true',  // ═══ KEY CHANGE: filter by hasPYQ, NOT testType ═══
+        hasPYQ: 'true',  // â•â•â• KEY CHANGE: filter by hasPYQ, NOT testType â•â•â•
         status: 'active',
         limit: 200,
       });
@@ -246,7 +311,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
     }
   }, []);
 
-  // ═══ PYQ COMPUTED ═══
+  // â•â•â• PYQ COMPUTED â•â•â•
   const pyqUnits = useMemo(() => {
     if (!pyqFilterData?.units) return [];
     return pyqFilterData.units;
@@ -262,7 +327,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
     return pyqFilterData.topics.filter(t => t.chapter === pyqSelectedChapter);
   }, [pyqFilterData, pyqSelectedChapter]);
 
-  // ═══ FILTER PYQ TESTS — uses both unit AND pyqUnits ═══
+  // â•â•â• FILTER PYQ TESTS â€” uses both unit AND pyqUnits â•â•â•
   const filteredPyqTests = useMemo(() => {
     let filtered = allPyqTests;
 
@@ -321,7 +386,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
     return map;
   }, [allPyqTests, pyqChaptersForUnit]);
 
-  // ═══ KEYBOARD ═══
+  // â•â•â• KEYBOARD â•â•â•
   useEffect(() => {
     const handleKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); searchRef.current?.focus(); }
@@ -331,7 +396,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
     return () => window.removeEventListener('keydown', handleKey);
   }, [selectionMode]);
 
-  // ═══ NAVIGATION ═══
+  // â•â•â• NAVIGATION â•â•â•
   const goHome = () => {
     setView('home'); clearFilters(); clearSelection(); setHeroSearch('');
     setPyqSelectedUnit(null); setPyqSelectedChapter(null);
@@ -379,7 +444,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
 
   const handleDelete = async (id, e) => {
     e?.stopPropagation();
-    if (!window.confirm(language === 'hi' ? 'क्या आप इस परीक्षा को संग्रहीत करना चाहते हैं?' : 'Archive this test?')) return;
+    if (!window.confirm(language === 'hi' ? 'à¤•à¥à¤¯à¤¾ à¤†à¤ª à¤‡à¤¸ à¤ªà¤°à¥€à¤•à¥à¤·à¤¾ à¤•à¥‹ à¤¸à¤‚à¤—à¥à¤°à¤¹à¥€à¤¤ à¤•à¤°à¤¨à¤¾ à¤šà¤¾à¤¹à¤¤à¥‡ à¤¹à¥ˆà¤‚?' : 'Archive this test?')) return;
     try {
       const svc = (await import('../services/testService')).default;
       await svc.deleteTest(id);
@@ -389,7 +454,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
   };
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(language === 'hi' ? `${selectedTests.size} परीक्षाएं संग्रहीत करें?` : `Archive ${selectedTests.size} tests?`)) return;
+    if (!window.confirm(language === 'hi' ? `${selectedTests.size} à¤ªà¤°à¥€à¤•à¥à¤·à¤¾à¤à¤‚ à¤¸à¤‚à¤—à¥à¤°à¤¹à¥€à¤¤ à¤•à¤°à¥‡à¤‚?` : `Archive ${selectedTests.size} tests?`)) return;
     try { await bulkDelete(); } catch { }
   };
 
@@ -397,7 +462,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
   const selectedTestObjects = useMemo(() => tests.filter(t => selectedTests.has(t._id)), [tests, selectedTests]);
   const handleHeroSearch = (e) => { e.preventDefault(); if (heroSearch.trim()) goToSearch(heroSearch.trim()); };
 
-  // ═══ SUB COMPONENTS ═══
+  // â•â•â• SUB COMPONENTS â•â•â•
   const Breadcrumb = () => (
     <nav className="flex items-center gap-1.5 text-sm flex-wrap mb-1">
       <button onClick={goHome} className="flex items-center gap-1 text-gray-400 hover:text-primary-600 transition-colors">
@@ -498,7 +563,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
     );
   };
 
-  // ═══ SOURCE TYPE BADGE for test cards ═══
+  // â•â•â• SOURCE TYPE BADGE for test cards â•â•â•
   const SourceBadge = ({ test }) => {
     if (!test.hasPYQ) return null;
     const icon = test.sourceType === 'pyq' ? Star : test.sourceType === 'mixed' ? GitMerge : null;
@@ -517,7 +582,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
     );
   };
 
-  // ═══ RENDER TEST CARDS ═══
+  // â•â•â• RENDER TEST CARDS â•â•â•
   const renderTests = () => {
     if (loading) return <TestListSkeleton count={6} viewMode={viewMode} />;
     if (tests.length === 0) return <EmptyBox text={T.noTests[language]} action={
@@ -546,7 +611,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
     );
   };
 
-  // ═══ RENDER PYQ TEST CARDS ═══
+  // â•â•â• RENDER PYQ TEST CARDS â•â•â•
   const renderPyqTests = (testList) => {
     if (pyqTestsLoading) return <TestListSkeleton count={4} viewMode="grid" />;
     if (testList.length === 0) return (
@@ -563,530 +628,368 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
               selectionMode={false} isSelected={false}
               onSelect={() => { }} onDelete={handleDelete}
               questions={questionsCache[test._id] || []} onFetchQuestions={() => fetchQuestionsForTest(test._id)} />
-            {/* Source badge overlay */}
-            <div className="absolute top-2 left-2 z-10">
-              <SourceBadge test={test} />
-            </div>
           </div>
         ))}
       </div>
     );
   };
 
-  // ═══════════════════════════════════════════════════════
-  //                    MAIN RENDER
-  // ═══════════════════════════════════════════════════════
-
   return (
-    <Layout language={language} setLanguage={setGlobalLanguage}>
-      {() => (
-        <div className="space-y-6" ref={listRef}>
-
-          {/* HEADER */}
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              {view !== 'home' && <Breadcrumb />}
-              <div className="flex items-center gap-3">
-                {view !== 'home' && (
-                  <button onClick={goBack} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors -ml-2 flex-shrink-0">
-                    <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                  </button>
-                )}
-                <div className="min-w-0">
-                  <h1 className="text-2xl lg:text-3xl font-black text-gray-900 dark:text-white truncate">
-                    {view === 'home' && T.title[language]}
-                    {view === 'paper' && PAPER_CONFIGS[filters.paper]?.title[language]}
-                    {view === 'unit' && (filters.unit || '')}
-                    {view === 'search' && `${pagination.total} ${T.found[language]}`}
-                    {view === 'pyq' && T.pyqTests[language]}
-                    {view === 'pyq_unit' && (pyqUnits.find(u => u.id === pyqSelectedUnit)?.name || pyqSelectedUnit)}
-                    {view === 'pyq_chapter' && pyqSelectedChapter}
-                  </h1>
-                  {view === 'home' && <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{T.subtitle[language]}</p>}
-                  {view === 'pyq' && <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{T.pyqDesc[language]}</p>}
-                  {view === 'paper' && <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{PAPER_CONFIGS[filters.paper]?.subtitle[language]}</p>}
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-2 flex-shrink-0">
-              {tests.length > 0 && (view === 'search' || view === 'unit') && (
-                <button onClick={() => { if (selectionMode) clearSelection(); setSelectionMode(!selectionMode); }}
-                  className={`px-3 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2
-                    ${selectionMode ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 ring-2 ring-primary-300 dark:ring-primary-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
-                  {selectionMode ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-                  <span className="hidden sm:inline">{T.select[language]}</span>
+    <Layout view={view} setView={setView}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              {view !== 'home' && (
+                <button 
+                  onClick={goBack} 
+                  className="p-2 -ml-2 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800 transition-all active:scale-95"
+                  title="Go Back"
+                >
+                  <ArrowLeft className="w-5 h-5" />
                 </button>
               )}
-              <button onClick={() => { refresh(); if (view.startsWith('pyq')) loadAllPyqTests(); }} disabled={loading}
-                className="p-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-colors disabled:opacity-50">
-                <RefreshCw className={`w-5 h-5 text-gray-600 dark:text-gray-400 ${loading ? 'animate-spin' : ''}`} />
-              </button>
-              <button onClick={() => navigate('/tests/create')}
-                className="px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-primary-500/25 transition-all flex items-center gap-2">
-                <PlusCircle className="w-4 h-4" /> {T.create[language]}
-              </button>
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                <button onClick={goHome} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1"><Home className="w-3.5 h-3.5" /> Home</button>
+                {view !== 'home' && <ChevronRight className="w-4 h-4" />}
+                {view === 'paper' && <span className="text-gray-900 dark:text-gray-100">{PAPER_CONFIGS[filters.paper]?.title[language]}</span>}
+                {view === 'unit' && <span className="text-gray-900 dark:text-gray-100">Explorer</span>}
+                {view === 'pyq' && <span className="text-gray-900 dark:text-gray-100">{T.pyqTests[language]}</span>}
+                {view === 'pyq_unit' && <span className="text-gray-900 dark:text-gray-100">PYQ Explorer</span>}
+                {view === 'search' && <span className="text-gray-900 dark:text-gray-100">Search</span>}
+              </div>
             </div>
+            <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+              {T.title[language]}
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">
+              {T.subtitle[language]}
+            </p>
           </div>
-
-          {/* Bulk Actions */}
-          {selectionMode && selectedTests.size > 0 && (
-            <BulkActions selectedCount={selectedTests.size} totalCount={tests.length}
-              onSelectAll={selectAll} onClearSelection={clearSelection}
-              onBulkDelete={handleBulkDelete} onBulkExport={handleBulkExport}
-              loading={bulkLoading} language={language} />
-          )}
-
-          {/* ═══════════ HOME VIEW ═══════════ */}
+        </div>
+        <div className="mt-8">
+          {/* ----------- HOME VIEW ----------- */}
           {view === 'home' && (
-            <div className="space-y-8 animate-fade-in">
-              {showStats && <QuickStats stats={stats} language={language} onClose={() => setShowStats(false)}
-                collapsed={statsCollapsed} onToggle={() => setStatsCollapsed(!statsCollapsed)} />}
+            <div className="space-y-6 animate-fade-in mt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Object.entries(PAPER_CONFIGS).map(([key, cfg]) => {
+                  const count = countsByPaper[key] || 0;
+                  const colorMap = {
+                    paper1: 'blue',
+                    paper2: 'amber',
+                    combined: 'purple'
+                  };
+                  return (
+                    <FolderCard 
+                      key={key}
+                      title={cfg.title[language]}
+                      subtitle={cfg.subtitle[language]}
+                      count={count}
+                      icon={cfg.icon}
+                      color={colorMap[key] || 'gray'}
+                      onClick={() => selectPaper(key)}
+                    />
+                  );
+                })}
 
-              {/* Hero Search */}
-              <form onSubmit={handleHeroSearch} className="relative max-w-2xl mx-auto">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary-500/15 to-purple-500/15 rounded-2xl blur-xl -z-10" />
-                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input ref={searchRef} type="text" value={heroSearch} onChange={(e) => setHeroSearch(e.target.value)}
-                  placeholder={T.search[language]}
-                  className="w-full pl-14 pr-12 py-4 text-base border-2 border-gray-200 dark:border-gray-600 rounded-2xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 shadow-lg transition-all" />
-                <kbd className="absolute right-4 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center px-2 py-1 text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-600 font-mono">Ctrl+K</kbd>
-              </form>
-
-              {/* Paper Selection */}
-              <div>
-                <SectionHeader icon={FolderOpen} title={T.browseBy[language]} />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-4">
-                  {Object.entries(PAPER_CONFIGS).map(([key, cfg]) => {
-                    const count = countsByPaper[key] || 0;
-                    const Icon = cfg.icon;
-                    return (
-                      <button key={key} onClick={() => selectPaper(key)}
-                        className="relative overflow-hidden p-6 rounded-2xl border-2 text-left transition-all duration-500 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:shadow-2xl hover:-translate-y-1.5 group">
-                        <div className="absolute inset-0 rounded-2xl pointer-events-none" style={{ backgroundImage: cfg.pattern }} />
-                        <div className={`absolute -top-6 -right-6 w-28 h-28 rounded-full bg-gradient-to-br ${cfg.gradient} opacity-[0.07] group-hover:opacity-[0.15] group-hover:scale-125 transition-all duration-500`} />
-                        <div className={`absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r ${cfg.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-b-2xl`} />
-                        <div className={`w-16 h-16 bg-gradient-to-br ${cfg.gradient} rounded-2xl flex items-center justify-center mb-5 shadow-xl group-hover:shadow-2xl group-hover:scale-110 transition-all duration-300`}>
-                          <Icon className="w-8 h-8 text-white" />
-                        </div>
-                        <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-1">{cfg.title[language]}</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{cfg.subtitle[language]}</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-5">{cfg.description[language]}</p>
-                        <div className="flex items-end justify-between">
-                          <div>
-                            <span className={`text-4xl font-black bg-gradient-to-r ${cfg.gradient} bg-clip-text text-transparent`}>{count}</span>
-                            <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">{T.tests[language]}</span>
-                          </div>
-                          <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center group-hover:bg-white/20 transition-all duration-300">
-                            <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 group-hover:translate-x-0.5 transition-all" />
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                {/* PYQ Folder */}
+                <FolderCard 
+                  title={T.pyqTests[language]}
+                  subtitle={T.pyqDesc[language]}
+                  count={totalPyqTests}
+                  icon={Star}
+                  color="rose"
+                  onClick={goToPYQ}
+                />
               </div>
-
-              {/* ═══ PYQ TESTS CARD — shows count of ALL tests with PYQ ═══ */}
-              <div>
-                <SectionHeader icon={Star} title={T.pyqTests[language]} />
-                <button onClick={goToPYQ}
-                  className="w-full mt-4 relative overflow-hidden p-6 rounded-2xl border-2 text-left transition-all duration-500 bg-white dark:bg-gray-800 border-amber-200 dark:border-amber-800 hover:shadow-2xl hover:-translate-y-1 group">
-                  <div className="absolute inset-0 rounded-2xl pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(251,191,36,0.12) 0%, transparent 50%)' }} />
-                  <div className="absolute -top-6 -right-6 w-32 h-32 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 opacity-[0.07] group-hover:opacity-[0.15] group-hover:scale-125 transition-all duration-500" />
-                  <div className="flex items-center gap-6 relative">
-                    <div className="w-20 h-20 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-2xl group-hover:scale-110 transition-all flex-shrink-0">
-                      <Star className="w-10 h-10 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-1">{T.pyqTests[language]}</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{T.pyqDesc[language]}</p>
-                      <div className="flex flex-wrap gap-3">
-                        <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-xl border border-amber-200 dark:border-amber-800">
-                          <ClipboardList className="w-4 h-4 text-amber-600" />
-                          <span className="text-sm font-bold text-amber-700 dark:text-amber-400">{totalPyqTests} {T.tests[language]}</span>
-                        </div>
-                        {/* Source breakdown */}
-                        {(countsBySource.pyq || 0) > 0 && (
-                          <div className="flex items-center gap-1.5 bg-amber-50/50 px-2.5 py-1 rounded-lg border border-amber-100">
-                            <Star className="w-3 h-3 text-amber-500" />
-                            <span className="text-xs font-bold text-amber-600">{countsBySource.pyq} {T.pyqOnly[language]}</span>
-                          </div>
-                        )}
-                        {(countsBySource.mixed || 0) > 0 && (
-                          <div className="flex items-center gap-1.5 bg-purple-50/50 px-2.5 py-1 rounded-lg border border-purple-100">
-                            <GitMerge className="w-3 h-3 text-purple-500" />
-                            <span className="text-xs font-bold text-purple-600">{countsBySource.mixed} {T.mixed[language]}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center group-hover:ring-4 ring-amber-200/50 transition-all flex-shrink-0">
-                      <ArrowRight className="w-6 h-6 text-amber-600 group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                  </div>
-                </button>
-              </div>
-
-              {/* Type Quick Access */}
-              {Object.keys(countsByType).length > 0 && (
-                <div>
-                  <SectionHeader icon={Sparkles} title={T.byType[language]} />
-                  <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3 mt-4">
-                    {Object.entries(countsByType).sort((a, b) => b[1] - a[1]).map(([type, count]) => {
-                      const cfg = TEST_TYPE_CONFIG[type] || {};
-                      const Icon = TYPE_ICONS[type] || ClipboardList;
-                      const grad = TYPE_GRADIENTS[type] || 'from-gray-500 to-gray-600';
-                      return (
-                        <button key={type} onClick={() => { updateFilter('testType', type); goToSearch(); }}
-                          className="p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-center transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-white dark:bg-gray-800 group">
-                          <div className={`w-10 h-10 bg-gradient-to-br ${grad} rounded-xl flex items-center justify-center mx-auto mb-2 shadow-md group-hover:scale-110 group-hover:shadow-lg transition-all`}>
-                            <Icon className="w-4.5 h-4.5 text-white" />
-                          </div>
-                          <div className="text-xl font-black text-gray-900 dark:text-white">{count}</div>
-                          <div className="text-[10px] text-gray-500 font-bold mt-0.5">{cfg.shortCode || type}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* View All */}
-              <button onClick={() => goToSearch()}
-                className="w-full bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary-400 dark:hover:border-primary-600 rounded-2xl p-5 flex items-center justify-between hover:shadow-xl transition-all group">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg"><List className="w-6 h-6 text-white" /></div>
-                  <div className="text-left"><h3 className="font-bold text-gray-900 dark:text-white">{T.viewAll[language]}</h3><p className="text-sm text-gray-500">{totalActive} {T.tests[language]}</p></div>
-                </div>
-                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-primary-600 group-hover:translate-x-1 transition-all" />
-              </button>
             </div>
           )}
 
-          {/* ═══════════ PYQ MAIN VIEW ═══════════ */}
+          {/* ----------- PYQ MAIN VIEW ----------- */}
           {view === 'pyq' && (
-            <div className="space-y-6 animate-fade-in">
-              {/* PYQ Header Banner */}
-              <div className="relative overflow-hidden rounded-2xl shadow-xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500">
-                <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
-                <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/5 rounded-full blur-2xl" />
-                <div className="relative p-6 sm:p-8">
-                  <div className="flex items-center gap-5">
-                    <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-2xl border border-white/10">
-                      <Star className="w-10 h-10 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <h2 className="text-3xl font-black text-white mb-1">{T.pyqTests[language]}</h2>
-                      <p className="text-white/80 text-sm">{T.pyqDesc[language]}</p>
-                      <div className="flex flex-wrap gap-3 mt-3">
-                        <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-xl px-3.5 py-2 border border-white/10">
-                          <ClipboardList className="w-4 h-4 text-white/90" />
-                          <span className="text-white font-bold text-sm">{allPyqTests.length}</span>
-                          <span className="text-white/70 text-xs">{T.tests[language]}</span>
-                        </div>
-                        {/* Source breakdown in banner */}
-                        {(() => {
-                          const pyqOnly = allPyqTests.filter(t => t.sourceType === 'pyq').length;
-                          const mixed = allPyqTests.filter(t => t.sourceType === 'mixed').length;
-                          return (
-                            <>
-                              {pyqOnly > 0 && (
-                                <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/10">
-                                  <Star className="w-3.5 h-3.5 text-white/80" />
-                                  <span className="text-white/90 text-xs font-bold">{pyqOnly} PYQ-only</span>
-                                </div>
-                              )}
-                              {mixed > 0 && (
-                                <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/10">
-                                  <GitMerge className="w-3.5 h-3.5 text-white/80" />
-                                  <span className="text-white/90 text-xs font-bold">{mixed} Mixed</span>
-                                </div>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                    <button onClick={() => navigate('/tests/create')}
-                      className="hidden sm:flex items-center gap-2 px-5 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-bold text-sm rounded-xl border border-white/20 shadow-lg transition-all">
-                      <PlusCircle className="w-4 h-4" /> {T.createPyqTest[language]}
-                    </button>
-                  </div>
-                </div>
+            <div className="space-y-6 animate-fade-in mt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {/* View All Tests Folder */}
+                <FolderCard 
+                  title={T.viewAll[language]}
+                  subtitle="All PYQ Tests"
+                  count={allPyqTests.length}
+                  icon={List}
+                  color="gray"
+                  onClick={() => goToSearch()}
+                />
+
+                {/* Units */}
+                {pyqUnits.map((unit, idx) => {
+                  const unitNum = unit.id?.match(/d+/)?.[0] || idx + 1;
+                  return (
+                    <FolderCard 
+                      key={unit.id}
+                      title={`Unit ${unitNum}`}
+                      subtitle={unit.name}
+                      count={pyqTestCountByUnit[unit.id] || 0}
+                      icon={Layers}
+                      color="rose"
+                      onClick={() => selectPYQUnit(unit.id)}
+                    />
+                  );
+                })}
               </div>
-
-              {pyqLoading || pyqTestsLoading ? <TestListSkeleton count={4} /> : (
-                <>
-                  {/* Browse by Unit */}
-                  {pyqUnits.length > 0 && (
-                    <div>
-                      <SectionHeader icon={Layers} title={T.units[language]} count={pyqUnits.length} />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                        {pyqUnits.map((unit, idx) => {
-                          const cl = UNIT_COLORS[idx % UNIT_COLORS.length];
-                          const unitNum = unit.id?.match(/\d+/)?.[0] || idx + 1;
-                          const testCount = pyqTestCountByUnit[unit.id] || 0;
-                          return (
-                            <button key={unit.id} onClick={() => selectPYQUnit(unit.id)}
-                              className={`relative overflow-hidden p-5 rounded-2xl border-2 text-left transition-all duration-300 bg-gradient-to-br ${cl.light} ${cl.border} hover:shadow-xl hover:-translate-y-1 group`}>
-                              <div className={`absolute -top-4 -right-4 w-24 h-24 rounded-full bg-gradient-to-br ${cl.grad} opacity-[0.08] group-hover:opacity-[0.18] group-hover:scale-150 transition-all duration-500`} />
-                              <div className="flex items-start justify-between gap-3 relative">
-                                <div className="flex-1 min-w-0">
-                                  <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r ${cl.grad} text-white text-xs font-black mb-3 shadow-md`}>
-                                    <Hash className="w-3 h-3" /> UNIT {unitNum}
-                                  </div>
-                                  <h4 className="text-sm font-bold text-gray-900 dark:text-white leading-snug mb-2 line-clamp-2">{unit.name}</h4>
-                                  <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-1.5">
-                                      <ClipboardList className="w-3.5 h-3.5 text-amber-500" />
-                                      <span className={`text-lg font-black ${cl.text}`}>{testCount}</span>
-                                      <span className="text-xs text-gray-500">{T.tests[language]}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                      <FileText className="w-3.5 h-3.5 text-gray-400" />
-                                      <span className="text-xs text-gray-400">{unit.count} Q</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="w-11 h-11 rounded-2xl bg-white/60 dark:bg-gray-800/60 flex items-center justify-center group-hover:ring-4 ring-gray-200/50 dark:ring-gray-700/50 transition-all flex-shrink-0">
-                                  <ChevronRight className={`w-5 h-5 ${cl.text} group-hover:translate-x-0.5 transition-transform`} />
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* All PYQ Tests */}
-                  <div>
-                    <SectionHeader icon={ClipboardList} title={`${T.allPyqTests[language]} (${allPyqTests.length})`}
-                      extra={
-                        <button onClick={() => navigate('/tests/create')} className="text-sm text-amber-600 dark:text-amber-400 font-medium hover:underline flex items-center gap-1">
-                          <PlusCircle className="w-3.5 h-3.5" /> {T.createPyqTest[language]}
-                        </button>
-                      } />
-                    <div className="mt-4">
-                      {renderPyqTests(allPyqTests)}
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
           )}
 
-          {/* ═══════════ PYQ UNIT VIEW ═══════════ */}
+          {/* ----------- EXPLORER VIEW (PYQ UNIT/CHAPTER) ----------- */}
           {view === 'pyq_unit' && (
-            <div className="space-y-6 animate-fade-in">
-              {pyqChaptersForUnit.length > 0 && (
-                <div>
-                  <SectionHeader icon={BookCopy} title={T.chapters[language]} count={pyqChaptersForUnit.length} />
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+            <div className="flex flex-col lg:flex-row gap-6 mt-2 animate-fade-in">
+              {/* Left Pane: Sidebar */}
+              <div className="w-full lg:w-[320px] flex-shrink-0">
+                <div className="bg-white dark:bg-gray-800/80 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden backdrop-blur-xl">
+                  <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">ALL CHAPTERS (PYQ)</h3>
+                    <span className="bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-400 text-xs font-bold px-2 py-0.5 rounded-full">{pyqChaptersForUnit.length}</span>
+                  </div>
+                  <div className="p-3 space-y-1.5 max-h-[600px] overflow-y-auto custom-scrollbar">
+                    {/* All Chapters Option */}
+                    <button 
+                      onClick={() => { updateFilter('chapter', ''); }}
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${!filters.chapter ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200/50 dark:border-rose-500/20 shadow-sm' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 border border-transparent'}`}
+                    >
+                      <span className="truncate pr-4">All Chapters</span>
+                      {!filters.chapter && <div className="w-1.5 h-1.5 rounded-full bg-rose-600 dark:bg-rose-400"></div>}
+                    </button>
+                    
                     {pyqChaptersForUnit.map((ch, idx) => {
-                      const cl = UNIT_COLORS[idx % UNIT_COLORS.length];
-                      const testCount = pyqTestCountByChapter[ch.chapter] || 0;
+                      const isActive = filters.chapter === ch.chapter;
+                      const numStr = String(idx + 1).padStart(2, '0');
                       return (
-                        <button key={ch.chapter} onClick={() => selectPYQChapter(ch.chapter)}
-                          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-left hover:shadow-xl transition-all duration-300 group hover:-translate-y-0.5 hover:border-primary-200 dark:hover:border-primary-800">
-                          <div className="flex items-start gap-3">
-                            <div className={`w-9 h-9 bg-gradient-to-br ${cl.grad} rounded-xl flex items-center justify-center flex-shrink-0 shadow-md text-white text-xs font-black`}>{idx + 1}</div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-bold text-gray-900 dark:text-white text-sm leading-snug mb-1 line-clamp-2">{ch.chapter}</h4>
-                              <div className="flex items-center gap-3">
-                                <span className="text-xs text-amber-600 font-bold">{testCount} {T.tests[language]}</span>
-                                <span className="text-xs text-gray-400">{ch.count} Q</span>
-                              </div>
+                        <button
+                          key={ch.chapter}
+                          onClick={() => { updateFilter('chapter', ch.chapter); }} 
+                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${isActive ? 'bg-rose-50 dark:bg-rose-500/10 border border-rose-200/50 dark:border-rose-500/20 shadow-sm' : 'hover:bg-gray-100 dark:hover:bg-gray-700/50 border border-transparent group'}`}
+                        >
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <div className={`flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-lg ${isActive ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 group-hover:bg-white dark:group-hover:bg-gray-700'}`}>
+                              <span className="text-xs font-bold">CH {numStr}</span>
                             </div>
-                            <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-primary-600 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-1" />
+                            <span className={`truncate ${isActive ? 'text-rose-700 dark:text-rose-400' : 'text-gray-700 dark:text-gray-300'}`}>{ch.chapter}</span>
                           </div>
+                          {isActive && <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-rose-600 dark:bg-rose-400"></div>}
                         </button>
                       );
                     })}
                   </div>
                 </div>
-              )}
+              </div>
 
-              <div>
-                <SectionHeader icon={ClipboardList} title={`${T.testsInUnit[language]} (${filteredPyqTests.length})`}
-                  extra={
-                    <button onClick={() => navigate('/tests/create')} className="text-sm text-amber-600 dark:text-amber-400 font-medium hover:underline flex items-center gap-1">
-                      <PlusCircle className="w-3.5 h-3.5" /> {T.createPyqTest[language]}
-                    </button>
-                  } />
-                <div className="mt-4">
-                  {renderPyqTests(filteredPyqTests)}
+              {/* Right Pane: Tests List */}
+              <div className="w-full lg:flex-1 bg-white dark:bg-gray-800/80 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden backdrop-blur-xl">
+                {/* Header / Tabs */}
+                <div className="px-6 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-8 overflow-x-auto no-scrollbar">
+                    <button className="whitespace-nowrap py-4 text-sm font-medium border-b-2 border-rose-600 text-rose-600 dark:text-rose-400">All PYQ Tests</button>
+                    <button className="whitespace-nowrap py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">Shift 1</button>
+                    <button className="whitespace-nowrap py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">Shift 2</button>
+                  </div>
+                </div>
+                
+                {/* Content */}
+                <div className="p-6 bg-gray-50/30 dark:bg-gray-900/20 min-h-[500px]">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                      {filters.chapter ? filters.chapter : (filters.unit || 'All PYQs')}
+                    </h2>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{filteredPyqTests.length} PYQs found</span>
+                  </div>
+                  
+                  {/* Reuse renderTests but force list mode for premium look */}
+                  <div className="space-y-4">
+                    {(() => {
+                       if (filteredPyqTests.length === 0) {
+                         return <EmptyBox text={T.noTests[language]} action={<button onClick={() => navigate('/tests/create')} className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl transition-colors inline-flex items-center gap-2"><PlusCircle className="w-4 h-4" /> {T.create[language]}</button>} />;
+                       }
+                       return (
+                         <div className="flex flex-col gap-4">
+                           {filteredPyqTests.map(test => (
+                             <TestCardPro key={test._id} test={test} language={language} variant="list" 
+                               onEdit={() => navigate('/tests/edit/' + test._id)}
+                               onView={() => navigate('/tests/' + test._id)}
+                               onDelete={() => {}}
+                               selectionMode={selectionMode}
+                               isSelected={selectedTests.has(test._id)}
+                               onToggleSelection={(id) => {}}
+                             />
+                           ))}
+                         </div>
+                       );
+                    })()}
+                    <PaginationBar />
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ═══════════ PYQ CHAPTER VIEW ═══════════ */}
+          {/* ----------- PYQ CHAPTER VIEW ----------- */}
           {view === 'pyq_chapter' && (
-            <div className="space-y-6 animate-fade-in">
-              {pyqTopicsForChapter.length > 0 && (
-                <div>
-                  <SectionHeader icon={Tag} title={T.topics[language]} count={pyqTopicsForChapter.length} />
-                  <div className="flex flex-wrap gap-3 mt-4">
-                    {pyqTopicsForChapter.map(tp => (
-                      <span key={tp.topic} className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-purple-200 dark:border-purple-800 rounded-xl text-sm font-medium text-purple-700 dark:text-purple-400 shadow-sm">
-                        <Tag className="w-3.5 h-3.5" /> {tp.topic} <span className="text-xs text-gray-400">({tp.count})</span>
-                      </span>
-                    ))}
+            <div className="space-y-6 animate-fade-in mt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {/* View All Tests Folder */}
+                <FolderCard 
+                  title={T.viewAll[language]}
+                  subtitle="Chapter Tests"
+                  count={filteredPyqTests.length}
+                  icon={List}
+                  color="gray"
+                  onClick={() => goToSearch()}
+                />
+
+                {/* Topics */}
+                {pyqTopicsForChapter.map((tp, idx) => {
+                  const tpTests = filteredPyqTests.filter(t => t.topic === tp.topic);
+                  return (
+                    <FolderCard 
+                      key={tp.topic}
+                      title={`Topic ${idx + 1}`}
+                      subtitle={tp.topic}
+                      count={tpTests.length}
+                      icon={Tag}
+                      color="purple"
+                      onClick={() => {}}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ----------- PAPER VIEW ----------- */}
+          {view === 'paper' && filters.paper && (
+            <div className="space-y-6 animate-fade-in mt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {/* View All Tests Folder */}
+                <FolderCard 
+                  title={T.viewAll[language]}
+                  subtitle={`${PAPER_CONFIGS[filters.paper]?.title[language]} Tests`}
+                  count={countsByPaper[filters.paper] || 0}
+                  icon={List}
+                  color="gray"
+                  onClick={() => goToSearch()}
+                />
+
+                {/* Units */}
+                {unitsForPaper.map((item, idx) => {
+                  const unitNum = item.unit?.match(/d+/)?.[0] || idx + 1;
+                  return (
+                    <FolderCard 
+                      key={item.unit}
+                      title={`Unit ${unitNum}`}
+                      subtitle={item.unit}
+                      count={item.count}
+                      icon={Layers}
+                      color="blue"
+                      onClick={() => selectUnit(item.unit)}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ----------- EXPLORER VIEW (UNIT/CHAPTER) ----------- */}
+          {view === 'unit' && (
+            <div className="flex flex-col lg:flex-row gap-6 mt-2 animate-fade-in">
+              {/* Left Pane: Sidebar */}
+              <div className="w-full lg:w-[320px] flex-shrink-0">
+                <div className="bg-white dark:bg-gray-800/80 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden backdrop-blur-xl">
+                  <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">ALL CHAPTERS</h3>
+                    <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400 text-xs font-bold px-2 py-0.5 rounded-full">{chaptersForUnit.length}</span>
+                  </div>
+                  <div className="p-3 space-y-1.5 max-h-[600px] overflow-y-auto custom-scrollbar">
+                    {/* All Chapters Option */}
+                    <button 
+                      onClick={() => { updateFilter('chapter', ''); }}
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${!filters.chapter ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-500/20 shadow-sm' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 border border-transparent'}`}
+                    >
+                      <span className="truncate pr-4">All Chapters</span>
+                      {!filters.chapter && <div className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400"></div>}
+                    </button>
+                    
+                    {chaptersForUnit.map((ch, idx) => {
+                      const isActive = filters.chapter === ch;
+                      const numStr = String(idx + 1).padStart(2, '0');
+                      return (
+                        <button
+                          key={ch}
+                          onClick={() => { updateFilter('chapter', ch); }} 
+                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${isActive ? 'bg-blue-50 dark:bg-blue-500/10 border border-blue-200/50 dark:border-blue-500/20 shadow-sm' : 'hover:bg-gray-100 dark:hover:bg-gray-700/50 border border-transparent group'}`}
+                        >
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <div className={`flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-lg ${isActive ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 group-hover:bg-white dark:group-hover:bg-gray-700'}`}>
+                              <span className="text-xs font-bold">CH {numStr}</span>
+                            </div>
+                            <span className={`truncate ${isActive ? 'text-blue-700 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'}`}>{ch}</span>
+                          </div>
+                          {isActive && <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400"></div>}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-              )}
+              </div>
 
-              <div>
-                <SectionHeader icon={ClipboardList} title={`${T.testsInChapter[language]} (${filteredPyqTests.length})`}
-                  extra={
-                    <button onClick={() => navigate('/tests/create')} className="text-sm text-amber-600 dark:text-amber-400 font-medium hover:underline flex items-center gap-1">
-                      <PlusCircle className="w-3.5 h-3.5" /> {T.createPyqTest[language]}
-                    </button>
-                  } />
-                <div className="mt-4">
-                  {renderPyqTests(filteredPyqTests)}
+              {/* Right Pane: Tests List */}
+              <div className="w-full lg:flex-1 bg-white dark:bg-gray-800/80 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden backdrop-blur-xl">
+                {/* Header / Tabs */}
+                <div className="px-6 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-8 overflow-x-auto no-scrollbar">
+                    <button onClick={() => updateFilter('testType', '')} className={`whitespace-nowrap py-4 text-sm font-medium border-b-2 transition-colors ${!filters.testType ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>All Tests</button>
+                    <button onClick={() => updateFilter('testType', 'mock')} className={`whitespace-nowrap py-4 text-sm font-medium border-b-2 transition-colors ${filters.testType === 'mock' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>Mock Tests</button>
+                    <button onClick={() => updateFilter('testType', 'dpp')} className={`whitespace-nowrap py-4 text-sm font-medium border-b-2 transition-colors ${filters.testType === 'dpp' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>DPPs</button>
+                    <button onClick={() => updateFilter('testType', 'pyq')} className={`whitespace-nowrap py-4 text-sm font-medium border-b-2 transition-colors ${filters.testType === 'pyq' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}>PYQs</button>
+                  </div>
+                </div>
+                
+                {/* Content */}
+                <div className="p-6 bg-gray-50/30 dark:bg-gray-900/20 min-h-[500px]">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                      {filters.chapter ? filters.chapter : (filters.unit || 'All Tests')}
+                    </h2>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{tests.length} tests found</span>
+                  </div>
+                  
+                  {/* Reuse renderTests but force list mode for premium look */}
+                  <div className="space-y-4">
+                    {(() => {
+                       if (tests.length === 0) {
+                         return <EmptyBox text={T.noTests[language]} action={<button onClick={() => navigate('/tests/create')} className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl transition-colors inline-flex items-center gap-2"><PlusCircle className="w-4 h-4" /> {T.create[language]}</button>} />;
+                       }
+                       return (
+                         <div className="flex flex-col gap-4">
+                           {tests.map(test => (
+                             <TestCardPro key={test._id} test={test} language={language} variant="list" 
+                               onEdit={() => navigate('/tests/edit/' + test._id)}
+                               onView={() => navigate('/tests/' + test._id)}
+                               onDelete={() => {}}
+                               selectionMode={selectionMode}
+                               isSelected={selectedTests.has(test._id)}
+                               onToggleSelection={(id) => {}}
+                             />
+                           ))}
+                         </div>
+                       );
+                    })()}
+                    <PaginationBar />
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ═══════════ PAPER VIEW ═══════════ */}
-          {view === 'paper' && filters.paper && (
-            <div className="space-y-6 animate-fade-in">
-              {(() => {
-                const cfg = PAPER_CONFIGS[filters.paper];
-                const Icon = cfg.icon;
-                const paperCount = countsByPaper[filters.paper] || 0;
-                return (
-                  <div className={`relative overflow-hidden rounded-2xl shadow-xl bg-gradient-to-r ${cfg.gradient}`}>
-                    <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: cfg.pattern }} />
-                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
-                    <div className="relative p-6 sm:p-8">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
-                        <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-2xl flex-shrink-0 border border-white/10">
-                          <Icon className="w-10 h-10 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h2 className="text-3xl font-black text-white mb-1">{cfg.title[language]}</h2>
-                          <p className="text-white/90 text-sm font-medium">{cfg.subtitle[language]}</p>
-                          <div className="flex flex-wrap items-center gap-3 mt-4">
-                            <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-xl px-3.5 py-2 border border-white/10">
-                              <ClipboardList className="w-4 h-4 text-white/90" />
-                              <span className="text-white font-bold text-sm">{paperCount}</span>
-                              <span className="text-white/70 text-xs">{T.tests[language]}</span>
-                            </div>
-                            <div className="flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-xl px-3.5 py-2 border border-white/10">
-                              <Layers className="w-4 h-4 text-white/90" />
-                              <span className="text-white font-bold text-sm">{unitsForPaper.length}</span>
-                              <span className="text-white/70 text-xs">{T.units[language]}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <button onClick={(e) => { e.stopPropagation(); navigate('/tests/create'); }}
-                          className="hidden sm:flex items-center gap-2 px-5 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-bold text-sm rounded-xl border border-white/20 shadow-lg hover:shadow-xl transition-all">
-                          <PlusCircle className="w-4 h-4" /> {T.create[language]}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              <button onClick={() => goToSearch()}
-                className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex items-center justify-between hover:shadow-lg transition-all group">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center justify-center"><List className="w-5 h-5 text-gray-500" /></div>
-                  <div className="text-left"><h4 className="font-bold text-gray-900 dark:text-white text-sm">{T.viewAll[language]}</h4><p className="text-xs text-gray-500">{countsByPaper[filters.paper] || 0} {T.tests[language]}</p></div>
-                </div>
-                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-primary-600 group-hover:translate-x-1 transition-all" />
-              </button>
-
-              <SectionHeader icon={Layers} title={T.units[language]} count={unitsForPaper.length} />
-              {loading ? <TestListSkeleton count={4} /> : unitsForPaper.length === 0 ? <EmptyBox text={T.noUnits[language]} /> : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {unitsForPaper.map((item, idx) => {
-                    const cl = UNIT_COLORS[idx % UNIT_COLORS.length];
-                    const unitNum = item.unit?.match(/\d+/)?.[0] || idx + 1;
-                    const testTypeIcons = (item.testTypes || []).slice(0, 4);
-                    return (
-                      <button key={item.unit} onClick={() => selectUnit(item.unit)}
-                        className={`relative overflow-hidden p-5 rounded-2xl border-2 text-left transition-all duration-300 bg-gradient-to-br ${cl.light} ${cl.border} hover:shadow-xl hover:-translate-y-1 group`}>
-                        <div className={`absolute -top-4 -right-4 w-24 h-24 rounded-full bg-gradient-to-br ${cl.grad} opacity-[0.08] group-hover:opacity-[0.18] group-hover:scale-150 transition-all duration-500`} />
-                        <div className="flex items-start justify-between gap-3 relative">
-                          <div className="flex-1 min-w-0">
-                            <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r ${cl.grad} text-white text-xs font-black mb-3 shadow-md`}>
-                              <Hash className="w-3 h-3" /> UNIT {unitNum}
-                            </div>
-                            <h4 className="text-sm font-bold text-gray-900 dark:text-white leading-snug mb-3 line-clamp-2">{item.unit}</h4>
-                            {testTypeIcons.length > 0 && (
-                              <div className="flex items-center gap-1.5 mb-3">
-                                {testTypeIcons.map((type) => {
-                                  const TIcon = TYPE_ICONS[type] || ClipboardList;
-                                  const tGrad = TYPE_GRADIENTS[type] || 'from-gray-400 to-gray-500';
-                                  return (
-                                    <div key={type} className={`w-6 h-6 bg-gradient-to-br ${tGrad} rounded-md flex items-center justify-center shadow-sm`} title={TEST_TYPE_CONFIG[type]?.shortCode}>
-                                      <TIcon className="w-3 h-3 text-white" />
-                                    </div>
-                                  );
-                                })}
-                                {(item.testTypes || []).length > 4 && <span className="text-[10px] text-gray-400 font-medium">+{item.testTypes.length - 4}</span>}
-                              </div>
-                            )}
-                            <div className="flex items-center gap-3">
-                              <span className={`text-2xl font-black ${cl.text}`}>{item.count}</span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">{T.tests[language]}</span>
-                            </div>
-                          </div>
-                          <div className="w-11 h-11 rounded-2xl bg-white/60 dark:bg-gray-800/60 flex items-center justify-center group-hover:ring-4 ring-gray-200/50 dark:ring-gray-700/50 transition-all flex-shrink-0">
-                            <ChevronRight className={`w-5 h-5 ${cl.text} group-hover:translate-x-0.5 transition-transform`} />
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ═══════════ UNIT VIEW ═══════════ */}
-          {view === 'unit' && (
-            <div className="space-y-6 animate-fade-in">
-              {chaptersForUnit.length > 0 && (
-                <>
-                  <SectionHeader icon={BookCopy} title={T.chapters[language]} count={chaptersForUnit.length} />
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {chaptersForUnit.map((ch, idx) => {
-                      const cl = UNIT_COLORS[idx % UNIT_COLORS.length];
-                      const chTests = tests.filter(t => t.chapter === ch);
-                      return (
-                        <button key={ch} onClick={() => selectChapter(ch)}
-                          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-left hover:shadow-xl transition-all duration-300 group hover:-translate-y-0.5 hover:border-primary-200 dark:hover:border-primary-800">
-                          <div className="flex items-start gap-3">
-                            <div className={`w-9 h-9 bg-gradient-to-br ${cl.grad} rounded-xl flex items-center justify-center flex-shrink-0 shadow-md text-white text-xs font-black`}>{idx + 1}</div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-bold text-gray-900 dark:text-white text-sm leading-snug mb-1 line-clamp-2">{ch}</h4>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">{chTests.length} {T.tests[language]}</p>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-primary-600 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-1" />
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-              <SectionHeader icon={ClipboardList} title={`${T.allTests[language]} (${pagination.total})`}
-                extra={<button onClick={() => goToSearch()} className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline flex items-center gap-1">{language === 'hi' ? 'फ़िल्टर करें' : 'Filter'} <ArrowUpRight className="w-3.5 h-3.5" /></button>} />
-              {renderTests()}
-              <PaginationBar />
-            </div>
-          )}
-
-          {/* ═══════════ SEARCH VIEW ═══════════ */}
+          {/* ----------- SEARCH VIEW ----------- */}
           {view === 'search' && (
-            <div className="space-y-4 animate-fade-in">
+            <div className="space-y-4 animate-fade-in mt-2">
               <FilterPanel filters={filters} updateFilter={updateFilter} clearFilters={clearFilters}
                 hasActiveFilters={hasActiveFilters} filterOptions={filterOptions}
                 language={language} viewMode={viewMode} setViewMode={setViewMode} />
@@ -1104,7 +1007,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
           <BatchExportModal isOpen={showBatchExport} onClose={() => setShowBatchExport(false)}
             tests={selectedTestObjects} questionsCache={questionsCache} language={language} />
         </div>
-      )}
+      </div>
     </Layout>
   );
 };

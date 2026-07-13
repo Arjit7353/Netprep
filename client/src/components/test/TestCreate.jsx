@@ -25,6 +25,7 @@ import PYQQuestionLibrary from '../pyq/PYQQuestionLibrary';
 import TitleGenerator from './TitleGenerator';
 import usePYQAnalysis from '../../hooks/usePYQAnalysis';
 import { getUnitNamesFromKeys, getChapterNamesFromKeys, getTopicNamesFromKeys } from '../../utils/testHelpers';
+import testService from '../../services/testService';
 
 import {
   GlassCard, StepIndicator, FloatingActionButton,
@@ -64,7 +65,7 @@ const TestCreate = ({ language = 'hi', testId }) => {
   const { syllabus: syllabusData, refreshSyllabus } = useSyllabus();
   const { pyqFilters: pyqFilterData, fetchPYQFilters, loading: pyqLoading } = usePYQAnalysis();
 
-  const t = (hi, en) => language === 'hi' ? hi : en;
+  const t = (hi, en) => language === 'hi' ? (hi || en) : (en || hi);
   const questions = Array.isArray(rawQuestions) ? rawQuestions : [];
 
   const [currentStep, setCurrentStep] = useState(0);
@@ -86,7 +87,7 @@ const TestCreate = ({ language = 'hi', testId }) => {
   });
 
   const [mainFilters, setMainFilters] = useState({
-    papers: [], units: [], chapters: [], topics: [], types: []
+    papers: [], units: [], chapters: [], topics: [], subtopics: [], types: []
   });
 
   // PYQ FILTER STATE
@@ -200,6 +201,7 @@ const TestCreate = ({ language = 'hi', testId }) => {
           units: [],
           chapters: [],
           topics: [],
+          subtopics: [],
           types: []
         };
         setMainFilters(newFilters);
@@ -395,6 +397,40 @@ const TestCreate = ({ language = 'hi', testId }) => {
     return opts;
   }, [language, getSyllabus, effectivePapers]);
 
+  const getSubtopicOptions = useCallback((topics, chapters, units, papers) => {
+    const opts = [];
+    const paperList = Array.isArray(papers) && papers.length > 0 ? papers : effectivePapers.length > 0 ? effectivePapers : ['paper1', 'paper2'];
+    const unitList = Array.isArray(units) ? units : [];
+    const chapterList = Array.isArray(chapters) ? chapters : [];
+    const topicList = Array.isArray(topics) ? topics : [];
+    paperList.forEach(paper => {
+      const s = getSyllabus(paper);
+      if (!s || !Array.isArray(s.units)) return;
+      s.units.forEach(unit => {
+        const uk = `${paper}_${unit.id}`;
+        if (unitList.length === 0 || unitList.includes(uk)) {
+          (unit.chapters || []).forEach(ch => {
+            const ck = `${paper}_${unit.id}_${ch.id}`;
+            if (chapterList.length === 0 || chapterList.includes(ck)) {
+              (ch.topics || []).forEach(topic => {
+                if (topicList.length === 0 || topicList.includes(topic.name)) {
+                  (topic.subtopics || []).forEach(subtopic => {
+                    const stName = typeof subtopic === 'string' ? subtopic : subtopic.name;
+                    const stNameHi = typeof subtopic === 'string' ? '' : (subtopic.nameHi || '');
+                    if (!opts.find(o => o.value === stName)) {
+                      opts.push({ value: stName, label: t(stNameHi, stName), shortName: t(stNameHi, stName) });
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
+    });
+    return opts;
+  }, [language, getSyllabus, effectivePapers]);
+
   const getTypeOptions = useCallback(() =>
     Object.entries(QUESTION_TYPE_LABELS).map(([k, v]) => ({ value: k, label: t(v.hi, v.en) })), [language]);
 
@@ -430,7 +466,19 @@ const TestCreate = ({ language = 'hi', testId }) => {
     }
   }, [formData.testType]);
 
-  useEffect(() => { setTestNumber(Math.floor(Math.random() * 100) + 1); }, [formData.testType, mainFilters]);
+  useEffect(() => {
+    const fetchSerial = async () => {
+      try {
+        const response = await testService.getTests({ testType: formData.testType, limit: 1 });
+        const total = response?.data?.pagination?.total || response?.pagination?.total || 0;
+        setTestNumber(total + 1);
+      } catch (error) {
+        console.error('Failed to fetch test count:', error);
+        setTestNumber(1);
+      }
+    };
+    fetchSerial();
+  }, [formData.testType]);
 
   useEffect(() => {
     if (!isRandomMode) return;
@@ -744,6 +792,7 @@ const TestCreate = ({ language = 'hi', testId }) => {
                   <EnhancedMultiSelect label="Unit" labelHi="इकाई" options={getUnitOptions(mainFilters.papers)} selected={mainFilters.units || []} onChange={v => updateMainFilter('units', v)} showSearch icon={Target} language={language} colorScheme="blue" />
                   <EnhancedMultiSelect label="Chapter" labelHi="अध्याय" options={getChapterOptions(mainFilters.units, mainFilters.papers)} selected={mainFilters.chapters || []} onChange={v => updateMainFilter('chapters', v)} disabled={!(mainFilters.units || []).length} showSearch language={language} colorScheme="green" />
                   <EnhancedMultiSelect label="Topic" labelHi="विषय" options={getTopicOptions(mainFilters.chapters, mainFilters.units, mainFilters.papers)} selected={mainFilters.topics || []} onChange={v => updateMainFilter('topics', v)} disabled={!(mainFilters.chapters || []).length} showSearch language={language} colorScheme="purple" />
+                  <EnhancedMultiSelect label="Subtopic" labelHi="उपविषय" options={getSubtopicOptions(mainFilters.topics, mainFilters.chapters, mainFilters.units, mainFilters.papers)} selected={mainFilters.subtopics || []} onChange={v => updateMainFilter('subtopics', v)} disabled={!(mainFilters.topics || []).length} showSearch language={language} colorScheme="rose" />
                   <EnhancedMultiSelect label="Question Type" labelHi="प्रश्न प्रकार" options={getTypeOptions()} selected={mainFilters.types || []} onChange={v => updateMainFilter('types', v)} language={language} colorScheme="orange" />
                 </div>
               </GlassCard>
@@ -865,7 +914,7 @@ const TestCreate = ({ language = 'hi', testId }) => {
             <TitleGenerator formData={formData} mainFilters={mainFilters} testNumber={testNumber}
               language={language} onTitleChange={v => handleChange('title', v)}
               getUnitOptions={getUnitOptions} getChapterOptions={getChapterOptions}
-              getTopicOptions={getTopicOptions} pyqInfo={pyqInfo} />
+              getTopicOptions={getTopicOptions} getSubtopicOptions={getSubtopicOptions} pyqInfo={pyqInfo} />
           </div>
         );
 

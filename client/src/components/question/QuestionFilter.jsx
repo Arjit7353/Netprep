@@ -47,6 +47,9 @@ const QuestionFilter = forwardRef(({
       newFilters.topic = '';
     } else if (key === 'chapter') {
       newFilters.topic = '';
+      newFilters.subtopic = '';
+    } else if (key === 'topic') {
+      newFilters.subtopic = '';
     }
     
     setLocalFilters(newFilters);
@@ -86,6 +89,20 @@ const QuestionFilter = forwardRef(({
       value: t.name,
       label: t.name,
       labelHi: t.nameHi
+    }));
+  };
+
+  const getSubtopics = () => {
+    if (!syllabus || !localFilters.paper || !localFilters.unit || !localFilters.chapter || !localFilters.topic) return [];
+    const paperSyllabus = syllabus[localFilters.paper];
+    const unit = paperSyllabus?.units?.find(u => u.name === localFilters.unit);
+    const chapter = unit?.chapters?.find(c => c.name === localFilters.chapter);
+    const topic = chapter?.topics?.find(t => t.name === localFilters.topic);
+    if (!topic?.subtopics) return [];
+    return topic.subtopics.map(st => ({
+      value: st.name,
+      label: st.name,
+      labelHi: st.nameHi
     }));
   };
 
@@ -254,6 +271,18 @@ const QuestionFilter = forwardRef(({
               language={language}
               searchable
               disabled={!localFilters.chapter}
+            />
+
+            <Dropdown
+              label={language === 'hi' ? 'उपविषय' : 'Subtopic'}
+              value={localFilters.subtopic || ''}
+              options={getSubtopics()}
+              onChange={(value) => handleChange('subtopic', value)}
+              placeholder="All Subtopics"
+              placeholderHi="सभी उपविषय"
+              language={language}
+              searchable
+              disabled={!localFilters.topic}
             />
 
             {/* ★ NEW: Translation Status Filter */}

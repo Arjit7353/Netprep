@@ -118,7 +118,7 @@ const ContentTagDisplay = ({ names, language, type, color, icon: Icon }) => {
   );
 };
 
-const TitleGenerator = ({ formData, mainFilters, testNumber, language = 'hi', onTitleChange, getUnitOptions, getChapterOptions, getTopicOptions, pyqInfo = null }) => {
+const TitleGenerator = ({ formData, mainFilters, testNumber, language = 'hi', onTitleChange, getUnitOptions, getChapterOptions, getTopicOptions, getSubtopicOptions, pyqInfo = null }) => {
   const t = (hi, en) => language === 'hi' ? hi : en;
 
   const [isEditing, setIsEditing] = useState(false);
@@ -151,7 +151,7 @@ const TitleGenerator = ({ formData, mainFilters, testNumber, language = 'hi', on
   };
 
   const getSelectedNames = useCallback(() => {
-    const result = { paperShort:'', paperFull:'', paperFullHi:'', unitFullNames:[], unitShortNames:[], chapterFullNames:[], chapterShortNames:[], topicFullNames:[], topicShortNames:[], unitCount: mainFilters.units.length, chapterCount: mainFilters.chapters.length, topicCount: mainFilters.topics.length };
+    const result = { paperShort:'', paperFull:'', paperFullHi:'', unitFullNames:[], unitShortNames:[], chapterFullNames:[], chapterShortNames:[], topicFullNames:[], topicShortNames:[], subtopicFullNames:[], subtopicShortNames:[], unitCount: mainFilters.units.length, chapterCount: mainFilters.chapters.length, topicCount: mainFilters.topics.length, subtopicCount: (mainFilters.subtopics || []).length };
     if (mainFilters.papers.length === 2) { result.paperShort = 'P1+P2'; result.paperFull = 'Paper 1 + Paper 2'; result.paperFullHi = 'पेपर 1 + पेपर 2'; }
     else if (mainFilters.papers.includes('paper1')) { result.paperShort = 'P1'; result.paperFull = 'Paper 1'; result.paperFullHi = 'पेपर 1'; }
     else if (mainFilters.papers.includes('paper2')) { result.paperShort = 'P2'; result.paperFull = 'Paper 2 (History)'; result.paperFullHi = 'पेपर 2 (इतिहास)'; }
@@ -172,10 +172,15 @@ const TitleGenerator = ({ formData, mainFilters, testNumber, language = 'hi', on
       const topicOpts = getTopicOptions(mainFilters.chapters, mainFilters.units, mainFilters.papers);
       mainFilters.topics.forEach(topicVal => { const opt = topicOpts.find(o => o.value === topicVal); if (opt) { result.topicFullNames.push(opt.label||topicVal); result.topicShortNames.push(opt.shortName||opt.label||topicVal); } });
     }
+    if (getSubtopicOptions) {
+      const subtopicOpts = getSubtopicOptions(mainFilters.topics, mainFilters.chapters, mainFilters.units, mainFilters.papers);
+      (mainFilters.subtopics || []).forEach(val => { const opt = subtopicOpts.find(o => o.value === val); if (opt) { result.subtopicFullNames.push(opt.label||val); result.subtopicShortNames.push(opt.shortName||opt.label||val); } });
+    }
     return result;
-  }, [mainFilters, getUnitOptions, getChapterOptions, getTopicOptions, language]);
+  }, [mainFilters, getUnitOptions, getChapterOptions, getTopicOptions, getSubtopicOptions, language]);
 
   const getMostSpecific = useCallback((names) => {
+    if (names.subtopicFullNames.length > 0) return { type:'subtopic', full:names.subtopicFullNames, short:names.subtopicShortNames };
     if (names.topicFullNames.length > 0) return { type:'topic', full:names.topicFullNames, short:names.topicShortNames };
     if (names.chapterFullNames.length > 0) return { type:'chapter', full:names.chapterFullNames, short:names.chapterShortNames };
     if (names.unitFullNames.length > 0) return { type:'unit', full:names.unitFullNames, short:names.unitShortNames };
@@ -237,6 +242,8 @@ const TitleGenerator = ({ formData, mainFilters, testNumber, language = 'hi', on
     const chaptersShort = buildShort(names.chapterShortNames, 2, 30);
     const topicsFull = buildContent(names.topicFullNames, 3);
     const topicsShort = buildShort(names.topicShortNames, 2, 25);
+    const subtopicsFull = buildContent(names.subtopicFullNames, 3);
+    const subtopicsShort = buildShort(names.subtopicShortNames, 2, 25);
 
     // ── PYQ content (FULL names, not truncated) ──
     let pyqYears = '', pyqSession = '', pyqUnits = '', pyqChapters = '', pyqTopics = '';
@@ -303,6 +310,10 @@ const TitleGenerator = ({ formData, mainFilters, testNumber, language = 'hi', on
         add(`PYQ ${pyqYears || date.year} | ${pShort} - ${sc} #${num}`);
       } else {
         // Non-PYQ standard titles
+        // ── 0. Subtopic-focused ──
+        if (subtopicsFull) {
+          add(`${pShort} | ${subtopicsFull} - ${sc} #${num}`);
+        }
         // ── 1. Topic-focused (most specific) ──
         if (topicsFull) {
           add(`${pShort} | ${topicsFull} - ${sc} #${num}`);
@@ -322,9 +333,12 @@ const TitleGenerator = ({ formData, mainFilters, testNumber, language = 'hi', on
         if (chaptersShort && topicsShort) {
           add(`${pShort} | ${chaptersShort} > ${topicsShort} - ${sc} #${num}`);
         }
+        if (topicsShort && subtopicsShort) {
+          add(`${pShort} | ${topicsShort} > ${subtopicsShort} - ${sc} #${num}`);
+        }
         // ── 5. Type-specific ──
         switch (formData.testType) {
-          case 'dpp': add(`DPP #${num} | ${topicsShort || chaptersShort || unitsShort || pShort}`); break;
+          case 'dpp': add(`DPP #${num} | ${subtopicsShort || topicsShort || chaptersShort || unitsShort || pShort}`); break;
           case 'chapter_test': add(`${t('अध्याय परीक्षा', 'Chapter Test')} | ${chaptersFull || unitsShort || pShort} #${num}`); break;
           case 'unit_test': add(`${t('इकाई परीक्षा', 'Unit Test')} | ${unitsFull || pShort} #${num}`); break;
           case 'topic_test': add(`${t('विषय परीक्षा', 'Topic Test')} | ${topicsFull || chaptersShort || pShort} #${num}`); break;
@@ -370,11 +384,13 @@ const TitleGenerator = ({ formData, mainFilters, testNumber, language = 'hi', on
         }
       } else {
         // Non-PYQ detailed
+        if (subtopicsFull) add(`${typeName} | ${subtopicsFull} | ${pFull}`);
         if (topicsFull) add(`${typeName} | ${topicsFull} | ${pFull}`);
         if (chaptersFull) add(`${pFull} — ${chaptersFull} [${sc} #${num}]`);
         if (unitsFull) add(`${pFull} | ${unitsFull} | ${typeName} #${num}`);
         if (unitsFull && chaptersFull) add(`${unitsFull} — ${chaptersFull} | ${pFull} [${sc}-${num}]`);
         if (chaptersFull && topicsFull) add(`${chaptersFull} — ${topicsFull} | ${pFull} #${num}`);
+        if (topicsFull && subtopicsFull) add(`${topicsFull} — ${subtopicsFull} | ${pFull} #${num}`);
         add(`UGC NET ${date.year} | ${pFull} | ${typeName} #${num}`);
         add(`${pFull} | ${typeName} #${num}`);
       }
@@ -408,7 +424,7 @@ const TitleGenerator = ({ formData, mainFilters, testNumber, language = 'hi', on
         add(`${date.weekday} | PYQ ${pyqYears} ${pyqSession || ''} | ${pShort}`);
       }
       add(`${date.dayStr} ${date.month} ${date.year} | ${pShort} | ${sc} #${num}`);
-      add(`${date.weekday} ${date.dayStr} ${date.month} | ${topicsShort || chaptersShort || unitsShort || pShort} - ${sc}`);
+      add(`${date.weekday} ${date.dayStr} ${date.month} | ${subtopicsShort || topicsShort || chaptersShort || unitsShort || pShort} - ${sc}`);
       add(`${date.monthFull} ${date.year} | ${pShort} ${typeName} #${num}`);
     }
     return [...new Set(suggestions)].filter(s => s.trim()).slice(0, 10);
@@ -530,7 +546,7 @@ const TitleGenerator = ({ formData, mainFilters, testNumber, language = 'hi', on
       )}
 
       {/* ═══ CONTENT DETAILS ═══ */}
-      {showContentDetails && (selectedNames.unitFullNames.length > 0 || selectedNames.chapterFullNames.length > 0 || selectedNames.topicFullNames.length > 0 || hasPYQ) && (
+      {showContentDetails && (selectedNames.unitFullNames.length > 0 || selectedNames.chapterFullNames.length > 0 || selectedNames.topicFullNames.length > 0 || selectedNames.subtopicFullNames.length > 0 || hasPYQ) && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-xs font-bold text-gray-700 flex items-center gap-1.5"><ListChecks className="w-3.5 h-3.5 text-blue-500" />{t('चयनित सामग्री (पूर्ण नाम)','Selected Content (Full Names)')}</h4>
@@ -540,6 +556,7 @@ const TitleGenerator = ({ formData, mainFilters, testNumber, language = 'hi', on
             <ContentTagDisplay names={selectedNames.unitFullNames} language={language} type={t('इकाइयां','Units')} color="blue" icon={Target} />
             <ContentTagDisplay names={selectedNames.chapterFullNames} language={language} type={t('अध्याय','Chapters')} color="green" icon={BookOpen} />
             <ContentTagDisplay names={selectedNames.topicFullNames} language={language} type={t('विषय','Topics')} color="purple" icon={Layers} />
+            <ContentTagDisplay names={selectedNames.subtopicFullNames} language={language} type={t('उपविषय','Subtopics')} color="amber" icon={FileText} />
             {hasPYQ && <>
               <ContentTagDisplay names={pyqInfo.years.map(y => `PYQ ${y}`)} language={language} type={t('PYQ वर्ष','PYQ Years')} color="amber" icon={Star} />
               {pyqInfo.chapters.length > 0 && <ContentTagDisplay names={pyqInfo.chapters} language={language} type={t('PYQ अध्याय','PYQ Chapters')} color="green" icon={BookOpen} />}
@@ -620,6 +637,7 @@ const TitleGenerator = ({ formData, mainFilters, testNumber, language = 'hi', on
           {selectedNames.unitFullNames.map((name,i) => <span key={`u-${i}`} className="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs rounded-lg font-semibold flex items-center gap-1" title={name}><Target className="w-3 h-3 flex-shrink-0" /><span className="truncate max-w-[150px]">{name}</span></span>)}
           {selectedNames.chapterFullNames.map((name,i) => <span key={`c-${i}`} className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-lg font-semibold flex items-center gap-1" title={name}><BookOpen className="w-3 h-3 flex-shrink-0" /><span className="truncate max-w-[150px]">{name}</span></span>)}
           {selectedNames.topicFullNames.map((name,i) => <span key={`t-${i}`} className="px-2.5 py-1 bg-purple-100 text-purple-700 text-xs rounded-lg font-semibold flex items-center gap-1" title={name}><Layers className="w-3 h-3 flex-shrink-0" /><span className="truncate max-w-[150px]">{name}</span></span>)}
+          {selectedNames.subtopicFullNames.map((name,i) => <span key={`st-${i}`} className="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs rounded-lg font-semibold flex items-center gap-1" title={name}><FileText className="w-3 h-3 flex-shrink-0" /><span className="truncate max-w-[150px]">{name}</span></span>)}
           <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs rounded-lg font-bold flex items-center gap-1"><Hash className="w-3 h-3" />{testNumber}</span>
           {hasPYQ && <>
             <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs rounded-lg font-bold flex items-center gap-1"><Star className="w-3 h-3 fill-current" />PYQ{pyqInfo.count > 0 ? `: ${pyqInfo.count}Q` : ''}</span>

@@ -52,8 +52,8 @@ const ImportQuestions = () => {
   const [previewQuestions, setPreviewQuestions] = useState([]);
   const [previewShell, setPreviewShell] = useState(null);
 
-  const [syllabusSelection, setSyllabusSelection] = useState({ paper: '', unit: '', chapter: '', topic: '' });
-  const [multiSyllabus, setMultiSyllabus] = useState({ paper: '', units: [], chapters: [], topics: [], unit: '', chapter: '', topic: '' });
+  const [syllabusSelection, setSyllabusSelection] = useState({ paper: '', unit: '', chapter: '', topic: '', subtopic: '' });
+  const [multiSyllabus, setMultiSyllabus] = useState({ paper: '', units: [], chapters: [], topics: [], subtopics: [], unit: '', chapter: '', topic: '', subtopic: '' });
   const [pyqData, setPyqData] = useState({ year: '', session: '', shift: '', questionNumber: '', isMemoryBased: false });
   const [importHistory, setImportHistory] = useState(() => {
     try { return JSON.parse(localStorage.getItem('netprep_import_history') || '[]'); } catch { return []; }
@@ -67,7 +67,7 @@ const ImportQuestions = () => {
   };
 
   const activeSyllabus = useMemo(() => {
-    if (useMultiSelect) return { paper: multiSyllabus.paper, unit: multiSyllabus.unit || multiSyllabus.units?.[0] || '', chapter: multiSyllabus.chapter || multiSyllabus.chapters?.[0] || '', topic: multiSyllabus.topic || multiSyllabus.topics?.[0] || '' };
+    if (useMultiSelect) return { paper: multiSyllabus.paper, unit: multiSyllabus.unit || multiSyllabus.units?.[0] || '', chapter: multiSyllabus.chapter || multiSyllabus.chapters?.[0] || '', topic: multiSyllabus.topic || multiSyllabus.topics?.[0] || '', subtopic: multiSyllabus.subtopic || multiSyllabus.subtopics?.[0] || '' };
     return syllabusSelection;
   }, [useMultiSelect, syllabusSelection, multiSyllabus]);
 

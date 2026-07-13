@@ -707,6 +707,16 @@ const TestInterface = () => {
                     </div>
                   </div>
 
+                  {/* PYQ Badge */}
+                  {currentQuestion?.isPYQ && currentQuestion?.year && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold border border-amber-200/60 dark:border-amber-800/50">
+                      <Star className="w-3 h-3 fill-current" />
+                      {t('PYQ', 'PYQ')} {currentQuestion.year}
+                      {currentQuestion.pyqSession && ` - ${currentQuestion.pyqSession.charAt(0).toUpperCase() + currentQuestion.pyqSession.slice(1)}`}
+                      {currentQuestion.pyqShift && currentQuestion.pyqShift !== 'none' && ` (${currentQuestion.pyqShift.charAt(0).toUpperCase() + currentQuestion.pyqShift.slice(1)})`}
+                    </span>
+                  )}
+
                   {/* Status badges */}
                   {isReviewed && (
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-[10px] font-bold border border-violet-200/60 dark:border-violet-800/50">

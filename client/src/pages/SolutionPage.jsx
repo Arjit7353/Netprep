@@ -586,8 +586,20 @@ const QuestionContent = ({ qData, language }) => {
       <div className="space-y-4">
         <p className="text-gray-900 dark:text-white font-semibold text-base">{qt || (language === 'hi' ? 'सुमेलित कीजिए:' : 'Match:')}</p>
         <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-secondary-600 shadow-sm">
-          <div className="grid grid-cols-2 bg-gray-100 dark:bg-secondary-700 border-b"><div className="px-4 py-2.5 font-bold text-sm border-r">{language === 'hi' ? 'सूची-I' : 'List-I'}</div><div className="px-4 py-2.5 font-bold text-sm">{language === 'hi' ? 'सूची-II' : 'List-II'}</div></div>
-          {la.map((a, i) => (<div key={i} className={`grid grid-cols-2 border-b last:border-0 ${i % 2 ? 'bg-gray-50/50 dark:bg-secondary-750/30' : ''}`}><div className="px-4 py-3 text-sm border-r"><span className="font-bold text-primary-600 mr-1.5">({optLabel(i)})</span>{a}</div><div className="px-4 py-3 text-sm"><span className="font-bold text-primary-600 mr-1.5">{roman(i)}</span>{lb[i] || ''}</div></div>))}
+          <div className="grid grid-cols-2 bg-gray-100 dark:bg-secondary-700 border-b border-gray-200 dark:border-secondary-600">
+            <div className="px-4 py-2.5 font-bold text-sm border-r border-gray-200 dark:border-secondary-600 text-gray-900 dark:text-gray-100">{language === 'hi' ? 'सूची-I' : 'List-I'}</div>
+            <div className="px-4 py-2.5 font-bold text-sm text-gray-900 dark:text-gray-100">{language === 'hi' ? 'सूची-II' : 'List-II'}</div>
+          </div>
+          {la.map((a, i) => (
+            <div key={i} className={`grid grid-cols-2 border-b border-gray-200 dark:border-secondary-600 last:border-0 ${i % 2 ? 'bg-gray-50/50 dark:bg-secondary-750/30' : 'bg-white dark:bg-secondary-800'}`}>
+              <div className="px-4 py-3 text-sm border-r border-gray-200 dark:border-secondary-600 text-gray-800 dark:text-gray-200">
+                <span className="font-bold text-primary-600 dark:text-primary-400 mr-1.5">({optLabel(i)})</span>{a}
+              </div>
+              <div className="px-4 py-3 text-sm text-gray-800 dark:text-gray-200">
+                <span className="font-bold text-primary-600 dark:text-primary-400 mr-1.5">{roman(i)}</span>{lb[i] || ''}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -622,9 +634,9 @@ const QuestionContent = ({ qData, language }) => {
         {bText(di.instruction, language) && <p className="text-sm text-gray-600 dark:text-secondary-400 italic text-center">{bText(di.instruction, language)}</p>}
         <div className="bg-white dark:bg-secondary-800 border border-gray-200 dark:border-secondary-700 rounded-xl p-4 overflow-x-auto shadow-inner">
           {qType === 'di_table' && (
-            <table className="w-full border-collapse text-sm">
-              <thead><tr className="bg-gray-100 dark:bg-secondary-700">{bArr(di.tableData?.headers, language).map((h, i) => <th key={i} className="border border-gray-200 dark:border-secondary-600 px-3 py-2 font-bold text-left">{h}</th>)}</tr></thead>
-              <tbody>{(di.tableData?.rows || []).map((row, ri) => <tr key={ri} className={ri % 2 ? 'bg-gray-50/70 dark:bg-secondary-750/30' : ''}>{row.map((c, ci) => <td key={ci} className="border border-gray-200 dark:border-secondary-600 px-3 py-2">{c ?? '-'}</td>)}</tr>)}</tbody>
+            <table className="w-full border-collapse text-sm text-gray-800 dark:text-gray-200">
+              <thead><tr className="bg-gray-100 dark:bg-secondary-700">{bArr(di.tableData?.headers, language).map((h, i) => <th key={i} className="border border-gray-200 dark:border-secondary-600 px-3 py-2 font-bold text-left text-gray-900 dark:text-gray-100">{h}</th>)}</tr></thead>
+              <tbody>{(di.tableData?.rows || []).map((row, ri) => <tr key={ri} className={ri % 2 ? 'bg-gray-50/70 dark:bg-secondary-750/30' : 'bg-white dark:bg-secondary-800'}>{row.map((c, ci) => <td key={ci} className="border border-gray-200 dark:border-secondary-600 px-3 py-2">{c ?? '-'}</td>)}</tr>)}</tbody>
             </table>
           )}
           {['di_bar_chart','di_line_graph','di_pie_chart'].includes(qType) && (

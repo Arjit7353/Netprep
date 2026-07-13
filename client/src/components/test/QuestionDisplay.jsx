@@ -330,7 +330,7 @@ const QuestionDisplay = ({
 
         <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
           {language === 'hi'
-            ? 'उपर्युक��त में से कौन सा/से कथन सही है/हैं?'
+            ? 'उपर्युक्त में से कौन सा/से कथन सही है/हैं?'
             : 'Which of the above statement(s) is/are correct?'}
         </p>
         {renderOptions(options)}
@@ -694,13 +694,17 @@ const QuestionDisplay = ({
           <span className="px-2.5 py-1 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-semibold">
             {QUESTION_TYPE_LABELS[questionType]?.[language] || questionType}
           </span>
-          {question.isPYQ && question.year && (
-            <span className="px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold border border-amber-200/50 dark:border-amber-800/50">
-              PYQ {question.year}
-              {question.pyqSession ? ` - ${question.pyqSession.charAt(0).toUpperCase() + question.pyqSession.slice(1)}` : ''}
-              {question.pyqShift && question.pyqShift !== 'none' ? ` (${question.pyqShift.charAt(0).toUpperCase() + question.pyqShift.slice(1)})` : ''}
-            </span>
-          )}
+        </div>
+      )}
+      {/* PYQ Badge - Always show if question is PYQ */}
+      {question.isPYQ && question.year && (
+        <div className="mb-4">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold border border-amber-200/50 dark:border-amber-800/50">
+            <span>⭐</span>
+            PYQ {question.year}
+            {question.pyqSession ? ` - ${question.pyqSession.charAt(0).toUpperCase() + question.pyqSession.slice(1)}` : ''}
+            {question.pyqShift && question.pyqShift !== 'none' ? ` (${question.pyqShift.charAt(0).toUpperCase() + question.pyqShift.slice(1)})` : ''}
+          </span>
         </div>
       )}
       {renderContent()}

@@ -99,12 +99,11 @@ const StatementBased = ({
       )}
 
       {/* Question for options */}
-      <div className="text-sm text-gray-600 dark:text-secondary-400">
-        {language === 'hi' 
-          ? 'उपरोक्त में से कौन सा/से कथन सही है/हैं?'
-          : 'Which of the above statement(s) is/are correct?'
-        }
-      </div>
+      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+        {language === 'hi'
+          ? 'उपर्युक्त में से कौन सा/से कथन सही है/हैं?'
+          : 'Which of the above statement(s) is/are correct?'}
+      </p>
 
       {/* Options */}
       <div className="space-y-2">

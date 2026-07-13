@@ -39,6 +39,18 @@ const MatchFollowing = ({
     return 'bg-white dark:bg-secondary-800 border-gray-300 dark:border-secondary-600 text-gray-700 dark:text-secondary-300 hover:border-gray-400 dark:hover:border-secondary-500';
   };
 
+  const formatOption = (optStr) => {
+    if (typeof optStr !== 'string') return optStr;
+    // Replace patterns like "a-2", "A- 2", "b - 3" with "A-(ii)", "B-(iii)"
+    return optStr.replace(/([a-hA-H])\s*[-–]\s*([1-8])/g, (match, p1, p2) => {
+      const letter = p1.toUpperCase();
+      const numIndex = parseInt(p2, 10) - 1;
+      // Get the roman numeral format from constants or generate it
+      const roman = ['(i)', '(ii)', '(iii)', '(iv)', '(v)', '(vi)', '(vii)', '(viii)'][numIndex] || p2;
+      return `${letter}-${roman}`;
+    });
+  };
+
   return (
     // ✅ FIX: pointer-events-none hatao - sirf button level pe handle karo
     <div className="space-y-4">
@@ -72,18 +84,18 @@ const MatchFollowing = ({
               >
                 <td className="border-b border-r border-gray-200 dark:border-secondary-600 px-4 py-3">
                   <div className="flex items-start gap-2">
-                    <span className="font-bold text-primary-700 dark:text-primary-400 flex-shrink-0">
-                      ({getOptionLabel(index)})
+                    <span className="font-bold text-white bg-primary-600 px-2 py-0.5 rounded shadow-sm flex-shrink-0">
+                      {getOptionLabel(index)}
                     </span>
-                    <span className="text-gray-800 dark:text-secondary-200">{itemA}</span>
+                    <span className="text-gray-800 dark:text-secondary-200 ml-1">{itemA}</span>
                   </div>
                 </td>
                 <td className="border-b border-gray-200 dark:border-secondary-600 px-4 py-3">
                   <div className="flex items-start gap-2">
-                    <span className="font-bold text-primary-700 dark:text-primary-400 flex-shrink-0">
+                    <span className="font-bold text-green-800 dark:text-green-100 bg-green-100 dark:bg-green-800 px-2 py-0.5 rounded shadow-sm flex-shrink-0">
                       {getRomanNumeral(index)}
                     </span>
-                    <span className="text-gray-800 dark:text-secondary-200">{listB[index]}</span>
+                    <span className="text-gray-800 dark:text-secondary-200 ml-1">{listB[index]}</span>
                   </div>
                 </td>
               </tr>
@@ -147,7 +159,7 @@ const MatchFollowing = ({
             </div>
             <div className="flex-1">
               <span className="font-medium mr-2">({getOptionLabel(index)})</span>
-              <span className="text-sm">{option}</span>
+              <span className="text-sm tracking-wide">{formatOption(option)}</span>
             </div>
             {showAnswer && index === question.correctAnswer && (
               <span className="text-[10px] font-bold bg-green-600 text-white px-2 py-0.5 rounded-full">

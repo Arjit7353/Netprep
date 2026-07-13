@@ -102,7 +102,7 @@ const EnhancedMultiSelect = ({
   const selectAll = (e) => { e.stopPropagation(); onChange(options.map(o => o.value)); };
   const clearAll = (e) => { e.stopPropagation(); onChange([]); };
 
-  const filteredOptions = options.filter(o => o.label.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredOptions = options.filter(o => (o.label || '').toLowerCase().includes((searchTerm || '').toLowerCase()));
 
   const getDisplayText = () => {
     if (selected.length === 0) return t(placeholderHi, placeholder) || t(labelHi, label);

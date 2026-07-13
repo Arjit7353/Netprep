@@ -485,7 +485,7 @@ const QuestionForm = ({
   const handleSyllabusChange = (syllabusData) => {
     setFormData(prev => ({
       ...prev, paper: syllabusData.paper || prev.paper,
-      unit: syllabusData.unit || '', chapter: syllabusData.chapter || '', topic: syllabusData.topic || ''
+      unit: syllabusData.unit || '', chapter: syllabusData.chapter || '', topic: syllabusData.topic || '', subtopic: syllabusData.subtopic || ''
     }));
   };
 
@@ -878,7 +878,7 @@ const QuestionForm = ({
 
         {activeTab === 'metadata' && (
           <div className="space-y-6">
-            <SyllabusDropdown value={{ paper: formData.paper, unit: formData.unit, chapter: formData.chapter, topic: formData.topic }}
+            <SyllabusDropdown value={{ paper: formData.paper, unit: formData.unit, chapter: formData.chapter, topic: formData.topic, subtopic: formData.subtopic }}
               onChange={handleSyllabusChange} language={language} required />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Dropdown label={language === 'hi' ? 'कठिनाई' : 'Difficulty'} value={formData.difficulty} options={difficultyOptions}
