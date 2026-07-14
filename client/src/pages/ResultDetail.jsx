@@ -144,20 +144,22 @@ const ResultDetail = ({ language: propLanguage = 'en', setLanguage: propSetLangu
   };
 
   return (
-    <ResultPage
-      attempt={attemptForPage}
-      test={testObj}
-      questions={questionsArr}
-      language={language}
-      onLanguageChange={handleLanguageChange}
-      previousAttempts={previousAttempts}
-      testDeleted={isDeletedTest}
-      onGoBack={() => navigate('/results')}
-      onReattempt={isDeletedTest ? null : () => {
-        const tid = testObj._id;
-        if (tid) navigate(`/test/${tid}`);
-      }}
-    />
+    <Layout language={language} setLanguage={handleLanguageChange}>
+      <ResultPage
+        attempt={attemptForPage}
+        test={testObj}
+        questions={questionsArr}
+        language={language}
+        onLanguageChange={handleLanguageChange}
+        previousAttempts={previousAttempts}
+        testDeleted={isDeletedTest}
+        onGoBack={() => navigate('/results')}
+        onReattempt={isDeletedTest ? null : () => {
+          const tid = testObj._id;
+          if (tid) navigate(`/test/${tid}`);
+        }}
+      />
+    </Layout>
   );
 };
 

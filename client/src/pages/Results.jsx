@@ -315,69 +315,84 @@ const Results = () => {
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* ═══════ HERO ═══════ */}
-        <div className="relative overflow-hidden rounded-3xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary-600 via-indigo-600 to-violet-700" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.15),transparent_60%)]" />
+        <div className="relative overflow-hidden rounded-[2.5rem] shadow-2xl border border-indigo-500/20 mb-8">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#3B1E8A] via-[#2A1358] to-[#1a0b3b]" />
+          
+          {/* Animated Glows */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500 rounded-full mix-blend-screen filter blur-[100px] opacity-40 animate-blob" />
+          <div className="absolute -bottom-10 -left-10 w-96 h-96 bg-purple-500 rounded-full mix-blend-screen filter blur-[100px] opacity-30 animate-blob animation-delay-2000" />
+          
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay" />
+          
           <FloatingParticles />
 
-          <div className="relative p-6 sm:p-8">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-white/20 rounded-2xl blur-lg" />
-                  <div className="relative p-3 bg-white/15 backdrop-blur-xl rounded-2xl border border-white/25 shadow-xl">
-                    <Trophy className="w-8 h-8 text-white drop-shadow-lg" />
-                  </div>
+          <div className="relative p-8 sm:p-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div className="flex items-center gap-5">
+              <div className="relative group">
+                <div className="absolute inset-0 bg-white/20 rounded-[1.5rem] blur-xl group-hover:blur-2xl transition-all duration-500" />
+                <div className="relative p-4 bg-white/10 backdrop-blur-xl rounded-[1.5rem] border border-white/20 shadow-xl flex items-center justify-center transform group-hover:scale-105 group-hover:-rotate-3 transition-all duration-500">
+                  <Trophy className="w-10 h-10 text-indigo-100 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
                 </div>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                    {language === 'hi' ? 'परीक्षा परिणाम' : 'Test Results'}
-                  </h1>
-                  <p className="text-white/50 text-sm mt-0.5 font-medium">
+              </div>
+              <div>
+                <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight drop-shadow-lg mb-2">
+                  {language === 'hi' ? 'परीक्षा परिणाम' : 'Test Results'}
+                </h1>
+                <div className="flex items-center gap-2.5 bg-black/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 w-fit">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                  <p className="text-indigo-50 text-xs sm:text-sm font-semibold tracking-wide">
                     {language === 'hi' ? `${attempts.length} प्रयास पूर्ण` : `${attempts.length} attempts completed`}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <StreakBadge attempts={attempts} language={language} />
-                {stats?.trend !== 0 && stats?.trend !== undefined && (
-                  <div className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold ${
-                    stats.trend > 0 ? 'bg-emerald-500/20 text-emerald-200' : 'bg-red-500/20 text-red-200'
-                  }`}>
-                    {stats.trend > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    {stats.trend > 0 ? '+' : ''}{stats.trend}%
-                  </div>
-                )}
-              </div>
+            </div>
+            <div className="flex flex-col sm:items-end gap-3">
+              <StreakBadge attempts={attempts} language={language} />
+              {stats?.trend !== 0 && stats?.trend !== undefined && (
+                <div className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-black shadow-xl backdrop-blur-md border ${
+                  stats.trend > 0 
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 shadow-emerald-500/20' 
+                    : 'bg-rose-500/20 text-rose-300 border-rose-500/30 shadow-rose-500/20'
+                }`}>
+                  {stats.trend > 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                  {stats.trend > 0 ? '+' : ''}{stats.trend}% {language === 'hi' ? 'सुधार' : 'Growth'}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* ═══════ STAT CARDS ═══════ */}
         {stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 mb-8">
             {[
-              { icon: Hash, value: stats.total, label: language === 'hi' ? 'कुल प्रयास' : 'Total Tests', gradient: 'from-violet-500 to-purple-600', shadow: 'shadow-violet-500/15', suffix: '' },
-              { icon: Target, value: stats.avgAccuracy, label: language === 'hi' ? 'औसत सटीकता' : 'Avg Accuracy', gradient: 'from-emerald-500 to-green-600', shadow: 'shadow-emerald-500/15', suffix: '%', extra: stats.recentScores },
-              { icon: Flame, value: stats.bestScore, label: language === 'hi' ? 'सर्वश्रेष्ठ' : 'Best Score', gradient: 'from-amber-500 to-orange-600', shadow: 'shadow-amber-500/15', suffix: '%' },
-              { icon: Zap, value: stats.passed, label: language === 'hi' ? 'पास (60%+)' : 'Passed (60%+)', gradient: 'from-blue-500 to-cyan-600', shadow: 'shadow-blue-500/15', suffix: '', rate: stats.total > 0 ? Math.round(stats.passed / stats.total * 100) : 0 },
+              { icon: Hash, value: stats.total, label: language === 'hi' ? 'कुल प्रयास' : 'Total Tests', gradient: 'from-[#8B5CF6] to-[#6D28D9]', shadow: 'shadow-purple-500/20', suffix: '' },
+              { icon: Target, value: stats.avgAccuracy, label: language === 'hi' ? 'औसत सटीकता' : 'Avg Accuracy', gradient: 'from-[#10B981] to-[#047857]', shadow: 'shadow-emerald-500/20', suffix: '%', extra: stats.recentScores },
+              { icon: Flame, value: stats.bestScore, label: language === 'hi' ? 'सर्वश्रेष्ठ' : 'Best Score', gradient: 'from-[#F59E0B] to-[#B45309]', shadow: 'shadow-amber-500/20', suffix: '%' },
+              { icon: Zap, value: stats.passed, label: language === 'hi' ? 'पास (60%+)' : 'Passed (60%+)', gradient: 'from-[#3B82F6] to-[#1D4ED8]', shadow: 'shadow-blue-500/20', suffix: '', rate: stats.total > 0 ? Math.round(stats.passed / stats.total * 100) : 0 },
             ].map((s, i) => (
-              <div key={i} className="group relative overflow-hidden bg-white dark:bg-secondary-800 rounded-2xl border border-gray-100 dark:border-secondary-700 p-5 hover:shadow-2xl transition-all duration-500 hover:-translate-y-1">
-                <div className={`absolute -top-6 -right-6 w-24 h-24 bg-gradient-to-br ${s.gradient} rounded-full opacity-[0.07] group-hover:opacity-[0.15] group-hover:scale-150 transition-all duration-700`} />
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className={`w-11 h-11 bg-gradient-to-br ${s.gradient} rounded-xl flex items-center justify-center mb-3 shadow-lg ${s.shadow} group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}>
-                      <s.icon className="w-5 h-5 text-white" />
+              <div key={i} className="group relative overflow-hidden bg-white dark:bg-secondary-800 rounded-[2rem] border border-gray-100 dark:border-secondary-700 p-6 sm:p-7 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.4)] transition-all duration-500 hover:-translate-y-2">
+                <div className={`absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br ${s.gradient} rounded-full opacity-[0.04] group-hover:opacity-[0.12] group-hover:scale-[2] transition-all duration-700 ease-out`} />
+                
+                <div className="flex flex-col h-full justify-between relative z-10">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className={`w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br ${s.gradient} rounded-2xl sm:rounded-[1.25rem] flex items-center justify-center shadow-lg ${s.shadow} group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]`}>
+                      <s.icon className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-md" />
                     </div>
-                    <p className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                    {s.extra && <MiniSparkline data={s.extra} width={80} height={32} />}
+                  </div>
+                  
+                  <div>
+                    <p className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tight drop-shadow-sm mb-1">
                       <AnimNum value={s.value} suffix={s.suffix} />
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-secondary-400 mt-1 font-semibold uppercase tracking-wider">{s.label}</p>
-                    {s.rate !== undefined && (
-                      <p className="text-[10px] text-gray-400 mt-0.5">{s.rate}% {language === 'hi' ? 'दर' : 'rate'}</p>
-                    )}
+                    <div className="flex items-center justify-between mt-3">
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-secondary-400 font-bold uppercase tracking-widest">{s.label}</p>
+                      {s.rate !== undefined && (
+                        <span className="text-[10px] sm:text-xs font-black bg-gray-100 dark:bg-secondary-700 text-gray-600 dark:text-secondary-300 px-2.5 py-1 rounded-md">{s.rate}% {language === 'hi' ? 'दर' : 'rate'}</span>
+                      )}
+                    </div>
                   </div>
-                  {s.extra && <MiniSparkline data={s.extra} width={70} height={28} />}
                 </div>
               </div>
             ))}
@@ -573,19 +588,19 @@ const Results = () => {
               return (
                 <div key={att._id}
                   onClick={() => { navigate(`/results/${att._id}`); loadDetail(att._id); }}
-                  className={`group relative bg-white dark:bg-secondary-800 rounded-2xl border p-4 sm:p-5 hover:shadow-2xl hover:shadow-gray-200/50 dark:hover:shadow-none transition-all duration-400 cursor-pointer hover:-translate-y-0.5 animate-fade-in ${
-                    isDeleted ? 'border-amber-200 dark:border-amber-800/40' : 'border-gray-100 dark:border-secondary-700/80 hover:border-primary-200 dark:hover:border-primary-700/50'
-                  } ${isPerfect ? 'ring-2 ring-amber-400/30' : ''}`}
+                  className={`group relative bg-white dark:bg-secondary-800 rounded-[2rem] border p-5 sm:p-6 hover:shadow-2xl transition-all duration-500 cursor-pointer hover:-translate-y-1 overflow-hidden ${
+                    isDeleted ? 'border-amber-200 dark:border-amber-800/40' : 'border-gray-100 dark:border-secondary-700/80 hover:border-indigo-500/30'
+                  } ${isPerfect ? 'ring-2 ring-amber-400/50 shadow-[0_0_30px_rgba(251,191,36,0.15)]' : ''}`}
                   style={{ animationDelay: `${idx * 40}ms` }}>
 
-                  {/* Hover gradient */}
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary-50/0 via-primary-50/0 to-indigo-50/0 group-hover:from-primary-50/40 group-hover:to-indigo-50/40 dark:group-hover:from-primary-900/10 dark:group-hover:to-indigo-900/10 transition-all duration-500" />
+                  {/* Hover gradient sweep */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/5 to-purple-500/0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
 
                   {/* Deleted indicator */}
                   {isDeleted && (
-                    <div className="absolute top-3 right-3 z-10">
-                      <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-lg text-[10px] font-bold border border-amber-200 dark:border-amber-800">
-                        <Archive className="w-2.5 h-2.5" />
+                    <div className="absolute top-4 right-4 z-10">
+                      <span className="flex items-center gap-1 px-3 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-xl text-[10px] font-bold border border-amber-200 dark:border-amber-800 backdrop-blur-sm">
+                        <Archive className="w-3 h-3" />
                         {language === 'hi' ? 'हटाया गया' : 'Archived'}
                       </span>
                     </div>
@@ -593,91 +608,93 @@ const Results = () => {
 
                   {/* Perfect score indicator */}
                   {isPerfect && (
-                    <div className="absolute top-3 right-3 z-10">
-                      <span className="flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-lg text-[10px] font-bold shadow-lg shadow-amber-400/30">
-                        <Medal className="w-2.5 h-2.5" />
+                    <div className="absolute top-4 right-4 z-10">
+                      <span className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-xl text-xs font-black shadow-lg shadow-amber-500/30">
+                        <Medal className="w-3.5 h-3.5" />
                         {language === 'hi' ? 'परफेक्ट!' : 'Perfect!'}
                       </span>
                     </div>
                   )}
 
-                  <div className="relative flex items-center gap-4">
-                    <div className="flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                      <ScoreRing percentage={acc} size={64} />
+                  <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                    <div className="flex-shrink-0 group-hover:scale-110 transition-transform duration-500 ease-out relative">
+                      <ScoreRing percentage={acc} size={76} />
+                      <div className="absolute inset-0 rounded-full shadow-[inset_0_0_15px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_15px_rgba(255,255,255,0.02)] pointer-events-none" />
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <h3 className={`font-bold group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors truncate text-[15px] ${
+                    <div className="flex-1 min-w-0 w-full">
+                      <div className="flex items-center gap-3 mb-3 flex-wrap">
+                        <h3 className={`font-black group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate text-lg sm:text-xl tracking-tight ${
                           isDeleted ? 'text-gray-500 dark:text-secondary-400 italic' : 'text-gray-900 dark:text-white'
                         }`}>
                           {title}
                         </h3>
                         {testType && <TestTypeBadge testType={testType} language={language} />}
-                        {acc >= 90 && !isPerfect && <Star className="w-4 h-4 text-amber-500 fill-amber-500 flex-shrink-0" />}
+                        {acc >= 90 && !isPerfect && <Star className="w-5 h-5 text-amber-500 fill-amber-500 flex-shrink-0 animate-pulse" />}
                         {att.attemptNumber > 1 && (
-                          <span className="flex items-center gap-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-1.5 py-0.5 rounded-md text-[10px] font-bold flex-shrink-0">
-                            <RotateCcw className="w-2.5 h-2.5" />#{att.attemptNumber}
+                          <span className="flex items-center gap-1 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-2 py-0.5 rounded-lg text-xs font-bold border border-purple-100 dark:border-purple-800/50">
+                            <RotateCcw className="w-3 h-3" />#{att.attemptNumber}
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-secondary-400">
-                        <span className="flex items-center gap-1 bg-gray-50 dark:bg-secondary-700/50 px-2 py-0.5 rounded-lg">
-                          <Calendar className="w-3 h-3" />{fmt(att.completedAt)}
+                      
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600 dark:text-secondary-400 font-medium">
+                        <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-secondary-700/50 px-3 py-1.5 rounded-xl border border-gray-100 dark:border-secondary-700">
+                          <Calendar className="w-4 h-4 text-gray-400" />{fmt(att.completedAt)}
                         </span>
-                        <span className="flex items-center gap-1 bg-gray-50 dark:bg-secondary-700/50 px-2 py-0.5 rounded-lg">
-                          <Clock className="w-3 h-3" />{fmtTime(att.totalTimeTaken)}
+                        <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-secondary-700/50 px-3 py-1.5 rounded-xl border border-gray-100 dark:border-secondary-700">
+                          <Clock className="w-4 h-4 text-gray-400" />{fmtTime(att.totalTimeTaken)}
                         </span>
-                        <span className="flex items-center gap-1 bg-gray-50 dark:bg-secondary-700/50 px-2 py-0.5 rounded-lg">
-                          <FileText className="w-3 h-3" />{att.answers?.length || 0}Q
+                        <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-secondary-700/50 px-3 py-1.5 rounded-xl border border-gray-100 dark:border-secondary-700">
+                          <FileText className="w-4 h-4 text-gray-400" />{att.answers?.length || 0}Q
                         </span>
                         {pct > 0 && pct !== acc && (
-                          <span className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-lg text-blue-600 dark:text-blue-400 font-semibold">
-                            <Percent className="w-3 h-3" />{pct}%
+                          <span className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 rounded-xl text-indigo-700 dark:text-indigo-400 font-bold border border-indigo-100 dark:border-indigo-800/30">
+                            <Percent className="w-4 h-4" />{pct}%
                           </span>
                         )}
                       </div>
                     </div>
 
                     {/* Desktop stats */}
-                    <div className="hidden sm:flex items-center gap-5">
+                    <div className="hidden sm:flex items-center gap-6 pr-4">
                       {[
-                        { val: att.correctCount || 0, label: language === 'hi' ? 'सही' : 'Right', color: 'text-emerald-600' },
-                        { val: att.wrongCount || 0, label: language === 'hi' ? 'गलत' : 'Wrong', color: 'text-red-500' },
-                        { val: att.score ?? 0, label: language === 'hi' ? 'अंक' : 'Score', color: 'text-gray-800 dark:text-secondary-200' },
+                        { val: att.correctCount || 0, label: language === 'hi' ? 'सही' : 'Right', color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+                        { val: att.wrongCount || 0, label: language === 'hi' ? 'गलत' : 'Wrong', color: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-900/20' },
+                        { val: att.score ?? 0, label: language === 'hi' ? 'अंक' : 'Score', color: 'text-gray-900 dark:text-white', bg: 'bg-gray-50 dark:bg-secondary-700/50' },
                       ].map((s, i) => (
-                        <div key={i} className="text-center min-w-[40px]">
-                          <p className={`text-lg font-black ${s.color}`}>{s.val}</p>
-                          <p className="text-[9px] text-gray-400 uppercase tracking-wider font-bold">{s.label}</p>
+                        <div key={i} className={`flex flex-col items-center justify-center min-w-[70px] h-[70px] rounded-2xl ${s.bg} border border-transparent group-hover:border-current/10 transition-colors`}>
+                          <p className={`text-2xl font-black ${s.color}`}>{s.val}</p>
+                          <p className="text-[10px] text-gray-500 dark:text-secondary-400 uppercase tracking-widest font-bold mt-0.5">{s.label}</p>
                         </div>
                       ))}
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-col items-center gap-1.5">
-                      <div className="w-9 h-9 rounded-full bg-gray-50 dark:bg-secondary-700 flex items-center justify-center group-hover:bg-primary-100 dark:group-hover:bg-primary-900/30 transition-all flex-shrink-0 group-hover:scale-110">
-                        <ArrowUpRight className="w-4 h-4 text-gray-400 group-hover:text-primary-600 transition-colors" />
+                    <div className="hidden sm:flex flex-col items-center gap-2 pl-6 border-l border-gray-100 dark:border-secondary-700">
+                      <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white text-indigo-600 dark:text-indigo-400 transition-all duration-300 flex-shrink-0 group-hover:shadow-lg shadow-indigo-500/30 group-hover:scale-110">
+                        <ArrowUpRight className="w-6 h-6 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                       </div>
                       <button
                         onClick={(e) => handleDeleteAttempt(att._id, e)}
-                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 ${
+                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 opacity-0 group-hover:opacity-100 ${
                           deleteConfirm === att._id
-                            ? 'bg-red-500 text-white scale-110'
-                            : 'bg-gray-100 dark:bg-secondary-700 text-gray-400 hover:bg-red-100 hover:text-red-500'
+                            ? 'bg-rose-500 text-white scale-110 shadow-lg'
+                            : 'bg-gray-50 dark:bg-secondary-700 text-gray-400 hover:bg-rose-100 hover:text-rose-600'
                         }`}
                         title={deleteConfirm === att._id ? (language === 'hi' ? 'पुष्टि करें' : 'Confirm') : (language === 'hi' ? 'हटाएं' : 'Delete')}
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
 
                   {/* Mobile stats */}
-                  <div className="relative flex sm:hidden items-center gap-4 mt-3 pt-3 border-t border-gray-100 dark:border-secondary-700">
-                    <div className="flex items-center gap-1.5 text-xs"><CheckCircle className="w-3.5 h-3.5 text-emerald-500" /><span className="font-bold text-emerald-600">{att.correctCount || 0}</span></div>
-                    <div className="flex items-center gap-1.5 text-xs"><XCircle className="w-3.5 h-3.5 text-red-500" /><span className="font-bold text-red-500">{att.wrongCount || 0}</span></div>
+                  <div className="relative flex sm:hidden items-center gap-4 mt-5 pt-5 border-t border-gray-100 dark:border-secondary-700">
+                    <div className="flex items-center gap-2 text-sm bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 rounded-xl"><CheckCircle className="w-4 h-4 text-emerald-500" /><span className="font-bold text-emerald-600">{att.correctCount || 0}</span></div>
+                    <div className="flex items-center gap-2 text-sm bg-rose-50 dark:bg-rose-900/20 px-4 py-2 rounded-xl"><XCircle className="w-4 h-4 text-rose-500" /><span className="font-bold text-rose-600">{att.wrongCount || 0}</span></div>
                     <div className="flex-1" />
-                    <span className="text-sm font-black text-gray-800 dark:text-secondary-200">{att.score ?? 0} <span className="text-xs font-normal text-gray-400">{language === 'hi' ? 'अंक' : 'pts'}</span></span>
+                    <span className="text-xl font-black text-gray-900 dark:text-white bg-gray-50 dark:bg-secondary-700/50 px-5 py-2 rounded-xl border border-gray-100 dark:border-secondary-700">{att.score ?? 0} <span className="text-xs font-bold text-gray-400 ml-1">{language === 'hi' ? 'अंक' : 'pts'}</span></span>
                   </div>
                 </div>
               );
