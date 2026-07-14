@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTestContext, TestProvider } from '../context/TestContext';
-import PracticeInstructions from '../components/test/PracticeInstructions';
-import TestInterface from '../components/test/TestInterface';
+import NTAInstructions from '../components/test/NTAInstructions';
+import NTAExamInterface from '../components/test/NTAExamInterface';
 import Loader from '../components/common/Loader';
 import attemptService from '../services/attemptService';
 import testService from '../services/testService';
 
-const TakeTestContent = () => {
+const NTATakeTestContent = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { initializeTest, status, resetTest } = useTestContext();
@@ -91,7 +91,7 @@ const TakeTestContent = () => {
   // Render based on phase
   if (phase === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-secondary-900">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <Loader 
           size="lg" 
           text={language === 'hi' ? 'परीक्षा लोड हो रही है...' : 'Loading test...'} 
@@ -102,27 +102,27 @@ const TakeTestContent = () => {
 
   if (phase === 'error') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-secondary-900 p-4">
-        <div className="bg-white dark:bg-secondary-800 rounded-xl shadow-lg p-8 max-w-md w-full text-center border border-gray-200 dark:border-secondary-700">
-          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center border border-gray-200">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
             {language === 'hi' ? 'त्रुटि' : 'Error'}
           </h2>
-          <p className="text-gray-600 dark:text-secondary-400 mb-6">{error}</p>
+          <p className="text-gray-600 mb-6">{error}</p>
           <div className="flex gap-3 justify-center">
             <button
               onClick={() => loadTest()}
-              className="px-4 py-2 border border-gray-300 dark:border-secondary-600 rounded-lg hover:bg-gray-50 dark:hover:bg-secondary-700 text-gray-700 dark:text-secondary-300 transition-colors"
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 transition-colors"
             >
               {language === 'hi' ? 'पुनः प्रयास करें' : 'Try Again'}
             </button>
             <button
               onClick={() => navigate('/tests')}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-6 py-2 bg-[#254F96] text-white rounded-lg hover:bg-blue-800 transition-colors"
             >
               {language === 'hi' ? 'वापस जाएं' : 'Go Back'}
             </button>
@@ -134,29 +134,30 @@ const TakeTestContent = () => {
 
   if (phase === 'instructions' && test) {
     return (
-      <PracticeInstructions
+      <NTAInstructions
         test={test}
         onStart={handleStartTest}
         onCancel={handleCancel}
         language={language}
+        onLanguageChange={handleLanguageChange}
       />
     );
   }
 
   if (phase === 'test') {
-    return <TestInterface />;
+    return <NTAExamInterface />;
   }
 
   return null;
 };
 
 // Wrapper with Provider
-const TakeTest = () => {
+const NTATakeTest = () => {
   return (
     <TestProvider>
-      <TakeTestContent />
+      <NTATakeTestContent />
     </TestProvider>
   );
 };
 
-export default TakeTest;
+export default NTATakeTest;

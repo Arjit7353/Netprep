@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { TEST_TYPE_CONFIG, PAPER_LABELS } from '../../utils/constants';
 import { formatDate } from '../../utils/helpers';
+import TestInterfaceSelectorModal from './TestInterfaceSelectorModal';
 
 // Helper functions
 const parseUnitString = (unitStr) => {
@@ -74,6 +75,7 @@ const TestCard = ({
 }) => {
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = React.useState(false);
+  const [showSelectorModal, setShowSelectorModal] = useState(false);
 
   const typeConfig = TEST_TYPE_CONFIG[test.testType] || {};
   const paperLabel = PAPER_LABELS[test.paper] || {};
@@ -134,11 +136,7 @@ const TestCard = ({
   };
 
   const handleStart = () => {
-    if (onStart) {
-      onStart(test);
-    } else {
-      navigate(`/test/${test._id}`);
-    }
+    setShowSelectorModal(true);
   };
 
   const truncate = (str, maxLen = 16) => {
@@ -224,7 +222,7 @@ const TestCard = ({
             {chapters.slice(0, 1).map((ch, i) => (
               <span 
                 key={`c-${i}`} 
-                className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs rounded-lg font-semibold"
+                className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:emerald-300 text-xs rounded-lg font-semibold"
                 title={ch}
               >
                 <BookOpen className="w-3 h-3" />
@@ -330,6 +328,14 @@ const TestCard = ({
           }
         </button>
       </div>
+
+      {/* Interface Selector Modal */}
+      <TestInterfaceSelectorModal
+        isOpen={showSelectorModal}
+        onClose={() => setShowSelectorModal(false)}
+        testId={test._id}
+        language={language}
+      />
     </div>
   );
 };

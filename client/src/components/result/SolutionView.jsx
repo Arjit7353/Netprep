@@ -863,12 +863,12 @@ const QContent = ({ qData, language }) => {
           {qt || (language === 'hi' ? 'सुमेलित कीजिए:' : 'Match:')}
         </p>
         <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-secondary-600">
-          <div className="grid grid-cols-2 bg-gray-100 dark:bg-secondary-700 border-b">
+          <div className="grid grid-cols-2 bg-gray-100 dark:bg-secondary-700 border-b text-gray-800 dark:text-secondary-200">
             <div className="px-4 py-2.5 font-bold text-sm border-r">{language === 'hi' ? 'सूची-I' : 'List-I'}</div>
             <div className="px-4 py-2.5 font-bold text-sm">{language === 'hi' ? 'सूची-II' : 'List-II'}</div>
           </div>
           {la.map((a, i) => (
-            <div key={i} className="grid grid-cols-2 border-b last:border-0">
+            <div key={i} className="grid grid-cols-2 border-b last:border-0 text-gray-800 dark:text-secondary-200">
               <div className="px-4 py-3 text-sm border-r">
                 <span className="font-bold text-primary-600 mr-1">({optLabel(i)})</span>{a}
               </div>
@@ -948,18 +948,18 @@ const QContent = ({ qData, language }) => {
         )}
         <div className="bg-white dark:bg-secondary-800 border rounded-xl p-4 overflow-x-auto">
           {qType === 'di_table' && (
-            <table className="w-full border-collapse text-sm">
+            <table className="w-full border-collapse text-sm text-gray-800 dark:text-secondary-200">
               <thead>
                 <tr className="bg-gray-100 dark:bg-secondary-700">
                   {bArr(di.tableData?.headers, language).map((h, i) => (
-                    <th key={i} className="border px-3 py-2 font-bold text-left">{h}</th>
+                    <th key={i} className="border border-gray-200 dark:border-secondary-600 px-3 py-2 font-bold text-left">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {(di.tableData?.rows || []).map((row, ri) => (
-                  <tr key={ri} className={ri % 2 ? 'bg-gray-50 dark:bg-secondary-750' : ''}>
-                    {row.map((c, ci) => <td key={ci} className="border px-3 py-2">{c ?? '-'}</td>)}
+                  <tr key={ri} className={ri % 2 ? 'bg-gray-50 dark:bg-secondary-750' : 'bg-white dark:bg-secondary-800'}>
+                    {row.map((c, ci) => <td key={ci} className="border border-gray-200 dark:border-secondary-600 px-3 py-2">{c ?? '-'}</td>)}
                   </tr>
                 ))}
               </tbody>
@@ -1016,7 +1016,7 @@ const QContent = ({ qData, language }) => {
           )}
 
           {qType === 'di_caselet' && bText(di.caseletText, language) && (
-            <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-line">
+            <p className="text-sm text-gray-800 dark:text-secondary-200 leading-relaxed whitespace-pre-line">
               {bText(di.caseletText, language)}
             </p>
           )}
@@ -1047,7 +1047,7 @@ const OptsDisplay = ({ qData, language, selectedAnswer, correctAnswer }) => {
 
         let cc = 'border-gray-200 dark:border-secondary-600 bg-white dark:bg-secondary-800';
         let ic = <div className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-secondary-500" />;
-        let tc = 'text-gray-700 dark:text-secondary-300';
+        let tc = 'text-gray-800 dark:text-secondary-300';
 
         if (isC) {
           cc = 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 ring-1 ring-emerald-400/50';

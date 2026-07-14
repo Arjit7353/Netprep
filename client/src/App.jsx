@@ -20,7 +20,7 @@ import SolutionPage from './pages/SolutionPage';
 import ManageSyllabus from './pages/ManageSyllabus';
 import QuestionReports from './pages/QuestionReports';
 import PYQHub from './pages/PYQHub';  // ✅ NEW
-
+import NTATakeTest from './pages/NTATakeTest'; // NTA EXAM UI
 
 // ─────────────────────────────────────────────
 //  ADVANCED FULL-SCREEN LOADER
@@ -446,6 +446,12 @@ function App() {
             <Route 
               path="/test/:id" 
               element={<TakeTest language={language} setLanguage={setLanguage} />} 
+            />
+            
+            {/* NTA Test Interface */}
+            <Route 
+              path="/nta-test/:id" 
+              element={<NTATakeTest language={language} setLanguage={setLanguage} />} 
             />
             
             {/* Results List */}

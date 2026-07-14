@@ -13,6 +13,7 @@ import {
 import PDFExportButton from '../common/PDFExportButton';
 import { TEST_TYPE_CONFIG } from '../../utils/constants';
 import testService from '../../services/testService';
+import TestInterfaceSelectorModal from './TestInterfaceSelectorModal';
 
 const TYPE_THEMES = {
   dpp: {
@@ -122,6 +123,7 @@ const TestCardPro = ({
 }) => {
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
+  const [showSelectorModal, setShowSelectorModal] = useState(false);
 
   // ★ Translation state
   const [translateState, setTranslateState] = useState(TRANSLATE_STATES.idle);
@@ -404,7 +406,7 @@ const TestCardPro = ({
                       </>
                     )}
                   </div>
-                  <button onClick={(e) => { e.stopPropagation(); navigate(`/test/${test._id}`); }}
+                  <button onClick={(e) => { e.stopPropagation(); setShowSelectorModal(true); }}
                     className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md hover:shadow-xl transition-all hover:scale-105 active:scale-95 bg-gradient-to-r ${t.gradient}`}>
                     <Play className="w-3.5 h-3.5" /> {language === 'hi' ? 'शुरू' : 'Start'}
                   </button>
@@ -494,7 +496,7 @@ const TestCardPro = ({
 
           {/* Action Buttons Row */}
           <div className="flex flex-wrap items-center gap-3 mt-auto">
-            <button onClick={(e) => { e.stopPropagation(); navigate(`/test/${test._id}`); }}
+            <button onClick={(e) => { e.stopPropagation(); setShowSelectorModal(true); }}
               className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-xl text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors">
               <Play className="w-4 h-4" /> {language === 'hi' ? 'टेस्ट दें' : 'Take Test'}
             </button>
@@ -521,6 +523,14 @@ const TestCardPro = ({
           <div className={`h-full ${t.strip} transition-all duration-500`} style={{ width: `${best}%` }} />
         </div>
       )}
+
+      {/* Interface Selector Modal */}
+      <TestInterfaceSelectorModal
+        isOpen={showSelectorModal}
+        onClose={() => setShowSelectorModal(false)}
+        testId={test._id}
+        language={language}
+      />
     </div>
   );
 };
