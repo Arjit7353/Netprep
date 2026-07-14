@@ -6,7 +6,7 @@ import {
 import {
   CheckCircle, Circle, BookOpen, AlertCircle, Table2,
   BarChart3, PieChart as PieChartIcon, TrendingUp, FileText,
-  ArrowRight
+  ArrowRight, X
 } from 'lucide-react';
 import {
   getBilingualText, getBilingualArray, getOptionLabel,
@@ -46,9 +46,31 @@ const renderPieLabel = ({ name, percent, x, y, midAngle }) => {
 };
 
 /* ─── Option Button Component ─── */
-const OptionButton = ({ index, text, isSelected, disabled, onClick }) => {
+const OptionButton = ({ index, text, isSelected, disabled, onClick, status = 'default' }) => {
   const optLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
   const label = optLabels[index] || `${index + 1}`;
+
+  let containerClass = 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50';
+  let badgeClass = 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 group-hover:bg-slate-200 dark:group-hover:bg-slate-600';
+  let textClass = 'text-slate-700 dark:text-slate-300';
+  
+  if (status === 'correct') {
+    containerClass = 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-400 shadow-md shadow-emerald-500/10 opacity-100';
+    badgeClass = 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 scale-105';
+    textClass = 'text-emerald-900 dark:text-emerald-100 font-bold';
+  } else if (status === 'incorrect') {
+    containerClass = 'border-red-500 bg-red-50 dark:bg-red-900/20 dark:border-red-400 shadow-md shadow-red-500/10 opacity-100';
+    badgeClass = 'bg-red-600 text-white shadow-lg shadow-red-500/30 scale-105';
+    textClass = 'text-red-900 dark:text-red-100 font-bold';
+  } else if (status === 'faded') {
+    containerClass = 'border-slate-200/50 dark:border-slate-700/50 opacity-40';
+    badgeClass = 'bg-slate-100/50 dark:bg-slate-700/50 text-slate-400 dark:text-slate-500';
+    textClass = 'text-slate-400 dark:text-slate-500';
+  } else if (isSelected) {
+    containerClass = 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400 shadow-md shadow-blue-500/10';
+    badgeClass = 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-105';
+    textClass = 'text-blue-900 dark:text-blue-100 font-medium';
+  }
 
   return (
     <button
@@ -57,29 +79,25 @@ const OptionButton = ({ index, text, isSelected, disabled, onClick }) => {
       className={`
         group w-full flex items-start gap-3 p-4 rounded-2xl border-2 text-left
         transition-all duration-200 active:scale-[0.99]
-        ${isSelected
-          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400 shadow-md shadow-blue-500/10'
-          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50'}
-        ${disabled ? 'cursor-default' : 'cursor-pointer'}
+        ${containerClass}
+        ${disabled && status === 'default' && !isSelected ? 'cursor-default opacity-60' : 'cursor-pointer'}
       `}
     >
       <div className={`
         w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5
         text-sm font-bold transition-all duration-200
-        ${isSelected
-          ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-105'
-          : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 group-hover:bg-slate-200 dark:group-hover:bg-slate-600'}
+        ${badgeClass}
       `}>
-        {isSelected ? <CheckCircle className="w-5 h-5" /> : label}
+        {status === 'correct' ? <CheckCircle className="w-5 h-5" /> : 
+         status === 'incorrect' ? <X className="w-5 h-5" /> :
+         isSelected ? <CheckCircle className="w-5 h-5" /> : label}
       </div>
 
-      <div className={`flex-1 pt-1.5 text-[15px] leading-relaxed transition-colors ${
-        isSelected ? 'text-blue-900 dark:text-blue-100 font-medium' : 'text-slate-700 dark:text-slate-300'
-      }`}>
+      <div className={`flex-1 pt-1.5 text-[15px] leading-relaxed transition-colors ${textClass}`}>
         {text}
       </div>
 
-      {isSelected && (
+      {isSelected && status === 'default' && (
         <div className="flex-shrink-0 mt-2">
           <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
         </div>
@@ -139,7 +157,9 @@ const QuestionDisplay = ({
   onAnswerSelect,
   disabled = false,
   showQuestionNumber = true,
-  questionNumber = 1
+  questionNumber = 1,
+  showFeedback = false,
+  correctAnswer = null
 }) => {
   const questionType = question.questionType;
   const questionText = getBilingualText(question.question, language);
@@ -147,16 +167,26 @@ const QuestionDisplay = ({
   /* ─── Render Options ─── */
   const renderOptions = (options) => (
     <div className="space-y-2.5 mt-5">
-      {options.map((option, index) => (
-        <OptionButton
-          key={index}
-          index={index}
-          text={option}
-          isSelected={selectedAnswer === index}
-          disabled={disabled}
-          onClick={onAnswerSelect}
-        />
-      ))}
+      {options.map((option, index) => {
+        let status = 'default';
+        if (showFeedback) {
+          if (index === correctAnswer) status = 'correct';
+          else if (index === selectedAnswer && selectedAnswer !== correctAnswer) status = 'incorrect';
+          else status = 'faded';
+        }
+        
+        return (
+          <OptionButton
+            key={index}
+            index={index}
+            text={option}
+            isSelected={selectedAnswer === index}
+            disabled={disabled || showFeedback}
+            onClick={onAnswerSelect}
+            status={status}
+          />
+        );
+      })}
     </div>
   );
 
@@ -183,8 +213,8 @@ const QuestionDisplay = ({
       <div className="space-y-4">
         <div className="text-slate-700 dark:text-slate-300 font-medium">
           {language === 'hi'
-            ? 'निम्नलिखित दो कथनों पर विचार करें:'
-            : 'Consider the following two statements:'}
+            ? 'निर्देश: नीचे दो कथन दिए गए हैं, जिनमें से एक को कथन (A) और दूसरे को कारण (R) कहा गया है।'
+            : 'Directions: Given below are two statements, one labelled Assertion (A) and the other labelled Reason (R).'}
         </div>
 
         {/* Assertion Card */}
