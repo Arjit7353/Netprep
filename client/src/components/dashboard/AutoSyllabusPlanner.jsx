@@ -346,12 +346,12 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
                     : 'bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-100'
                 }`}
               >
-                <p className="text-[10px] uppercase opacity-80">{isHi ? d.shortHi : d.shortEn}</p>
-                <p className="text-xs md:text-sm font-black mt-0.5">{idx + 1}</p>
+                <p className={`text-[10px] uppercase font-bold opacity-80 ${isSelected ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`}>{isHi ? d.shortHi : d.shortEn}</p>
+                <p className={`text-xs md:text-sm font-black mt-0.5 ${isSelected ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}>{idx + 1}</p>
                 {dayDone ? (
                   <CheckCircle className="w-3 h-3 mx-auto mt-1 text-emerald-400" />
                 ) : (
-                  <p className="text-[9px] opacity-70 mt-1">{d.items.length}</p>
+                  <p className={`text-[9px] font-semibold mt-1 ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>{d.items.length}</p>
                 )}
               </button>
             );
@@ -422,7 +422,11 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
                                 <Square className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
                               )}
                               <div className="min-w-0 flex-1">
-                                <p className={`text-xs font-semibold leading-snug ${isDone ? 'line-through opacity-75' : ''}`}>
+                                <p className={`text-xs font-semibold leading-snug ${
+                                  isDone
+                                    ? 'text-emerald-800 dark:text-emerald-300 line-through opacity-75'
+                                    : 'text-gray-900 dark:text-gray-100'
+                                }`}>
                                   {item.subtopicName || item.topicName}
                                 </p>
                               </div>
