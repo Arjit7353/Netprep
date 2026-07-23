@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Calendar, CheckCircle, Circle, BookOpen, Layers, Target, ChevronRight,
   CheckSquare, Square, RefreshCw, BarChart3, PieChart, Sparkles, Filter,
-  Clock, Award, ArrowUpRight, ChevronDown, ChevronUp, AlertCircle, Zap, Sliders
+  Clock, Award, ArrowUpRight, ChevronDown, ChevronUp, AlertCircle, Zap, Sliders,
+  Plus, Trash2, Check, ChevronLeft, Sun, Coffee, Moon, Sunset, ListTodo
 } from 'lucide-react';
 import { useSyllabus } from '../../hooks/useSyllabus';
 import syllabusPaper1Static from '../../data/syllabusPaper1';
@@ -30,6 +31,23 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
     return day === 0 ? 6 : day - 1; // 0 (Mon) to 6 (Sun)
   });
 
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next, -1 = prev
+
+  // Live Exam Date Sync State
+  const [examDateSync, setExamDateSync] = useState(() => localStorage.getItem('netprep_exam_date') || '');
+
+  useEffect(() => {
+    const handleExamDateChange = () => {
+      setExamDateSync(localStorage.getItem('netprep_exam_date') || '');
+    };
+    window.addEventListener('storage', handleExamDateChange);
+    window.addEventListener('netprep-exam-date-changed', handleExamDateChange);
+    return () => {
+      window.removeEventListener('storage', handleExamDateChange);
+      window.removeEventListener('netprep-exam-date-changed', handleExamDateChange);
+    };
+  }, []);
+
   // Saved completed targets
   const [completedMap, setCompletedMap] = useState(() => {
     try {
@@ -39,6 +57,58 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
       return {};
     }
   });
+
+  // Daily To-Do List & Timetable State
+  const [todoList, setTodoList] = useState(() => {
+    try {
+      const stored = localStorage.getItem('netprep_daily_todolist');
+      return stored ? JSON.parse(stored) : [
+        { id: '1', text: 'Morning Revision: Paper 1 Key Formulas', slot: 'morning', priority: 'high', done: true },
+        { id: '2', text: 'Solve 30 PYQs from Question Bank', slot: 'afternoon', priority: 'medium', done: false },
+        { id: '3', text: 'Complete Scheduled Syllabus Targets', slot: 'evening', priority: 'high', done: false },
+      ];
+    } catch {
+      return [];
+    }
+  });
+
+  const [newTaskText, setNewTaskText] = useState('');
+  const [newTaskSlot, setNewTaskSlot] = useState('morning');
+  const [newTaskPriority, setNewTaskPriority] = useState('medium');
+
+  const saveTodoList = useCallback((newList) => {
+    setTodoList(newList);
+    try {
+      localStorage.setItem('netprep_daily_todolist', JSON.stringify(newList));
+    } catch (e) {
+      console.warn('Failed to store todo list', e);
+    }
+  }, []);
+
+  const handleAddTodo = (e) => {
+    e.preventDefault();
+    if (!newTaskText.trim()) return;
+    const item = {
+      id: Date.now().toString(),
+      text: newTaskText.trim(),
+      slot: newTaskSlot,
+      priority: newTaskPriority,
+      done: false,
+    };
+    const updated = [...todoList, item];
+    saveTodoList(updated);
+    setNewTaskText('');
+  };
+
+  const toggleTodoDone = (id) => {
+    const updated = todoList.map(t => t.id === id ? { ...t, done: !t.done } : t);
+    saveTodoList(updated);
+  };
+
+  const deleteTodo = (id) => {
+    const updated = todoList.filter(t => t.id !== id);
+    saveTodoList(updated);
+  };
 
   const handlePaceChange = (mode) => {
     setPaceMode(mode);
@@ -127,7 +197,7 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
     return list;
   }, [syllabusData, selectedPaper, isHi]);
 
-  // Calculate Adaptive Daily Limit based on Pace Mode & Exam Date
+  // Calculate Adaptive Daily Limit based on Pace Mode & Live Exam Date
   const paceDetails = useMemo(() => {
     const totalCount = flattenedTargets.length;
     const pendingCount = flattenedTargets.filter(item => !completedMap[item.key]).length;
@@ -136,7 +206,7 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
     let examDaysLeft = 60; // fallback default
 
     try {
-      const storedExamDate = localStorage.getItem('netprep_exam_date');
+      const storedExamDate = examDateSync || localStorage.getItem('netprep_exam_date');
       if (storedExamDate) {
         const diffMs = new Date(storedExamDate).getTime() - Date.now();
         const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
@@ -170,19 +240,42 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
       dateFormatted,
       pendingCount
     };
-  }, [flattenedTargets, completedMap, paceMode, isHi]);
+  }, [flattenedTargets, completedMap, paceMode, examDateSync, isHi]);
 
-  // Distribute targets into 7 days with realistic daily limits
+  // Distribute targets into 7 Real Calendar Days
   const weeklySchedule = useMemo(() => {
-    const days = [
-      { dayIndex: 0, nameEn: 'Monday', nameHi: 'सोमवार', shortEn: 'Mon', shortHi: 'सोम' },
-      { dayIndex: 1, nameEn: 'Tuesday', nameHi: 'मंगलवार', shortEn: 'Tue', shortHi: 'मंगल' },
-      { dayIndex: 2, nameEn: 'Wednesday', nameHi: 'बुधवार', shortEn: 'Wed', shortHi: 'बुध' },
-      { dayIndex: 3, nameEn: 'Thursday', nameHi: 'गुरुवार', shortEn: 'Thu', shortHi: 'गुरु' },
-      { dayIndex: 4, nameEn: 'Friday', nameHi: 'शुक्रवार', shortEn: 'Fri', shortHi: 'शुक्र' },
-      { dayIndex: 5, nameEn: 'Saturday', nameHi: 'शनिवार', shortEn: 'Sat', shortHi: 'शनि' },
-      { dayIndex: 6, nameEn: 'Sunday', nameHi: 'रविवार', shortEn: 'Sun', shortHi: 'रवि' },
-    ];
+    // Get Monday of current week offset
+    const today = new Date();
+    const currentDayOfWeek = today.getDay(); // 0 (Sun) to 6 (Sat)
+    const distanceToMon = currentDayOfWeek === 0 ? -6 : 1 - currentDayOfWeek;
+    
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + distanceToMon + (weekOffset * 7));
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+
+      const dayIndex = i;
+      const dateNum = d.getDate();
+      const monthStr = d.toLocaleDateString(isHi ? 'hi-IN' : 'en-US', { month: 'short' });
+      const dayShort = d.toLocaleDateString(isHi ? 'hi-IN' : 'en-US', { weekday: 'short' });
+      const dayFull = d.toLocaleDateString(isHi ? 'hi-IN' : 'en-US', { weekday: 'long' });
+      const isToday = d.toDateString() === new Date().toDateString();
+      const dateFormatted = `${dateNum} ${monthStr}`;
+
+      days.push({
+        dayIndex,
+        dateObj: d,
+        dateNum,
+        monthStr,
+        dayShort,
+        dayFull,
+        dateFormatted,
+        isToday,
+      });
+    }
 
     const totalItems = flattenedTargets.length;
     if (totalItems === 0) {
@@ -228,7 +321,28 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
         chaptersGrouped,
       };
     });
-  }, [flattenedTargets, paceDetails.itemsPerDay]);
+  }, [flattenedTargets, paceDetails.itemsPerDay, weekOffset, isHi]);
+
+  // One-click import today's targets to To-Do List
+  const autoImportTargetsToTodo = useCallback(() => {
+    const currentDayData = weeklySchedule[selectedDay] || { items: [] };
+    if (!currentDayData.items.length) {
+      alert(isHi ? 'इस दिन कोई टारगेट नहीं है!' : 'No targets for this day!');
+      return;
+    }
+
+    const newEntries = currentDayData.items.map((item, idx) => ({
+      id: `imported_${Date.now()}_${idx}`,
+      text: item.fullPath,
+      slot: idx % 2 === 0 ? 'morning' : 'afternoon',
+      priority: 'high',
+      done: !!completedMap[item.key],
+    }));
+
+    const merged = [...todoList, ...newEntries];
+    saveTodoList(merged);
+    alert(isHi ? `${newEntries.length} सिलेबस लक्ष्य टू-डू लिस्ट में जोड़ दिए गए हैं!` : `Imported ${newEntries.length} syllabus targets to To-Do list!`);
+  }, [weeklySchedule, selectedDay, todoList, completedMap, saveTodoList, isHi]);
 
   // Overall Statistics
   const stats = useMemo(() => {
@@ -245,6 +359,11 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
     const dayCompletedPct = dayTotal > 0 ? Math.round((dayCompleted / dayTotal) * 100) : 0;
     const dayRemainingPct = 100 - dayCompletedPct;
 
+    // To-Do stats
+    const todoTotal = todoList.length;
+    const todoDone = todoList.filter(t => t.done).length;
+    const todoPct = todoTotal > 0 ? Math.round((todoDone / todoTotal) * 100) : 0;
+
     return {
       totalCount,
       completedCount,
@@ -256,8 +375,11 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
       dayPending,
       dayCompletedPct,
       dayRemainingPct,
+      todoTotal,
+      todoDone,
+      todoPct,
     };
-  }, [flattenedTargets, completedMap, weeklySchedule, selectedDay]);
+  }, [flattenedTargets, completedMap, weeklySchedule, selectedDay, todoList]);
 
   const currentDayData = weeklySchedule[selectedDay] || { items: [], chaptersGrouped: [] };
 
@@ -272,10 +394,10 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
           </div>
           <div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-              {isHi ? 'स्मार्ट सिलेबस टारगेट प्लानर' : 'Smart Syllabus Target Planner'}
+              {isHi ? 'स्मार्ट सिलेबस व रियल कैलेंडर टारगेट प्लानर' : 'Smart Syllabus & Real Calendar Target Planner'}
             </h2>
             <p className="text-xs text-gray-500">
-              {isHi ? 'परीक्षा तारीख और आपकी गति के अनुसार स्वचालित दैनिक लक्ष्य' : 'Adaptive daily pace auto-calculated for your exam schedule'}
+              {isHi ? 'वास्तविक कैलेंडर तिथियों और अनुकूली गति के अनुसार दैनिक लक्ष्य' : 'Target pacing running on real calendar dates and dynamic countdown'}
             </p>
           </div>
         </div>
@@ -318,10 +440,10 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
           <Sliders className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
           <div>
             <span className="text-xs font-bold text-gray-900 dark:text-white">
-              {isHi ? 'लक्ष्य गति (Study Pace):' : 'Study Pace Mode:'}
+              {isHi ? 'लक्ष्य गति (Pace):' : 'Pace Mode:'}
             </span>
             <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 ml-1.5">
-              {paceDetails.itemsPerDay} {isHi ? 'लक्ष्य/दिन' : 'items/day'}
+              {paceDetails.itemsPerDay} {isHi ? 'लक्ष्य/दिन' : 'items/day'} ({paceDetails.examDaysLeft} {isHi ? 'दिन परीक्षा में बाकी' : 'days to exam'})
             </span>
           </div>
         </div>
@@ -358,79 +480,49 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
         </div>
       </div>
 
-      {/* Progress Metric Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {/* Overall Completion */}
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-3.5 border border-blue-100 dark:border-blue-800/30">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
-              {isHi ? 'कुल पूर्ण %' : 'Overall Completed'}
-            </span>
-            <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-          </div>
-          <p className="text-2xl font-black text-blue-900 dark:text-blue-100">{stats.completedPct}%</p>
-          <p className="text-[10px] text-blue-600 dark:text-blue-300 mt-1">
-            {stats.completedCount} / {stats.totalCount} {isHi ? 'लक्ष्य पूरे' : 'targets completed'}
-          </p>
-        </div>
-
-        {/* Overall Remaining */}
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-3.5 border border-amber-100 dark:border-amber-800/30">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-              {isHi ? 'कुल बाकी %' : 'Overall Remaining'}
-            </span>
-            <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-          </div>
-          <p className="text-2xl font-black text-amber-900 dark:text-amber-100">{stats.remainingPct}%</p>
-          <p className="text-[10px] text-amber-600 dark:text-amber-300 mt-1">
-            {stats.pendingCount} {isHi ? 'लक्ष्य शेष' : 'targets pending'}
-          </p>
-        </div>
-
-        {/* Today's Completion */}
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl p-3.5 border border-emerald-100 dark:border-emerald-800/30">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-              {isHi ? 'आज पूर्ण %' : 'Today Completed'}
-            </span>
-            <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <p className="text-2xl font-black text-emerald-900 dark:text-emerald-100">{stats.dayCompletedPct}%</p>
-          <p className="text-[10px] text-emerald-600 dark:text-emerald-300 mt-1">
-            {stats.dayCompleted} / {stats.dayTotal} {isHi ? 'आज का पूरा' : 'items today'}
-          </p>
-        </div>
-
-        {/* Today's Remaining */}
-        <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-xl p-3.5 border border-purple-100 dark:border-purple-800/30">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">
-              {isHi ? 'आज बाकी %' : 'Today Remaining'}
-            </span>
-            <Layers className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-          </div>
-          <p className="text-2xl font-black text-purple-900 dark:text-purple-100">{stats.dayRemainingPct}%</p>
-          <p className="text-[10px] text-purple-600 dark:text-purple-300 mt-1">
-            {stats.dayPending} {isHi ? 'आज के बाकी' : 'items remaining today'}
-          </p>
-        </div>
-      </div>
-
-      {/* Days Tabs (7-Day Weekly Schedule Bar) */}
+      {/* Real Calendar Week Navigation & Schedule Bar */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-            {isHi ? 'साप्ताहिक शेड्यूल (दिन चुनें)' : 'Weekly Schedule (Select Day)'}
-          </span>
-          <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
-            {isHi ? `दिन ${selectedDay + 1} का लक्ष्य (${currentDayData.items.length} लक्ष्य)` : `Day ${selectedDay + 1} Targets (${currentDayData.items.length} items)`}
-          </span>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+              {isHi ? 'वास्तविक कैलेंडर सप्ताह शेड्यूल' : 'Real Calendar Weekly Schedule'}
+            </span>
+            {weekOffset === 0 && (
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                {isHi ? 'इस सप्ताह' : 'Current Week'}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setWeekOffset(w => w - 1)}
+              className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+              title={isHi ? 'पिछला सप्ताह' : 'Previous Week'}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            {weekOffset !== 0 && (
+              <button
+                onClick={() => setWeekOffset(0)}
+                className="px-2.5 py-1 text-xs font-bold bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg"
+              >
+                {isHi ? 'आज' : 'Today'}
+              </button>
+            )}
+            <button
+              onClick={() => setWeekOffset(w => w + 1)}
+              className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+              title={isHi ? 'अगला सप्ताह' : 'Next Week'}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
+        {/* 7 Real Calendar Days Bar */}
         <div className="grid grid-cols-7 gap-1.5 md:gap-2">
           {weeklySchedule.map((d, idx) => {
-            const isToday = new Date().getDay() === (idx === 6 ? 0 : idx + 1);
             const isSelected = selectedDay === idx;
             const dayDone = d.items.length > 0 && d.items.every(item => completedMap[item.key]);
 
@@ -438,20 +530,31 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
               <button
                 key={idx}
                 onClick={() => setSelectedDay(idx)}
-                className={`p-2 md:p-3 rounded-xl border text-center transition-all ${
+                className={`p-2 md:p-3 rounded-xl border text-center transition-all relative ${
                   isSelected
                     ? 'bg-blue-600 text-white border-blue-600 shadow-md scale-105 font-bold'
-                    : isToday
-                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700'
+                    : d.isToday
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700 font-bold'
                     : 'bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:bg-gray-100'
                 }`}
               >
-                <p className={`text-[10px] uppercase font-bold opacity-80 ${isSelected ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`}>{isHi ? d.shortHi : d.shortEn}</p>
-                <p className={`text-xs md:text-sm font-black mt-0.5 ${isSelected ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}>{idx + 1}</p>
+                {d.isToday && (
+                  <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 px-1.5 py-0.2 rounded-full text-[8px] font-black bg-emerald-500 text-white shadow-xs">
+                    TODAY
+                  </span>
+                )}
+                <p className={`text-[10px] uppercase font-bold opacity-80 ${isSelected ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                  {d.dayShort}
+                </p>
+                <p className={`text-xs md:text-sm font-black mt-0.5 ${isSelected ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}>
+                  {d.dateFormatted}
+                </p>
                 {dayDone ? (
                   <CheckCircle className="w-3 h-3 mx-auto mt-1 text-emerald-400" />
                 ) : (
-                  <p className={`text-[9px] font-semibold mt-1 ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>{d.items.length}</p>
+                  <p className={`text-[9px] font-semibold mt-1 ${isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                    {d.items.length} {isHi ? 'लक्ष्य' : 'items'}
+                  </p>
                 )}
               </button>
             );
@@ -464,12 +567,23 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-blue-500" />
-            {isHi ? `दिन ${selectedDay + 1} का सिलेबस ब्रेकडाउन (${currentDayData.nameHi})` : `Day ${selectedDay + 1} Targets Breakdown (${currentDayData.nameEn})`}
+            {isHi 
+              ? `${currentDayData.dayFull} (${currentDayData.dateFormatted}) का लक्ष्य ब्रेकडाउन` 
+              : `${currentDayData.dayFull} (${currentDayData.dateFormatted}) Targets Breakdown`}
           </h3>
 
-          <span className="text-xs text-gray-500">
-            {stats.dayCompleted} / {stats.dayTotal} {isHi ? 'पूर्ण' : 'completed'}
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={autoImportTargetsToTodo}
+              className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors flex items-center gap-1"
+            >
+              <ListTodo className="w-3.5 h-3.5" />
+              {isHi ? 'टू-डू लिस्ट में जोड़ें' : 'Import to To-Do'}
+            </button>
+            <span className="text-xs text-gray-500 font-semibold">
+              {stats.dayCompleted} / {stats.dayTotal} {isHi ? 'पूर्ण' : 'completed'}
+            </span>
+          </div>
         </div>
 
         {currentDayData.chaptersGrouped.length > 0 ? (
@@ -544,10 +658,159 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
           <div className="text-center py-8 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
             <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
             <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-              {isHi ? 'इस दिन के लिए कोई लक्ष्य उपलब्ध नहीं है' : 'No targets scheduled for this day'}
+              {isHi ? 'इस तारीख के लिए कोई टारगेट निर्धारित नहीं है' : 'No targets scheduled for this date'}
             </p>
           </div>
         )}
+      </div>
+
+      {/* ════════════════════════════════════════════
+          DAILY STUDY TIMETABLE & TO-DO LIST HUB
+      ════════════════════════════════════════════ */}
+      <div className="pt-4 border-t border-gray-100 dark:border-gray-700 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-sm">
+              <ListTodo className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                {isHi ? 'दैनिक समय-सारणी एवं टू-डू सूची' : 'Daily Study Timetable & To-Do List'}
+              </h3>
+              <p className="text-xs text-gray-500">
+                {isHi ? 'अपने समय स्लॉट के अनुसार कस्टम कार्य जोड़ें एवं प्रगति ट्रैक करें' : 'Manage custom study slots and track your daily execution'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-32 h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${stats.todoPct}%` }} />
+              </div>
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                {stats.todoDone}/{stats.todoTotal} ({stats.todoPct}%)
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* New Task Add Form */}
+        <form onSubmit={handleAddTodo} className="grid grid-cols-1 sm:grid-cols-12 gap-2 bg-gray-50 dark:bg-gray-700/40 p-3 rounded-xl border border-gray-200 dark:border-gray-600/60">
+          <input
+            type="text"
+            value={newTaskText}
+            onChange={e => setNewTaskText(e.target.value)}
+            placeholder={isHi ? 'नया अध्ययन कार्य लिखें (उदा. रिसर्च एप्टीट्यूड 30 PYQs)' : 'Enter custom study task (e.g. Read Unit 1 notes)'}
+            className="sm:col-span-6 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+
+          <select
+            value={newTaskSlot}
+            onChange={e => setNewTaskSlot(e.target.value)}
+            className="sm:col-span-3 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-semibold text-gray-800 dark:text-gray-200 focus:outline-none"
+          >
+            <option value="morning">🌅 {isHi ? 'सुबह (Morning)' : 'Morning Slot'}</option>
+            <option value="afternoon">☀️ {isHi ? 'दोपहर (Afternoon)' : 'Afternoon Slot'}</option>
+            <option value="evening">{isHi ? 'शाम (Evening)' : 'Evening Slot'}</option>
+            <option value="night">🌙 {isHi ? 'रात (Night)' : 'Night Slot'}</option>
+          </select>
+
+          <select
+            value={newTaskPriority}
+            onChange={e => setNewTaskPriority(e.target.value)}
+            className="sm:col-span-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-semibold text-gray-800 dark:text-gray-200 focus:outline-none"
+          >
+            <option value="high">{isHi ? 'उच्च' : 'High'}</option>
+            <option value="medium">{isHi ? 'मध्यम' : 'Medium'}</option>
+            <option value="normal">{isHi ? 'सामान्य' : 'Normal'}</option>
+          </select>
+
+          <button
+            type="submit"
+            className="sm:col-span-1 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg font-bold text-xs flex items-center justify-center transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </form>
+
+        {/* Tasks List Grouped by Slots */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            { id: 'morning', labelEn: 'Morning Slot (06:00 AM - 10:00 AM)', labelHi: 'सुबह का स्लॉट (06:00 AM - 10:00 AM)', icon: Sun, color: 'amber' },
+            { id: 'afternoon', labelEn: 'Afternoon Slot (02:00 PM - 05:00 PM)', labelHi: 'दोपहर का स्लॉट (02:00 PM - 05:00 PM)', icon: Coffee, color: 'blue' },
+            { id: 'evening', labelEn: 'Evening Slot (06:00 PM - 09:00 PM)', labelHi: 'शाम का स्लॉट (06:00 PM - 09:00 PM)', icon: Sunset, color: 'purple' },
+            { id: 'night', labelEn: 'Night Slot (09:30 PM - 11:30 PM)', labelHi: 'रात का स्लॉट (09:30 PM - 11:30 PM)', icon: Moon, color: 'indigo' },
+          ].map(slot => {
+            const slotTasks = todoList.filter(t => t.slot === slot.id);
+            const SlotIcon = slot.icon;
+
+            return (
+              <div key={slot.id} className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-3 border border-gray-200 dark:border-gray-600/50 space-y-2">
+                <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-600 pb-2">
+                  <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                    <SlotIcon className={`w-3.5 h-3.5 text-${slot.color}-500`} />
+                    {isHi ? slot.labelHi : slot.labelEn}
+                  </span>
+                  <span className="text-[10px] font-bold text-gray-500">
+                    {slotTasks.filter(t => t.done).length}/{slotTasks.length}
+                  </span>
+                </div>
+
+                {slotTasks.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {slotTasks.map(t => (
+                      <div
+                        key={t.id}
+                        className={`flex items-center justify-between p-2 rounded-lg border transition-all ${
+                          t.done
+                            ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
+                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                        }`}
+                      >
+                        <div
+                          onClick={() => toggleTodoDone(t.id)}
+                          className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
+                        >
+                          {t.done ? (
+                            <CheckSquare className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                          ) : (
+                            <Square className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          )}
+                          <span className={`text-xs font-semibold truncate ${
+                            t.done ? 'line-through text-emerald-800 dark:text-emerald-300' : 'text-gray-900 dark:text-gray-100'
+                          }`}>
+                            {t.text}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${
+                            t.priority === 'high' ? 'bg-red-100 text-red-700' :
+                            t.priority === 'medium' ? 'bg-amber-100 text-amber-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {t.priority}
+                          </span>
+                          <button
+                            onClick={() => deleteTodo(t.id)}
+                            className="text-gray-400 hover:text-red-500 p-0.5 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-gray-400 italic text-center py-2">
+                    {isHi ? 'कोई कार्य निर्धारित नहीं' : 'No tasks scheduled'}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
     </div>

@@ -173,8 +173,17 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
     return hi ? 'शुभ संध्या' : 'Good Evening';
   };
 
-  const handleSetExamDate = () => {
-    if (examDateInput) d.setExamDate(examDateInput);
+  const [editingDate, setEditingDate] = useState(false);
+
+  const handleSetExamDate = (dateVal) => {
+    const val = typeof dateVal === 'string' ? dateVal : examDateInput;
+    if (val) {
+      d.setExamDate(val);
+      try {
+        window.dispatchEvent(new CustomEvent('netprep-exam-date-changed', { detail: val }));
+      } catch {}
+      setEditingDate(false);
+    }
   };
 
   const COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
@@ -238,9 +247,17 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
               {/* Countdown */}
               <div className="col-span-2 bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-                {ecc.countdown.isSet ? (
-                  <div className="text-center">
-                    <p className="text-blue-200 text-xs mb-2 font-medium">{hi ? 'परीक्षा तक' : 'Exam In'}</p>
+                {ecc.countdown.isSet && !editingDate ? (
+                  <div className="text-center relative group">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-blue-200 text-xs font-medium">{hi ? 'परीक्षा तक (Exam Date)' : 'Exam Countdown'}</p>
+                      <button
+                        onClick={() => setEditingDate(true)}
+                        className="text-blue-200 hover:text-white text-[10px] font-bold underline transition-colors"
+                      >
+                        {hi ? 'तारीख बदलें' : 'Change Date'}
+                      </button>
+                    </div>
                     <div className="flex items-center justify-center gap-3">
                       <div><p className="text-3xl font-black">{ecc.countdown.days}</p><p className="text-[10px] text-blue-200">{hi ? 'दिन' : 'Days'}</p></div>
                       <span className="text-2xl font-light opacity-50">:</span>
@@ -251,11 +268,21 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
                   </div>
                 ) : (
                   <div className="text-center">
-                    <p className="text-blue-200 text-xs mb-2 font-medium">{hi ? 'परीक्षा तारीख सेट करें' : 'Set Exam Date'}</p>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-blue-200 text-xs font-medium">{hi ? 'परीक्षा तारीख चुनें' : 'Select Exam Date'}</p>
+                      {ecc.countdown.isSet && (
+                        <button onClick={() => setEditingDate(false)} className="text-blue-200 text-[10px] underline">
+                          {hi ? 'रद्द करें' : 'Cancel'}
+                        </button>
+                      )}
+                    </div>
                     <div className="flex gap-2">
-                      <input type="date" value={examDateInput} onChange={e => setExamDateInput(e.target.value)}
-                        className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-white text-sm placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-white/30" />
-                      <button onClick={handleSetExamDate}
+                      <input type="date" value={examDateInput} onChange={e => {
+                        setExamDateInput(e.target.value);
+                        handleSetExamDate(e.target.value);
+                      }}
+                        className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/30" />
+                      <button onClick={() => handleSetExamDate(examDateInput)}
                         className="bg-white text-blue-700 px-3 py-1.5 rounded-lg text-sm font-bold hover:scale-105 transition-all">
                         {hi ? 'सेट' : 'Set'}
                       </button>
