@@ -2,14 +2,14 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Calendar, CheckCircle, Circle, BookOpen, Layers, Target, ChevronRight,
   CheckSquare, Square, RefreshCw, BarChart3, PieChart, Sparkles, Filter,
-  Clock, Award, ArrowUpRight, ChevronDown, ChevronUp, AlertCircle
+  Clock, Award, ArrowUpRight, ChevronDown, ChevronUp, AlertCircle, Zap, Sliders
 } from 'lucide-react';
 import { useSyllabus } from '../../hooks/useSyllabus';
 import syllabusPaper1Static from '../../data/syllabusPaper1';
 import syllabusPaper2HistoryStatic from '../../data/syllabusPaper2History';
 
 const AutoSyllabusPlanner = ({ language = 'en' }) => {
-  const { syllabus: fetchedSyllabus, loading: syllabusLoading } = useSyllabus(true);
+  const { syllabus: fetchedSyllabus } = useSyllabus(true);
   const isHi = language === 'hi';
 
   const syllabusData = useMemo(() => {
@@ -19,15 +19,18 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
     };
   }, [fetchedSyllabus]);
 
-  // Selected filters
+  // Filters & Settings
   const [selectedPaper, setSelectedPaper] = useState('all'); // 'all', 'paper1', 'paper2'
-  const [selectedDay, setSelectedDay] = useState(() => {
-    // Current day index (0 = Monday, 6 = Sunday)
-    const day = new Date().getDay();
-    return day === 0 ? 6 : day - 1; // 0 to 6
+  const [paceMode, setPaceMode] = useState(() => {
+    return localStorage.getItem('netprep_target_pace_mode') || 'auto'; // 'auto', 'light', 'moderate', 'intense'
   });
 
-  // Local storage for completed targets
+  const [selectedDay, setSelectedDay] = useState(() => {
+    const day = new Date().getDay();
+    return day === 0 ? 6 : day - 1; // 0 (Mon) to 6 (Sun)
+  });
+
+  // Saved completed targets
   const [completedMap, setCompletedMap] = useState(() => {
     try {
       const stored = localStorage.getItem('netprep_completed_targets');
@@ -36,6 +39,13 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
       return {};
     }
   });
+
+  const handlePaceChange = (mode) => {
+    setPaceMode(mode);
+    try {
+      localStorage.setItem('netprep_target_pace_mode', mode);
+    } catch {}
+  };
 
   const toggleItemCompleted = useCallback((key) => {
     setCompletedMap(prev => {
@@ -117,7 +127,52 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
     return list;
   }, [syllabusData, selectedPaper, isHi]);
 
-  // Distribute targets into 7 days (Weekly Schedule)
+  // Calculate Adaptive Daily Limit based on Pace Mode & Exam Date
+  const paceDetails = useMemo(() => {
+    const totalCount = flattenedTargets.length;
+    const pendingCount = flattenedTargets.filter(item => !completedMap[item.key]).length;
+
+    let itemsPerDay = 4; // default moderate
+    let examDaysLeft = 60; // fallback default
+
+    try {
+      const storedExamDate = localStorage.getItem('netprep_exam_date');
+      if (storedExamDate) {
+        const diffMs = new Date(storedExamDate).getTime() - Date.now();
+        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays > 0) examDaysLeft = diffDays;
+      }
+    } catch {}
+
+    if (paceMode === 'auto') {
+      // Adaptive: total remaining targets / remaining exam days
+      itemsPerDay = Math.max(2, Math.min(10, Math.ceil(pendingCount / Math.max(1, examDaysLeft))));
+    } else if (paceMode === 'light') {
+      itemsPerDay = 3;
+    } else if (paceMode === 'moderate') {
+      itemsPerDay = 5;
+    } else if (paceMode === 'intense') {
+      itemsPerDay = 8;
+    }
+
+    const estimatedDaysToFinish = Math.ceil(pendingCount / Math.max(1, itemsPerDay));
+    const estCompletionDate = new Date(Date.now() + estimatedDaysToFinish * 86400000);
+    const dateFormatted = estCompletionDate.toLocaleDateString(isHi ? 'hi-IN' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+
+    return {
+      itemsPerDay,
+      examDaysLeft,
+      estimatedDaysToFinish,
+      dateFormatted,
+      pendingCount
+    };
+  }, [flattenedTargets, completedMap, paceMode, isHi]);
+
+  // Distribute targets into 7 days with realistic daily limits
   const weeklySchedule = useMemo(() => {
     const days = [
       { dayIndex: 0, nameEn: 'Monday', nameHi: 'सोमवार', shortEn: 'Mon', shortHi: 'सोम' },
@@ -134,13 +189,13 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
       return days.map(d => ({ ...d, items: [], chaptersGrouped: [] }));
     }
 
-    const itemsPerDay = Math.ceil(totalItems / 7);
+    const limit = paceDetails.itemsPerDay;
 
     return days.map((day, idx) => {
-      const startIdx = idx * itemsPerDay;
-      const dayItems = flattenedTargets.slice(startIdx, startIdx + itemsPerDay);
+      const startIdx = idx * limit;
+      const dayItems = flattenedTargets.slice(startIdx, startIdx + limit);
 
-      // Group items by Chapter -> Topic for hierarchical rendering
+      // Group items by Chapter -> Topic
       const groupedMap = new Map();
       dayItems.forEach(item => {
         const groupKey = `${item.paperLabel}_${item.unitName}_${item.chapterName}`;
@@ -173,9 +228,9 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
         chaptersGrouped,
       };
     });
-  }, [flattenedTargets]);
+  }, [flattenedTargets, paceDetails.itemsPerDay]);
 
-  // Calculate Overall Progress & Current Day Progress
+  // Overall Statistics
   const stats = useMemo(() => {
     const totalCount = flattenedTargets.length;
     const completedCount = flattenedTargets.filter(item => completedMap[item.key]).length;
@@ -183,7 +238,6 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
     const completedPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
     const remainingPct = 100 - completedPct;
 
-    // Current Selected Day Stats
     const currentDaySchedule = weeklySchedule[selectedDay] || { items: [] };
     const dayTotal = currentDaySchedule.items.length;
     const dayCompleted = currentDaySchedule.items.filter(item => completedMap[item.key]).length;
@@ -218,10 +272,10 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
           </div>
           <div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-              {isHi ? 'ऑटोमैटिक सिलेबस टारगेट प्लानर' : 'Automated Syllabus Target Planner'}
+              {isHi ? 'स्मार्ट सिलेबस टारगेट प्लानर' : 'Smart Syllabus Target Planner'}
             </h2>
             <p className="text-xs text-gray-500">
-              {isHi ? 'इकाई > अध्याय > टॉपिक > सबटॉपिक स्तर पर दैनिक लक्ष्य' : 'Auto-generated targets down to Chapter > Topic > Subtopic'}
+              {isHi ? 'परीक्षा तारीख और आपकी गति के अनुसार स्वचालित दैनिक लक्ष्य' : 'Adaptive daily pace auto-calculated for your exam schedule'}
             </p>
           </div>
         </div>
@@ -255,6 +309,52 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
           >
             <RefreshCw className="w-4 h-4" />
           </button>
+        </div>
+      </div>
+
+      {/* Pace Mode Selector Bar */}
+      <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/30 dark:via-indigo-950/30 dark:to-purple-950/30 rounded-xl p-4 border border-blue-100 dark:border-blue-900/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5">
+          <Sliders className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+          <div>
+            <span className="text-xs font-bold text-gray-900 dark:text-white">
+              {isHi ? 'लक्ष्य गति (Study Pace):' : 'Study Pace Mode:'}
+            </span>
+            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 ml-1.5">
+              {paceDetails.itemsPerDay} {isHi ? 'लक्ष्य/दिन' : 'items/day'}
+            </span>
+          </div>
+        </div>
+
+        {/* Mode Selector Buttons */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {[
+            { id: 'auto', labelEn: 'Adaptive (Auto)', labelHi: 'ऑटो (अनुकूली)' },
+            { id: 'light', labelEn: 'Light (3/day)', labelHi: 'हल्का (3/दिन)' },
+            { id: 'moderate', labelEn: 'Moderate (5/day)', labelHi: 'मध्यम (5/दिन)' },
+            { id: 'intense', labelEn: 'Sprint (8/day)', labelHi: 'तेज (8/दिन)' },
+          ].map(m => (
+            <button
+              key={m.id}
+              onClick={() => handlePaceChange(m.id)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                paceMode === m.id
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-white/80 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-white'
+              }`}
+            >
+              {isHi ? m.labelHi : m.labelEn}
+            </button>
+          ))}
+        </div>
+
+        <div className="text-right flex-shrink-0">
+          <p className="text-[10px] text-gray-500 font-medium">
+            {isHi ? 'अनुमानित पूर्णता तारीख:' : 'Est. Completion:'}
+          </p>
+          <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+            {paceDetails.dateFormatted} ({paceDetails.estimatedDaysToFinish} {isHi ? 'दिन' : 'days'})
+          </p>
         </div>
       </div>
 
@@ -324,7 +424,7 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
             {isHi ? 'साप्ताहिक शेड्यूल (दिन चुनें)' : 'Weekly Schedule (Select Day)'}
           </span>
           <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
-            {isHi ? `दिन ${selectedDay + 1} का लक्ष्य` : `Day ${selectedDay + 1} Targets`}
+            {isHi ? `दिन ${selectedDay + 1} का लक्ष्य (${currentDayData.items.length} लक्ष्य)` : `Day ${selectedDay + 1} Targets (${currentDayData.items.length} items)`}
           </span>
         </div>
 
@@ -412,8 +512,8 @@ const AutoSyllabusPlanner = ({ language = 'en' }) => {
                               onClick={() => toggleItemCompleted(item.key)}
                               className={`flex items-start gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${
                                 isDone
-                                  ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
-                                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 hover:border-blue-400'
+                                  ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
+                                  : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-400'
                               }`}
                             >
                               {isDone ? (

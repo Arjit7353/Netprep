@@ -11,7 +11,7 @@ import {
   RefreshCw, Calendar, Timer, Shield, Award, Brain, Lightbulb, Eye,
   Layers, Coffee, Sun, Moon, Sunset, Hash, Flag, Minus,
   ArrowUpRight, ArrowDownRight, Activity, BookMarked, GraduationCap,
-  Sparkles, Compass, CheckSquare
+  Sparkles, Compass, CheckSquare, Layers3, CheckCircle2
 } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import useDashboard from '../hooks/useDashboard';
@@ -57,32 +57,6 @@ const Section = ({ icon: Icon, title, titleHi, language, children, defaultOpen =
         {open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
       </button>
       {open && <div className="px-5 pb-5 space-y-4 animate-fade-in">{children}</div>}
-    </div>
-  );
-};
-
-// ═══════════════════════════════════════════════════════
-//  GAUGE COMPONENT (circular progress)
-// ═══════════════════════════════════════════════════════
-const CircularGauge = ({ value, max = 100, size = 100, strokeWidth = 8, color = '#3b82f6', label, sublabel, showPct = true }) => {
-  const r = (size - strokeWidth) / 2;
-  const circ = 2 * Math.PI * r;
-  const pct = Math.min(value / max, 1);
-  const offset = circ * (1 - pct);
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor"
-          strokeWidth={strokeWidth} className="text-gray-200 dark:text-gray-700" />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color}
-          strokeWidth={strokeWidth} strokeDasharray={circ} strokeDashoffset={offset}
-          strokeLinecap="round" className="transition-all duration-1000 ease-out" />
-      </svg>
-      <div className="absolute flex flex-col items-center justify-center" style={{ width: size, height: size }}>
-        <span className="text-xl font-black" style={{ color }}>{showPct ? `${Math.round(value)}%` : value}</span>
-        {sublabel && <span className="text-[9px] text-gray-500 font-medium">{sublabel}</span>}
-      </div>
-      {label && <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 mt-1">{label}</span>}
     </div>
   );
 };
@@ -617,7 +591,7 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
         </div>
 
         {/* ════════════════════════════════════════════
-            §5  SYLLABUS COVERAGE HEATMAP
+            §5  SYLLABUS COVERAGE HEATMAP (Vibrant Unit Badges)
         ════════════════════════════════════════════ */}
         <Section icon={BookOpen} title="Syllabus Coverage" titleHi="सिलेबस कवरेज" language={language} badgeColor="blue"
           badge={`${sc.overallPct}%`}>
@@ -625,26 +599,31 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
             {/* Paper 1 */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300">Paper 1</h4>
-                <span className="text-xs font-bold text-blue-600">{sc.paper1Summary.overallPct}%</span>
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white">Paper 1</h4>
+                <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{sc.paper1Summary.overallPct}%</span>
               </div>
               <ProgressBar value={sc.paper1Summary.overallPct} color="#3b82f6" height={5} />
               <div className="space-y-2 mt-3">
                 {sc.paper1.map((u, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                    <div className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black text-white" style={{ background: u.color }}>
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700/80 transition-colors">
+                    {/* Vibrant Unit Badge */}
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white shadow-sm flex-shrink-0 ${
+                      u.attemptedCount > 0
+                        ? 'bg-gradient-to-br from-blue-600 to-indigo-600'
+                        : 'bg-gradient-to-br from-gray-400 to-gray-500'
+                    }`}>
                       {i + 1}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{u.name}</span>
+                        <span className="text-xs font-bold text-gray-900 dark:text-white truncate">{u.name}</span>
                         <LevelBadge level={u.level} language={language} />
                       </div>
                       <ProgressBar value={u.coveragePct} color={u.color} height={4} />
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{u.accuracy}%</p>
-                      <p className="text-[9px] text-gray-400">{u.attemptedCount}/{u.totalTests}</p>
+                      <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{u.accuracy}%</p>
+                      <p className="text-[9px] text-gray-500 font-semibold">{u.attemptedCount}/{u.totalTests}</p>
                     </div>
                   </div>
                 ))}
@@ -653,26 +632,31 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
             {/* Paper 2 */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300">Paper 2</h4>
-                <span className="text-xs font-bold text-purple-600">{sc.paper2Summary.overallPct}%</span>
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white">Paper 2</h4>
+                <span className="text-xs font-bold text-purple-600 dark:text-purple-400">{sc.paper2Summary.overallPct}%</span>
               </div>
               <ProgressBar value={sc.paper2Summary.overallPct} color="#8b5cf6" height={5} />
               <div className="space-y-2 mt-3">
                 {sc.paper2.map((u, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                    <div className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black text-white" style={{ background: u.color }}>
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700/80 transition-colors">
+                    {/* Vibrant Unit Badge */}
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white shadow-sm flex-shrink-0 ${
+                      u.attemptedCount > 0
+                        ? 'bg-gradient-to-br from-purple-600 to-indigo-600'
+                        : 'bg-gradient-to-br from-gray-400 to-gray-500'
+                    }`}>
                       {i + 1}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{u.name}</span>
+                        <span className="text-xs font-bold text-gray-900 dark:text-white truncate">{u.name}</span>
                         <LevelBadge level={u.level} language={language} />
                       </div>
                       <ProgressBar value={u.coveragePct} color={u.color} height={4} />
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{u.accuracy}%</p>
-                      <p className="text-[9px] text-gray-400">{u.attemptedCount}/{u.totalTests}</p>
+                      <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{u.accuracy}%</p>
+                      <p className="text-[9px] text-gray-500 font-semibold">{u.attemptedCount}/{u.totalTests}</p>
                     </div>
                   </div>
                 ))}
@@ -747,45 +731,73 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
         </Section>
 
         {/* ════════════════════════════════════════════
-            §7  WEEKLY STUDY PLAN
+            §7  EXAM SPRINT & WEEKLY STRATEGY HUB
         ════════════════════════════════════════════ */}
-        <Section icon={Calendar} title="Weekly Strategy" titleHi="साप्ताहिक रणनीति" language={language} badgeColor="indigo"
-          defaultOpen={false}>
-          {wcm.suggestedPlan && (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
-              {wcm.suggestedPlan.map((day, i) => (
-                <div key={i} className={`p-3 rounded-xl border text-center ${
-                  day.focus === 'critical' ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' :
-                  day.focus === 'revision' ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800' :
-                  day.focus === 'new' ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800' :
-                  day.focus === 'mock' ? 'bg-purple-50 dark:bg-purple-900/10 border-purple-200 dark:border-purple-800' :
-                  'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600'
-                }`}>
-                  <p className="text-[10px] font-bold text-gray-500 uppercase">{day.day}</p>
-                  <p className="text-xs font-bold text-gray-900 dark:text-white mt-1 truncate">{day.name}</p>
-                  <span className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${
-                    day.focus === 'critical' ? 'bg-red-200 text-red-700' :
-                    day.focus === 'revision' ? 'bg-amber-200 text-amber-700' :
-                    day.focus === 'mock' ? 'bg-purple-200 text-purple-700' :
-                    'bg-blue-200 text-blue-700'
-                  }`}>{day.focus}</span>
-                </div>
-              ))}
+        <Section icon={Compass} title="Weekly Exam Sprint Strategy" titleHi="साप्ताहिक परीक्षा रणनीति" language={language} badgeColor="indigo"
+          defaultOpen={true}>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            {/* Pillar 1: Mon-Wed */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl p-4 border border-blue-100 dark:border-blue-900/40">
+              <div className="flex items-center justify-between mb-2">
+                <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-600 text-white uppercase">
+                  {hi ? 'सोम - बुध' : 'Mon - Wed'}
+                </span>
+                <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">
+                {hi ? 'अवधारणा और अध्याय अध्ययन' : 'Core Concept & Target Study'}
+              </h4>
+              <p className="text-xs text-gray-600 dark:text-gray-300">
+                {hi ? 'टारगेट प्लानर के दैनिक 3-5 सबटॉपिक्स को पूरा करें और नोट्स बनाएं।' : 'Complete daily targets from the target planner and write chapter notes.'}
+              </p>
             </div>
-          )}
+
+            {/* Pillar 2: Thu-Fri */}
+            <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950/30 dark:to-violet-950/30 rounded-xl p-4 border border-purple-100 dark:border-purple-900/40">
+              <div className="flex items-center justify-between mb-2">
+                <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white uppercase">
+                  {hi ? 'गुरु - शुक्र' : 'Thu - Fri'}
+                </span>
+                <Target className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              </div>
+              <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">
+                {hi ? 'PYQ और टॉपिक टेस्ट अभ्यास' : 'Topic PYQ & Accuracy Practice'}
+              </h4>
+              <p className="text-xs text-gray-600 dark:text-gray-300">
+                {hi ? 'कमजोर इकाइयों पर क्वेश्चन बैंक से 30-50 प्रश्न हल करें।' : 'Solve 30-50 questions from Question Bank on weak & ongoing topics.'}
+              </p>
+            </div>
+
+            {/* Pillar 3: Sat-Sun */}
+            <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-xl p-4 border border-emerald-100 dark:border-emerald-800/40">
+              <div className="flex items-center justify-between mb-2">
+                <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-600 text-white uppercase">
+                  {hi ? 'शनि - रवि' : 'Sat - Sun'}
+                </span>
+                <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">
+                {hi ? 'फुल मॉक टेस्ट और स्मार्ट रिवीजन' : 'Full Mock Sprint & SRS Revision'}
+              </h4>
+              <p className="text-xs text-gray-600 dark:text-gray-300">
+                {hi ? '1 फुल लेंथ NTA मॉक टेस्ट दें और मिस्टेक जर्नल का रिवीजन करें।' : 'Take 1 Full NTA Mock Test and revise SRS flagged mistake units.'}
+              </p>
+            </div>
+          </div>
 
           {/* Weekly insights */}
           {wcm.insights && wcm.insights.length > 0 && (
-            <div className="space-y-1.5 mt-3">
-              <p className="text-[10px] font-bold text-gray-500 uppercase">{hi ? 'अंतर्दृष्टि' : 'Insights'}</p>
+            <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+              <p className="text-[10px] font-bold text-gray-500 uppercase">{hi ? 'लाइव साप्ताहिक अंतर्दृष्टि' : 'Live Strategy Insights'}</p>
               {wcm.insights.slice(0, 4).map((ins, i) => (
-                <div key={i} className={`flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-lg ${
-                  ins.type === 'critical' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' :
-                  ins.type === 'warning' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400' :
-                  ins.type === 'positive' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' :
-                  'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                <div key={i} className={`flex items-center gap-2 text-xs px-3 py-2 rounded-xl font-semibold ${
+                  ins.type === 'critical' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-100 dark:border-red-800/30' :
+                  ins.type === 'warning' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-100 dark:border-amber-800/30' :
+                  ins.type === 'positive' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800/30' :
+                  'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800/30'
                 }`}>
-                  {ins.type === 'positive' ? <TrendingUp className="w-3 h-3 flex-shrink-0" /> : <AlertTriangle className="w-3 h-3 flex-shrink-0" />}
+                  {ins.type === 'positive' ? <TrendingUp className="w-4 h-4 flex-shrink-0" /> : <AlertTriangle className="w-4 h-4 flex-shrink-0" />}
                   {hi ? ins.textHi : ins.text}
                 </div>
               ))}
