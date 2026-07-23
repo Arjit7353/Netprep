@@ -36,8 +36,7 @@ const resolveAROptions = (question, language) => {
 };
 
 const OptionButton = ({ index, text, isSelected, disabled, onClick }) => {
-  const optLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-  const label = optLabels[index] || `${index + 1}`;
+  const label = `${index + 1}`;
 
   return (
     <div 

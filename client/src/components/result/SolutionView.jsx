@@ -381,7 +381,7 @@ const SolutionView = ({
       <div className="flex-1 flex overflow-hidden relative" {...swipeHandlers}>
 
         {/* Scrollable content */}
-        <main id="sv-scroll" className="flex-1 overflow-y-auto">
+        <main id="sv-scroll" className="flex-1 overflow-y-auto lg:overflow-hidden flex flex-col">
           {filteredQ.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-400 p-8">
               <Filter className="w-16 h-16 mb-4 opacity-30" />
@@ -396,7 +396,7 @@ const SolutionView = ({
               </button>
             </div>
           ) : currentQ ? (
-            <div className={`max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 pb-8 ${
+            <div className={`max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-6 pb-8 flex-1 flex flex-col min-h-0 ${
               animDir === 'right' ? 'animate-slide-left'
               : animDir === 'left' ? 'animate-slide-right'
               : 'animate-fade-in'
@@ -666,7 +666,7 @@ const QCard = ({
       };
 
   return (
-    <div className="bg-white dark:bg-secondary-800 rounded-2xl shadow-sm border border-gray-200 dark:border-secondary-700 overflow-hidden">
+    <div className="bg-white dark:bg-secondary-800 rounded-2xl shadow-sm border border-gray-200 dark:border-secondary-700 overflow-hidden flex flex-col h-full">
 
       {/* Card header */}
       <div className={`px-5 sm:px-6 py-4 border-b border-gray-100 dark:border-secondary-700 bg-gradient-to-r ${rc.hdr}`}>
@@ -737,66 +737,62 @@ const QCard = ({
       </div>
 
       {/* Card body */}
-      <div className="p-5 sm:p-6 lg:p-8 space-y-6">
-        <QContent qData={qData} language={language} />
-        <OptsDisplay
-          qData={qData}
-          language={language}
-          selectedAnswer={q.selectedAnswer}
-          correctAnswer={q.correctAnswer}
-        />
-
-        {/* Your answer vs correct answer */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-gray-50 dark:bg-secondary-700/50 rounded-xl border border-gray-100 dark:border-secondary-600">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">{language === 'hi' ? 'आपका:' : 'Yours:'}</span>
-            <span className={`text-sm font-bold px-2.5 py-0.5 rounded-lg ${
-              isSkipped(q.selectedAnswer) ? 'bg-gray-200 text-gray-600'
-              : q.isCorrect              ? 'bg-emerald-100 text-emerald-700'
-              :                            'bg-red-100 text-red-700'
-            }`}>
-              {isSkipped(q.selectedAnswer)
-                ? (language === 'hi' ? 'नहीं दिया' : 'N/A')
-                : `(${optLabel(q.selectedAnswer)})`}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">{language === 'hi' ? 'सही:' : 'Correct:'}</span>
-            <span className="text-sm font-bold bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-lg">
-              ({optLabel(q.correctAnswer)})
-            </span>
-          </div>
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x border-t dark:border-secondary-700 border-gray-100">
+        
+        {/* Left Side: Question and Options */}
+        <div className="flex-1 p-5 sm:p-6 lg:p-8 space-y-6 overflow-y-auto">
+          <QContent qData={qData} language={language} />
+          <OptsDisplay
+            qData={qData}
+            language={language}
+            selectedAnswer={q.selectedAnswer}
+            correctAnswer={q.correctAnswer}
+          />
         </div>
 
-        {/* Explanation */}
-        {qData.explanation &&
-          (bText(qData.explanation, language) || bText(qData.explanation, language === 'hi' ? 'en' : 'hi')) && (
-          <div>
-            <button
-              onClick={onToggleExplanation}
-              className="flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 mb-3"
-            >
-              <Lightbulb className="w-4 h-4" />
-              {language === 'hi' ? 'व्याख्या' : 'Explanation'}
-              {showExplanation ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
-            {showExplanation && (
-              <div className="p-5 bg-blue-50/70 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-xl animate-fade-in">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-xl">
-                    <BookOpen className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <span className="font-bold text-blue-900 dark:text-blue-300">
-                    {language === 'hi' ? 'समाधान' : 'Solution'}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-800 dark:text-secondary-200 leading-relaxed whitespace-pre-line">
-                  {bText(qData.explanation, language) || bText(qData.explanation, language === 'hi' ? 'en' : 'hi')}
-                </p>
-              </div>
-            )}
+        {/* Right Side: Explanation */}
+        <div className="lg:w-[40%] xl:w-[35%] p-5 sm:p-6 lg:p-8 space-y-6 overflow-y-auto bg-gray-50/50 dark:bg-secondary-900/20">
+          
+          {/* Your answer vs correct answer */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white dark:bg-secondary-800 rounded-xl border border-gray-200 dark:border-secondary-700 shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">{language === 'hi' ? 'आपका:' : 'Yours:'}</span>
+              <span className={`text-sm font-bold px-2.5 py-0.5 rounded-lg ${
+                isSkipped(q.selectedAnswer) ? 'bg-gray-200 text-gray-600'
+                : q.isCorrect              ? 'bg-emerald-100 text-emerald-700'
+                :                            'bg-red-100 text-red-700'
+              }`}>
+                {isSkipped(q.selectedAnswer)
+                  ? (language === 'hi' ? 'नहीं दिया' : 'N/A')
+                  : `(${q.selectedAnswer + 1})`}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">{language === 'hi' ? 'सही:' : 'Correct:'}</span>
+              <span className="text-sm font-bold bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-lg">
+                ({q.correctAnswer + 1})
+              </span>
+            </div>
           </div>
-        )}
+
+          {/* Explanation */}
+          {qData.explanation &&
+            (bText(qData.explanation, language) || bText(qData.explanation, language === 'hi' ? 'en' : 'hi')) && (
+            <div className="animate-fade-in">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200 dark:border-secondary-700">
+                <div className="bg-amber-100 dark:bg-amber-900/30 p-1.5 rounded-lg">
+                  <Lightbulb className="w-4 h-4 text-amber-600" />
+                </div>
+                <span className="font-bold text-gray-900 dark:text-white">
+                  {language === 'hi' ? 'व्याख्या (Explanation)' : 'Explanation'}
+                </span>
+              </div>
+              <div className="text-sm text-gray-800 dark:text-secondary-200 leading-relaxed whitespace-pre-line">
+                {bText(qData.explanation, language) || bText(qData.explanation, language === 'hi' ? 'en' : 'hi')}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1064,7 +1060,7 @@ const OptsDisplay = ({ qData, language, selectedAnswer, correctAnswer }) => {
             <div className="flex-shrink-0 mt-0.5">{ic}</div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className="font-bold text-sm opacity-60">({optLabel(i)})</span>
+                <span className="font-bold text-sm opacity-60">({i + 1})</span>
                 {isC && (
                   <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase">
                     {language === 'hi' ? 'सही' : 'Correct'}

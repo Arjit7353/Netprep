@@ -582,7 +582,7 @@ const QuestionForm = ({
           {formData.options[language]?.map((option, index) => (
             <div key={index} className="flex items-center gap-2">
               <input type="radio" name="correctAnswer" checked={formData.correctAnswer === index} onChange={() => handleChange('correctAnswer', index)} className="w-4 h-4 text-primary-600" />
-              <span className="w-8 text-sm font-medium text-gray-500">({String.fromCharCode(65 + index)})</span>
+              <span className="w-8 text-sm font-medium text-gray-500">{index + 1}.</span>
               <input type="text" value={option} onChange={(e) => handleOptionChange(index, e.target.value)}
                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-900 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
                 placeholder={`${language === 'hi' ? 'विकल्प' : 'Option'} ${String.fromCharCode(65 + index)}`} />
@@ -682,7 +682,7 @@ const QuestionForm = ({
           {formData.options[language]?.map((option, index) => (
             <div key={index} className="flex items-center gap-2">
               <input type="radio" name="correctAnswer" checked={formData.correctAnswer === index} onChange={() => handleChange('correctAnswer', index)} className="w-4 h-4 text-primary-600" />
-              <span className="w-8 text-sm font-medium text-gray-500">({String.fromCharCode(65 + index)})</span>
+              <span className="w-8 text-sm font-medium text-gray-500">{index + 1}.</span>
               <input type="text" value={option} onChange={(e) => handleOptionChange(index, e.target.value)}
                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-900 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
                 placeholder="A-i, B-ii, C-iii, D-iv" />
@@ -711,7 +711,7 @@ const QuestionForm = ({
         <div className="space-y-2">
           {formData.sequenceData.items[language].map((item, index) => (
             <div key={index} className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-500 w-6">{['I','II','III','IV','V'][index]}</span>
+              <span className="text-sm font-medium text-gray-500 w-6">({String.fromCharCode(65 + index)})</span>
               <input type="text" value={item} onChange={(e) => handleSequenceChange(index, e.target.value)}
                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-900 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500" />
             </div>
@@ -727,7 +727,7 @@ const QuestionForm = ({
           {formData.options[language]?.map((option, index) => (
             <div key={index} className="flex items-center gap-2">
               <input type="radio" name="correctAnswer" checked={formData.correctAnswer === index} onChange={() => handleChange('correctAnswer', index)} className="w-4 h-4 text-primary-600" />
-              <span className="w-8 text-sm font-medium text-gray-500">({String.fromCharCode(65 + index)})</span>
+              <span className="w-8 text-sm font-medium text-gray-500">{index + 1}.</span>
               <input type="text" value={option} onChange={(e) => handleOptionChange(index, e.target.value)}
                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-900 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500" />
             </div>
@@ -775,7 +775,7 @@ const QuestionForm = ({
           {formData.options[language]?.map((option, index) => (
             <div key={index} className="flex items-center gap-2">
               <input type="radio" name="correctAnswer" checked={formData.correctAnswer === index} onChange={() => handleChange('correctAnswer', index)} className="w-4 h-4 text-primary-600" />
-              <span className="w-8 text-sm font-medium text-gray-500">({String.fromCharCode(65 + index)})</span>
+              <span className="w-8 text-sm font-medium text-gray-500">{index + 1}.</span>
               <input type="text" value={option} onChange={(e) => handleOptionChange(index, e.target.value)}
                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-900 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500"
                 placeholder={language === 'hi' ? 'केवल 1 और 2' : 'Only 1 and 2'} />

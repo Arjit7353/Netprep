@@ -47,8 +47,7 @@ const renderPieLabel = ({ name, percent, x, y, midAngle }) => {
 
 /* ─── Option Button Component ─── */
 const OptionButton = ({ index, text, isSelected, disabled, onClick, status = 'default' }) => {
-  const optLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-  const label = optLabels[index] || `${index + 1}`;
+  const label = `${index + 1}`;
 
   let containerClass = 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50';
   let badgeClass = 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 group-hover:bg-slate-200 dark:group-hover:bg-slate-600';
@@ -309,7 +308,7 @@ const QuestionDisplay = ({
   const renderSequenceOrder = () => {
     const items = getBilingualArray(question.sequenceData?.items, language);
     const options = getBilingualArray(question.options, language);
-    const romanLabels = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+    const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
     return (
       <div className="space-y-4">
@@ -321,7 +320,7 @@ const QuestionDisplay = ({
           {items.map((item, idx) => (
             <div key={idx} className="flex items-start gap-3 p-3.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
               <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-sm">
-                {romanLabels[idx] || idx + 1}
+                {letters[idx] || String.fromCharCode(65 + idx)}
               </span>
               <span className="text-slate-800 dark:text-slate-200 flex-1 leading-relaxed pt-0.5">{item}</span>
             </div>
