@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area,
@@ -10,10 +10,12 @@ import {
   FileQuestion, ClipboardList, Flame, Star, Medal, Crown, AlertTriangle,
   RefreshCw, Calendar, Timer, Shield, Award, Brain, Lightbulb, Eye,
   Layers, Coffee, Sun, Moon, Sunset, Hash, Flag, Minus,
-  ArrowUpRight, ArrowDownRight, Activity, BookMarked, GraduationCap
+  ArrowUpRight, ArrowDownRight, Activity, BookMarked, GraduationCap,
+  Sparkles, Compass, CheckSquare
 } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import useDashboard from '../hooks/useDashboard';
+import AutoSyllabusPlanner from '../components/dashboard/AutoSyllabusPlanner';
 
 // ═══════════════════════════════════════════════════════
 //  ICON MAP (for dynamic icon rendering from hook data)
@@ -153,32 +155,59 @@ const TrendArrow = ({ direction, size = 14 }) => {
 // ═══════════════════════════════════════════════════════
 //  MAIN DASHBOARD COMPONENT
 // ═══════════════════════════════════════════════════════
-const Dashboard = ({ language = 'en' }) => {
+const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => {
+  // Sync language with state, localStorage, and props
+  const [language, setLanguageState] = useState(() => {
+    return propLanguage || localStorage.getItem('netprep-language') || 'en';
+  });
+
+  useEffect(() => {
+    if (propLanguage) setLanguageState(propLanguage);
+  }, [propLanguage]);
+
+  useEffect(() => {
+    const handleLangSync = () => {
+      const stored = localStorage.getItem('netprep-language') || 'en';
+      setLanguageState(stored);
+    };
+    window.addEventListener('storage', handleLangSync);
+    window.addEventListener('netprep-language-changed', handleLangSync);
+    return () => {
+      window.removeEventListener('storage', handleLangSync);
+      window.removeEventListener('netprep-language-changed', handleLangSync);
+    };
+  }, []);
+
+  const handleSetLanguage = useCallback((newLang) => {
+    setLanguageState(newLang);
+    try { localStorage.setItem('netprep-language', newLang); } catch {}
+    if (propSetLanguage) propSetLanguage(newLang);
+    window.dispatchEvent(new Event('netprep-language-changed'));
+  }, [propSetLanguage]);
+
   const d = useDashboard();
   const navigate = useNavigate();
   const [examDateInput, setExamDateInput] = useState(d.examDate || '');
-  const [activeTab, setActiveTab] = useState('overview');
 
   const hi = language === 'hi';
 
   const getGreeting = () => {
     const h = new Date().getHours();
-    if (h < 6) return hi ? '🌙 शुभ रात्रि' : '🌙 Good Night';
-    if (h < 12) return hi ? '🌅 सुप्रभात' : '🌅 Good Morning';
-    if (h < 17) return hi ? '☀️ शुभ दोपहर' : '☀️ Good Afternoon';
-    return hi ? '🌆 शुभ संध्या' : '🌆 Good Evening';
+    if (h < 6) return hi ? 'शुभ रात्रि' : 'Good Night';
+    if (h < 12) return hi ? 'सुप्रभात' : 'Good Morning';
+    if (h < 17) return hi ? 'शुभ दोपहर' : 'Good Afternoon';
+    return hi ? 'शुभ संध्या' : 'Good Evening';
   };
 
   const handleSetExamDate = () => {
     if (examDateInput) d.setExamDate(examDateInput);
   };
 
-  // Chart colors
   const COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
   if (d.loading) {
     return (
-      <Layout>
+      <Layout language={language} setLanguage={handleSetLanguage}>
         <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
           {[1, 2, 3, 4, 5].map(i => (
             <div key={i} className="h-40 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-2xl" />
@@ -200,7 +229,7 @@ const Dashboard = ({ language = 'en' }) => {
   const tod = d.timeOfDayAnalysis;
 
   return (
-    <Layout>
+    <Layout language={language} setLanguage={handleSetLanguage}>
       <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6 animate-fade-in pb-20">
 
         {/* ════════════════════════════════════════════
@@ -216,7 +245,7 @@ const Dashboard = ({ language = 'en' }) => {
               <div>
                 <h1 className="text-2xl md:text-3xl font-black mb-1">{getGreeting()}</h1>
                 <p className="text-blue-100 text-sm max-w-lg">
-                  {hi ? 'UGC NET की तैयारी का कमांड सेंटर — सब कुछ एक नज़र में' : 'Your UGC NET preparation command center — everything at a glance'}
+                  {hi ? 'UGC NET की तैयारी का कमांड सेंटर - सब कुछ एक नज़र में' : 'Your UGC NET preparation command center - everything at a glance'}
                 </p>
               </div>
               <div className="flex gap-2 flex-wrap">
@@ -312,6 +341,11 @@ const Dashboard = ({ language = 'en' }) => {
         </div>
 
         {/* ════════════════════════════════════════════
+            AUTOMATED SYLLABUS TARGET PLANNER
+        ════════════════════════════════════════════ */}
+        <AutoSyllabusPlanner language={language} />
+
+        {/* ════════════════════════════════════════════
             §2  JRF / NET PREDICTION + DAILY REPORT
         ════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -323,7 +357,7 @@ const Dashboard = ({ language = 'en' }) => {
                 <GraduationCap className="w-4.5 h-4.5 text-white" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-gray-900 dark:text-white">{hi ? '🔮 AI भविष्यवाणी' : '🔮 AI Prediction Engine'}</h2>
+                <h2 className="text-base font-bold text-gray-900 dark:text-white">{hi ? 'AI भविष्यवाणी' : 'AI Prediction Engine'}</h2>
                 <p className="text-[10px] text-gray-500">{hi ? `आत्मविश्वास: ${jp.confidence} | डेटा: ${jp.dataPoints}` : `Confidence: ${jp.confidence} | Data points: ${jp.dataPoints}`}</p>
               </div>
             </div>
@@ -366,7 +400,7 @@ const Dashboard = ({ language = 'en' }) => {
                       strokeWidth={7} strokeDasharray={226} strokeDashoffset={226 * (1 - jp.netProbability / 100)}
                       strokeLinecap="round" className="transition-all duration-1000" />
                   </svg>
-                  <span className="absolute text-lg font-black text-gray-900 dark:text-white">{jp.netProbability >= 50 ? '✓' : '✗'}</span>
+                  <span className="absolute text-sm font-bold text-gray-900 dark:text-white">{jp.netProbability >= 50 ? (hi ? 'योग्य' : 'Eligible') : (hi ? 'अयोग्य' : 'Ineligible')}</span>
                 </div>
                 <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mt-1">PhD</p>
               </div>
@@ -537,9 +571,9 @@ const Dashboard = ({ language = 'en' }) => {
               sub={<span className="flex items-center gap-1"><TrendArrow direction={d.trendDirection} size={10} /> {d.trendDirection}</span>}
               color="emerald" onClick={() => navigate('/results')} />
             <MiniStat icon={BookOpen} label="P1" value={`${d.paper1AvgScore}%`}
-              sub={d.paper1Predicted ? `→ ${d.paper1Predicted}%` : ''} color="amber" />
+              sub={d.paper1Predicted ? `-> ${d.paper1Predicted}%` : ''} color="amber" />
             <MiniStat icon={FileQuestion} label="P2" value={`${d.paper2AvgScore}%`}
-              sub={d.paper2Predicted ? `→ ${d.paper2Predicted}%` : ''} color="purple" />
+              sub={d.paper2Predicted ? `-> ${d.paper2Predicted}%` : ''} color="purple" />
             <MiniStat icon={Clock} label={hi ? 'गति' : 'Speed'} value={`${sa.avgTimePerQ}s`}
               sub={hi ? 'प्रति प्रश्न' : 'per question'} color="cyan" />
             <MiniStat icon={Activity} label={hi ? 'इस हफ्ते' : 'This Week'} value={d.weeklyComparison.thisWeek.tests}
@@ -576,7 +610,7 @@ const Dashboard = ({ language = 'en' }) => {
               </ResponsiveContainer>
             ) : (
               <div className="h-[200px] flex items-center justify-center text-gray-400 text-sm">
-                {hi ? 'अभी तक कोई डेटा नहीं — टेस्ट दें!' : 'No data yet — take some tests!'}
+                {hi ? 'अभी तक कोई डेटा नहीं - टेस्ट दें!' : 'No data yet - take some tests!'}
               </div>
             )}
           </div>
@@ -665,7 +699,7 @@ const Dashboard = ({ language = 'en' }) => {
             §6  SMART REVISION HUB (SRS)
         ════════════════════════════════════════════ */}
         <Section icon={RefreshCw} title="Smart Revision (SRS)" titleHi="स्मार्ट रिवीजन" language={language} badgeColor="orange"
-          badge={sr.stats.dueToday > 0 ? `${sr.stats.dueToday} due` : '✓'}>
+          badge={sr.stats.dueToday > 0 ? `${sr.stats.dueToday} due` : 'Complete'}>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
             {[
               { label: hi ? 'गंभीर' : 'Critical', count: sr.stats.critical, color: 'red' },
@@ -696,7 +730,7 @@ const Dashboard = ({ language = 'en' }) => {
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{item.title}</p>
                         <p className="text-[10px] text-gray-500">
-                          {hi ? `स्कोर: ${item.bestScore}%` : `Score: ${item.bestScore}%`} • {item.daysSinceLastAttempt}d ago
+                          {hi ? `स्कोर: ${item.bestScore}%` : `Score: ${item.bestScore}%`} * {item.daysSinceLastAttempt}d ago
                           {item.isOverdue && <span className="text-red-500 ml-1 font-bold">{hi ? 'बाकी!' : 'Overdue!'}</span>}
                         </p>
                       </div>
@@ -779,7 +813,7 @@ const Dashboard = ({ language = 'en' }) => {
                       <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{u.unit}</p>
                       <p className="text-[10px] text-gray-500">
                         {hi ? `${u.wrong} गलत / ${u.total} कुल` : `${u.wrong} wrong / ${u.total} total`}
-                        {u.isRepeated && <span className="text-red-500 ml-1 font-bold">⚠ Repeated</span>}
+                        {u.isRepeated && <span className="text-red-500 ml-1 font-bold">Repeated</span>}
                       </p>
                     </div>
                     <ProgressBar value={u.correct} max={u.total} color={u.errorRate > 50 ? '#ef4444' : '#22c55e'} height={4} />
@@ -902,7 +936,7 @@ const Dashboard = ({ language = 'en' }) => {
                   }`}>{r.priority}</span>
                 </div>
               )) : (
-                <p className="text-sm text-gray-400 text-center py-4">{hi ? 'सब अच्छा है! 🎉' : 'All good! 🎉'}</p>
+                <p className="text-sm text-gray-400 text-center py-4">{hi ? 'सब अच्छा है!' : 'All good!'}</p>
               )}
             </div>
 
