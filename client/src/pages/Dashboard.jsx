@@ -237,7 +237,7 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
               <div className="flex gap-2 flex-wrap">
                 <button onClick={() => setShowAdaptiveModal(true)}
                   className="bg-gradient-to-r from-amber-400 to-orange-500 text-gray-900 px-4 py-2 rounded-xl font-black text-sm shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2">
-                  <Brain className="w-4 h-4 text-gray-900" /> {hi ? '⚡ AI एडाप्टिव टेस्ट' : '⚡ AI Adaptive Test'}
+                  <Brain className="w-4 h-4 text-gray-900" /> {hi ? 'AI एडाप्टिव टेस्ट' : 'AI Adaptive Test'}
                 </button>
                 <button onClick={() => navigate('/timeline')}
                   className="bg-purple-500/30 text-white border border-purple-300/40 backdrop-blur-sm px-4 py-2 rounded-xl font-bold text-sm shadow-lg hover:bg-purple-500/40 hover:scale-105 transition-all flex items-center gap-2">

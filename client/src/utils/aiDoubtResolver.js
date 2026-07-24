@@ -72,8 +72,8 @@ function analyzeAssertionReason(question, correctAnswer, selectedAnswer, lang) {
   const reasonAnalysis = analyzeReasonTruth(correctAnswer, lang);
 
   const whyCorrect = explanation || (lang === 'hi'
-    ? `सही उत्तर: "${correctLabel}"।\n\n📌 अभिकथन (A) विश्लेषण: ${assertionAnalysis}\n📌 कारण (R) विश्लेषण: ${reasonAnalysis}`
-    : `Correct Answer: "${correctLabel}".\n\n📌 Assertion (A) Analysis: ${assertionAnalysis}\n📌 Reason (R) Analysis: ${reasonAnalysis}`);
+    ? `सही उत्तर: "${correctLabel}"。\n\nअभिकथन (A) विश्लेषण: ${assertionAnalysis}\nकारण (R) विश्लेषण: ${reasonAnalysis}`
+    : `Correct Answer: "${correctLabel}".\n\nAssertion (A) Analysis: ${assertionAnalysis}\nReason (R) Analysis: ${reasonAnalysis}`);
 
   const whyOthersWrong = arLabels.map((label, i) => {
     if (i === correctAnswer) return null;
@@ -158,7 +158,7 @@ function analyzeStatementBased(question, correctAnswer, selectedAnswer, lang) {
   let analysis = '';
   statements.forEach((stmt, i) => {
     const isCorrect = correctStatements.includes(i);
-    analysis += `  ${i + 1}. ${stmt} — ${isCorrect ? (lang === 'hi' ? '✅ सही' : '✅ Correct') : (lang === 'hi' ? '❌ गलत' : '❌ Incorrect')}\n`;
+    analysis += `  ${i + 1}. ${stmt} - ${isCorrect ? (lang === 'hi' ? 'सही' : 'Correct') : (lang === 'hi' ? 'गलत' : 'Incorrect')}\n`;
   });
 
   const whyCorrect = explanation || (lang === 'hi'
