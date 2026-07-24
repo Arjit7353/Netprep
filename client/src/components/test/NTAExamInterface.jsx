@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useTestContext } from '../../context/TestContext';
 import { useNavigate } from 'react-router-dom';
 import NTAQuestionDisplay from './NTAQuestionDisplay';
+import DigitalScratchpad from './DigitalScratchpad';
+import { ZoomIn, ZoomOut, Edit3, Keyboard, HelpCircle, X } from 'lucide-react';
 
 const NTAExamInterface = () => {
   const navigate = useNavigate();
@@ -16,6 +18,10 @@ const NTAExamInterface = () => {
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
+  const [fontSize, setFontSize] = useState(16); // Font Zoom state
+  const [showScratchpad, setShowScratchpad] = useState(false); // Scratchpad modal
+  const [paletteFilter, setPaletteFilter] = useState('all'); // 'all' | 'answered' | 'not_answered' | 'marked' | 'not_visited'
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false); // Keyboard shortcuts modal
 
   // Derived state
   const totalQuestions = questions.length;
@@ -53,12 +59,17 @@ const NTAExamInterface = () => {
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
       if (e.key === 'ArrowRight') saveAndNext();
       if (e.key === 'ArrowLeft') previousQuestion();
+      if (e.key === 's' || e.key === 'S') { e.preventDefault(); saveAndNext(); }
+      if (e.key === 'm' || e.key === 'M') { e.preventDefault(); toggleMarkForReview(); saveAndNext(); }
+      if (e.key === 'c' || e.key === 'C') { e.preventDefault(); clearResponse(); }
+      if (e.key === '?') { e.preventDefault(); setShowKeyboardHelp(prev => !prev); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [saveAndNext, previousQuestion]);
+  }, [saveAndNext, previousQuestion, toggleMarkForReview, clearResponse]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -94,7 +105,52 @@ const NTAExamInterface = () => {
 
       {/* 2. Blue Action Bar */}
       <div className="bg-[#195a94] text-white px-4 flex justify-between items-center text-xs h-7 shrink-0">
-         <div></div>
+         <div className="flex items-center gap-3">
+           {/* Font Zoom */}
+           <div className="flex items-center gap-1 bg-[#5978b5] px-2 py-0.5 rounded-sm">
+             <span className="text-[10px] font-bold">Font:</span>
+             <button
+               onClick={() => setFontSize(prev => Math.min(prev + 2, 24))}
+               className="px-1 bg-white/20 hover:bg-white/30 rounded font-bold"
+               title="Zoom In (+A)"
+             >
+               +A
+             </button>
+             <button
+               onClick={() => setFontSize(prev => Math.max(prev - 2, 12))}
+               className="px-1 bg-white/20 hover:bg-white/30 rounded font-bold"
+               title="Zoom Out (-A)"
+             >
+               -A
+             </button>
+             <button
+               onClick={() => setFontSize(16)}
+               className="px-1 text-[9px] bg-white/10 hover:bg-white/20 rounded"
+               title="Reset Font"
+             >
+               Reset
+             </button>
+           </div>
+
+           {/* Digital Scratchpad Button */}
+           <button
+             onClick={() => setShowScratchpad(true)}
+             className="flex items-center gap-1 bg-[#5978b5] hover:bg-[#4a679e] px-2 py-0.5 rounded-sm font-bold text-[11px]"
+           >
+             <Edit3 className="w-3 h-3" />
+             Scratchpad
+           </button>
+
+           {/* Keyboard Shortcuts Button */}
+           <button
+             onClick={() => setShowKeyboardHelp(true)}
+             className="flex items-center gap-1 bg-[#5978b5] hover:bg-[#4a679e] px-2 py-0.5 rounded-sm font-bold text-[11px]"
+           >
+             <Keyboard className="w-3 h-3" />
+             Shortcuts (?)
+           </button>
+         </div>
+
          <div className="flex items-center gap-4 h-full">
             <div className="bg-[#5978b5] h-full px-2 flex items-center gap-2 border-l border-r border-[#3e5f9e] cursor-pointer">
               <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center text-[#5978b5] font-bold text-[10px]">A</div>
@@ -155,7 +211,7 @@ const NTAExamInterface = () => {
             </div>
 
             {/* Scrollable Question Body */}
-            <div className="flex-1 overflow-y-auto p-4 bg-white text-[15px]">
+            <div className="flex-1 overflow-y-auto p-4 bg-white text-[15px]" style={{ fontSize: `${fontSize}px` }}>
               {currentQuestion ? (
                 <NTAQuestionDisplay
                   question={currentQuestion}
@@ -274,9 +330,30 @@ const NTAExamInterface = () => {
                </div>
             </div>
 
-            {/* Section Header (if any) */}
+            {/* Section Header */}
             <div className="bg-[#337ab7] text-white px-2 py-1 text-xs font-bold flex justify-between items-center">
-               <span>Physics</span>
+               <span>{test?.paper === 'paper2' ? 'UGC NET HISTORY' : test?.paper === 'paper1' ? 'UGC NET PAPER 1' : 'UGC NET COMBINED'}</span>
+            </div>
+
+            {/* Palette Filter Tabs */}
+            <div className="bg-[#eef3f6] p-1 border-b border-gray-300 flex flex-wrap gap-1 text-[9px] font-bold">
+              {[
+                { id: 'all', label: 'All' },
+                { id: 'answered', label: `Ans (${summary.answered})` },
+                { id: 'not_answered', label: `Unans (${summary.notAnswered})` },
+                { id: 'marked', label: `Marked (${summary.markedForReview + summary.answeredAndMarked})` },
+                { id: 'not_visited', label: `Unvisit (${summary.notVisited})` },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setPaletteFilter(f.id)}
+                  className={`px-1.5 py-0.5 rounded transition-colors ${
+                    paletteFilter === f.id ? 'bg-[#337ab7] text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
             </div>
 
             {/* Question Palette Grid */}
@@ -284,6 +361,13 @@ const NTAExamInterface = () => {
               <div className="grid grid-cols-5 gap-2">
                  {questions.map((_, index) => {
                    const status = statuses[index];
+
+                   // Filter matching logic
+                   if (paletteFilter === 'answered' && status !== 'answered') return null;
+                   if (paletteFilter === 'not_answered' && status !== 'not_answered') return null;
+                   if (paletteFilter === 'marked' && status !== 'marked' && status !== 'answered_marked') return null;
+                   if (paletteFilter === 'not_visited' && status !== 'not_visited') return null;
+
                    let styleClass = "w-8 h-8 flex items-center justify-center text-xs font-bold cursor-pointer transition-transform hover:scale-110 ";
                    
                    if (status === 'not_visited') {
@@ -324,6 +408,61 @@ const NTAExamInterface = () => {
 
       </div>
       
+      {/* Digital Scratchpad Overlay */}
+      {showScratchpad && (
+        <DigitalScratchpad
+          onClose={() => setShowScratchpad(false)}
+          testId={test?._id}
+          language={language}
+        />
+      )}
+
+      {/* Keyboard Shortcuts Modal */}
+      {showKeyboardHelp && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 dark:border-gray-700">
+              <h3 className="font-bold text-base text-gray-900 dark:text-white flex items-center gap-2">
+                <Keyboard className="w-5 h-5 text-blue-600" />
+                Keyboard Shortcuts
+              </h3>
+              <button onClick={() => setShowKeyboardHelp(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
+              <div className="flex justify-between py-1 border-b dark:border-gray-700">
+                <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded font-bold">Right Arrow (→)</span>
+                <span>Save & Next</span>
+              </div>
+              <div className="flex justify-between py-1 border-b dark:border-gray-700">
+                <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded font-bold">Left Arrow (←)</span>
+                <span>Previous Question</span>
+              </div>
+              <div className="flex justify-between py-1 border-b dark:border-gray-700">
+                <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded font-bold">S</span>
+                <span>Save & Next</span>
+              </div>
+              <div className="flex justify-between py-1 border-b dark:border-gray-700">
+                <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded font-bold">M</span>
+                <span>Mark for Review & Next</span>
+              </div>
+              <div className="flex justify-between py-1 border-b dark:border-gray-700">
+                <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded font-bold">C</span>
+                <span>Clear Response</span>
+              </div>
+              <div className="flex justify-between py-1 border-b dark:border-gray-700">
+                <span className="font-mono bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded font-bold">?</span>
+                <span>Toggle Shortcuts Help</span>
+              </div>
+            </div>
+            <button onClick={() => setShowKeyboardHelp(false)} className="w-full py-2 bg-blue-600 text-white rounded-xl font-bold text-xs">
+              Got it!
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <div className="bg-[#195a94] text-white text-center py-2 text-xs shrink-0">
         © All Rights Reserved - National Testing Agency

@@ -5,7 +5,7 @@ import {
   BarChart3, Settings, ChevronLeft, ChevronRight, X, GraduationCap,
   BookOpen, Database, ScrollText, TrendingUp, Target, Sparkles, CalendarCheck,
   FlaskConical, Library, Search, ChevronDown, Command,
-  Keyboard, HelpCircle, ArrowRight, Layers, Hash, Zap, AlertTriangle
+  Keyboard, HelpCircle, ArrowRight, Layers, Hash, Zap, AlertTriangle, Clock
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════
@@ -148,11 +148,12 @@ const MENU = [
   },
   {
     id: 'pyq',
-    label: { en: 'PYQ Analysis', hi: 'PYQ विश्लेषण' },
+    label: { en: 'PYQ & Study Tools', hi: 'PYQ व अध्ययन उपकरण' },
     collapsible: true,
     sectionIcon: ScrollText,
     items: [
       { id: 'pyq-dashboard', label: { en: 'PYQ Dashboard', hi: 'PYQ डैशबोर्ड' }, icon: ScrollText, path: '/pyq' },
+      { id: 'timeline', label: { en: 'Timeline Explorer', hi: 'टाइमलाइन एक्सप्लोरर' }, icon: Clock, path: '/timeline', tag: 'NEW' },
       { id: 'pyq-bank', label: { en: 'PYQ Questions', hi: 'PYQ प्रश्न' }, icon: Library, path: '/pyq/question-bank' },
       { id: 'pyq-trends', label: { en: 'Multi-Year Trends', hi: 'बहु-वर्ष रुझान' }, icon: TrendingUp, path: '/pyq/trends' },
       { id: 'pyq-heatmap', label: { en: 'Topic Heatmap', hi: 'विषय हीटमैप' }, icon: Target, path: '/pyq/heatmap' },

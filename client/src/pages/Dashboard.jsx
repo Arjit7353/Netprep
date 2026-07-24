@@ -17,6 +17,7 @@ import Layout from '../components/layout/Layout';
 import useDashboard from '../hooks/useDashboard';
 import AutoSyllabusPlanner from '../components/dashboard/AutoSyllabusPlanner';
 import ExplainableAIPredictor from '../components/analytics/ExplainableAIPredictor';
+import AdaptiveTestCreator from '../components/test/AdaptiveTestCreator';
 
 // ═══════════════════════════════════════════════════════
 //  ICON MAP (for dynamic icon rendering from hook data)
@@ -163,6 +164,7 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
   const d = useDashboard();
   const navigate = useNavigate();
   const [examDateInput, setExamDateInput] = useState(d.examDate || '');
+  const [showAdaptiveModal, setShowAdaptiveModal] = useState(false);
 
   const hi = language === 'hi';
 
@@ -233,6 +235,14 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
                 </p>
               </div>
               <div className="flex gap-2 flex-wrap">
+                <button onClick={() => setShowAdaptiveModal(true)}
+                  className="bg-gradient-to-r from-amber-400 to-orange-500 text-gray-900 px-4 py-2 rounded-xl font-black text-sm shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-gray-900" /> {hi ? '⚡ AI एडाप्टिव टेस्ट' : '⚡ AI Adaptive Test'}
+                </button>
+                <button onClick={() => navigate('/timeline')}
+                  className="bg-purple-500/30 text-white border border-purple-300/40 backdrop-blur-sm px-4 py-2 rounded-xl font-bold text-sm shadow-lg hover:bg-purple-500/40 hover:scale-105 transition-all flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-purple-200" /> {hi ? 'कालक्रम टाइमलाइन' : 'Timeline'}
+                </button>
                 <button onClick={() => navigate('/planner')}
                   className="bg-amber-400 text-gray-900 px-4 py-2 rounded-xl font-black text-sm shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2">
                   <Target className="w-4 h-4 text-gray-900" /> {hi ? 'मिशन JRF टाइमटेबल' : 'Mission JRF Planner'}
@@ -932,6 +942,21 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
             </button>
           ))}
         </div>
+
+        {/* Adaptive Test Creator Modal */}
+        {showAdaptiveModal && (
+          <AdaptiveTestCreator
+            isOpen={showAdaptiveModal}
+            onClose={() => setShowAdaptiveModal(false)}
+            allAttempts={d.allAttempts || []}
+            availableQuestions={d.questionStats?.allQuestions || []}
+            language={language}
+            onCreateTest={(config) => {
+              setShowAdaptiveModal(false);
+              navigate('/tests/create', { state: { adaptiveConfig: config } });
+            }}
+          />
+        )}
 
       </div>
     </Layout>

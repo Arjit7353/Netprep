@@ -10,7 +10,7 @@ import {
   Keyboard, HelpCircle, Shuffle, Rocket, Plus, RotateCcw,
   BookOpen, Target, Clock, Award, MinusCircle, Sparkles,
   Zap, Trophy, Lightbulb, Activity, Play, Copy, X, Star,
-  Calendar, ScrollText, Tag
+  Calendar, ScrollText, Tag, Brain
 } from 'lucide-react';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +24,7 @@ import QuestionLibraryModal from './QuestionLibraryModal';
 import PYQQuestionLibrary from '../pyq/PYQQuestionLibrary';
 import TitleGenerator from './TitleGenerator';
 import usePYQAnalysis from '../../hooks/usePYQAnalysis';
+import AdaptiveTestCreator from './AdaptiveTestCreator';
 import { getUnitNamesFromKeys, getChapterNamesFromKeys, getTopicNamesFromKeys } from '../../utils/testHelpers';
 import testService from '../../services/testService';
 
@@ -45,6 +46,7 @@ const STEPS = [
 ];
 
 const QUICK_TEMPLATES = [
+  { id: 'adaptive', name: 'AI Adaptive', nameHi: 'AI एडाप्टिव', desc: 'Personalized Test', descHi: 'व्यक्तिगत परीक्षा', icon: Brain, gradient: 'from-violet-600 to-purple-600', isAdaptive: true },
   { id: 'quick_10', name: 'Quick 10', nameHi: 'त्वरित 10', desc: '10 Q, 15 min', descHi: '10 प्रश्न, 15 मिनट', icon: Zap, gradient: 'from-amber-500 to-orange-500', config: { testType: 'dpp', totalQuestions: 10, duration: 15 } },
   { id: 'chapter_25', name: 'Chapter Test', nameHi: 'अध्याय परीक्षा', desc: '25 Q, 30 min', descHi: '25 प्रश्न, 30 मिनट', icon: BookOpen, gradient: 'from-purple-500 to-indigo-500', config: { testType: 'chapter_test', totalQuestions: 25, duration: 30 } },
   { id: 'full_mock', name: 'Full Mock', nameHi: 'फुल मॉक', desc: '50 Q, 60 min', descHi: '50 प्रश्न, 60 मिनट', icon: Target, gradient: 'from-rose-500 to-pink-500', config: { testType: 'full_mock_p1', totalQuestions: 50, duration: 60 } },

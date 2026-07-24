@@ -22,6 +22,8 @@ import ManageSyllabus from './pages/ManageSyllabus';
 import QuestionReports from './pages/QuestionReports';
 import PYQHub from './pages/PYQHub';  // ✅ NEW
 import NTATakeTest from './pages/NTATakeTest'; // NTA EXAM UI
+import HistoryTimeline from './components/timeline/HistoryTimeline';
+import ChronologyPractice from './components/timeline/ChronologyPractice';
 
 // ─────────────────────────────────────────────
 //  ADVANCED FULL-SCREEN LOADER
@@ -519,6 +521,24 @@ function App() {
                 <QuestionReports
                   language={language}
                   setLanguage={setLanguage}
+                />
+              }
+            />
+
+            {/* History Timeline & Chronology Explorer */}
+            <Route
+              path="/timeline"
+              element={
+                <HistoryTimeline
+                  language={language}
+                />
+              }
+            />
+            <Route
+              path="/timeline/practice"
+              element={
+                <ChronologyPractice
+                  language={language}
                 />
               }
             />

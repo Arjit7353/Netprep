@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import ReportIssueModal from '../test/ReportIssueModal';
 import { getSequenceItemLabel } from '../../utils/helpers';
+import AIDoubtPanel from './AIDoubtPanel';
 
 // ─── Hindi Detection ───────────────────────────────────────────────────────────
 const HINDI_RE = /[\u0900-\u097F]/;
@@ -638,6 +639,7 @@ const QCard = ({
   onReport,
 }) => {
   const qData = q.question;
+  const [showDoubtPanel, setShowDoubtPanel] = useState(false);
   if (!qData) return null;
 
   const qType      = qData.questionType;
@@ -779,7 +781,7 @@ const QCard = ({
           {/* Explanation */}
           {qData.explanation &&
             (bText(qData.explanation, language) || bText(qData.explanation, language === 'hi' ? 'en' : 'hi')) && (
-            <div className="animate-fade-in">
+            <div className="animate-fade-in mb-4">
               <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200 dark:border-secondary-700">
                 <div className="bg-amber-100 dark:bg-amber-900/30 p-1.5 rounded-lg">
                   <Lightbulb className="w-4 h-4 text-amber-600" />
@@ -793,6 +795,16 @@ const QCard = ({
               </div>
             </div>
           )}
+
+          {/* AI Doubt Resolver Panel */}
+          <AIDoubtPanel
+            question={qData}
+            selectedAnswer={q.selectedAnswer}
+            correctAnswer={q.correctAnswer}
+            language={language}
+            isOpen={showDoubtPanel}
+            onToggle={() => setShowDoubtPanel(!showDoubtPanel)}
+          />
         </div>
       </div>
     </div>
