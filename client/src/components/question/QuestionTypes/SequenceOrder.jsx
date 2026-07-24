@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle, Circle, ArrowDown } from 'lucide-react';
-import { getBilingualText, getBilingualArray, getOptionLabel } from '../../../utils/helpers';
+import { getBilingualText, getBilingualArray, getOptionLabel, getSequenceItemLabel } from '../../../utils/helpers';
 
 const SequenceOrder = ({
   question,
@@ -71,7 +71,7 @@ const SequenceOrder = ({
               className="flex items-start gap-3 p-3 bg-white dark:bg-secondary-800 rounded-lg border border-gray-200 dark:border-secondary-600"
             >
               <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 font-bold flex items-center justify-center text-sm">
-                {toRoman(index)}
+                {getSequenceItemLabel(index, options)}
               </span>
               <span className="text-gray-800 dark:text-secondary-200 flex-1">{item}</span>
             </div>

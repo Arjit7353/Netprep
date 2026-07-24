@@ -11,6 +11,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import ReportIssueModal from '../test/ReportIssueModal';
+import { getSequenceItemLabel } from '../../utils/helpers';
 
 // ─── Hindi Detection ───────────────────────────────────────────────────────────
 const HINDI_RE = /[\u0900-\u097F]/;
@@ -903,6 +904,7 @@ const QContent = ({ qData, language }) => {
   // ── Sequence order ─────────────────────────────────────────────────────────
   if (qType === 'sequence_order') {
     const items = bArr(qData.sequenceData?.items, language);
+    const opts = bArr(qData.options, language);
     return (
       <div className="space-y-4">
         <p className="text-gray-900 dark:text-white font-medium text-base">
@@ -912,7 +914,7 @@ const QContent = ({ qData, language }) => {
           {items.map((it, i) => (
             <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-secondary-700/50 rounded-xl border">
               <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-700">
-                {optLabel(i)}
+                {getSequenceItemLabel(i, opts)}
               </span>
               <span className="text-sm text-gray-800 dark:text-secondary-200">{it}</span>
             </div>

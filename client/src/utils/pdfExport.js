@@ -4,6 +4,7 @@
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getSequenceItemLabel } from './helpers';
 
 // ==================== CONFIGURATION ====================
 
@@ -999,13 +1000,13 @@ class QuestionRenderer {
       this.doc.setDrawColor(...colors.gray300);
       this.doc.roundedRect(M + 8, y, CW - 16, boxH, 1.5, 1.5, 'FD');
 
-      // Number
+      // Number / Label
       this.doc.setFillColor(...colors.info);
       this.doc.circle(M + 14, y + boxH / 2, 3.5, 'F');
       this.doc.setFontSize(fonts.small);
       this.doc.setFont('helvetica', 'bold');
       this.doc.setTextColor(...colors.white);
-      this.doc.text(String(idx + 1), M + 14, y + boxH / 2 + 1, { align: 'center' });
+      this.doc.text(getSequenceItemLabel(idx, options), M + 14, y + boxH / 2 + 1, { align: 'center' });
 
       this.txt.render(item, M + 22, y + 4, {
         fontSize: fonts.option,

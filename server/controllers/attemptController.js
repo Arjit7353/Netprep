@@ -618,11 +618,11 @@ const startAttempt = async (req, res, next) => {
 
     // ═══ SHUFFLE OPTIONS ═══
     for (let q of resolvedQuestions) {
-       let optionsHi = q.options?.hi || [];
-       let optionsEn = q.options?.en || [];
+       let optionsHi = Array.isArray(q.options?.hi) ? q.options.hi : (Array.isArray(q.options) ? q.options : []);
+       let optionsEn = Array.isArray(q.options?.en) ? q.options.en : [];
        let numOptions = Math.max(optionsHi.length, optionsEn.length);
        
-       if (numOptions > 1 && !['assertion_reason', 'match_following', 'sequence_order', 'statement_based'].includes(q.questionType)) {
+       if (numOptions > 1) {
           let order = Array.from({length: numOptions}, (_, i) => i);
           for (let i = order.length - 1; i > 0; i--) {
              const j = Math.floor(Math.random() * (i + 1));
@@ -630,8 +630,12 @@ const startAttempt = async (req, res, next) => {
           }
           
           q.optionsOrder = order;
-          if (optionsHi.length > 0) q.options.hi = order.map(i => optionsHi[i]);
-          if (optionsEn.length > 0) q.options.en = order.map(i => optionsEn[i]);
+          if (Array.isArray(q.options)) {
+            q.options = order.map(i => optionsHi[i]);
+          } else if (q.options && typeof q.options === 'object') {
+            if (optionsHi.length > 0) q.options.hi = order.map(i => optionsHi[i]);
+            if (optionsEn.length > 0) q.options.en = order.map(i => optionsEn[i]);
+          }
           
           let newCorrect = order.indexOf(q.correctAnswer);
           if (newCorrect !== -1) {

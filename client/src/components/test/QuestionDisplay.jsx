@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import {
   getBilingualText, getBilingualArray, getOptionLabel,
-  getRomanNumeral, getChartLabels, getDatasetLabel
+  getRomanNumeral, getSequenceItemLabel, getChartLabels, getDatasetLabel
 } from '../../utils/helpers';
 import { QUESTION_TYPE_LABELS, CHART_COLORS, AR_OPTIONS_HI, AR_OPTIONS_EN } from '../../utils/constants';
 
@@ -308,7 +308,6 @@ const QuestionDisplay = ({
   const renderSequenceOrder = () => {
     const items = getBilingualArray(question.sequenceData?.items, language);
     const options = getBilingualArray(question.options, language);
-    const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
     return (
       <div className="space-y-4">
@@ -320,7 +319,7 @@ const QuestionDisplay = ({
           {items.map((item, idx) => (
             <div key={idx} className="flex items-start gap-3 p-3.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
               <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-sm">
-                {letters[idx] || String.fromCharCode(65 + idx)}
+                {getSequenceItemLabel(idx, options)}
               </span>
               <span className="text-slate-800 dark:text-slate-200 flex-1 leading-relaxed pt-0.5">{item}</span>
             </div>

@@ -42,6 +42,52 @@ export const getRomanNumeral = (index) => {
   return ROMAN_NUMERALS[index] || `(${index + 1})`;
 };
 
+/**
+ * Smart sequence/statement item label detector
+ * Analyzes options array (e.g. ['II, IV, I, III', ...]) to determine whether
+ * items should be labeled with Roman numerals (I, II, III, IV) or Alphabets (A, B, C, D).
+ */
+export const getSequenceItemLabel = (index, options = []) => {
+  const upperRoman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+  const lowerRoman = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'];
+
+  if (!options || !Array.isArray(options) || options.length === 0) {
+    return upperRoman[index] || `(${index + 1})`;
+  }
+
+  const optString = options
+    .map(o => (typeof o === 'string' ? o : JSON.stringify(o || '')))
+    .join(' ');
+
+  // Check for Uppercase Roman Numerals (I, II, III, IV, etc.)
+  const upperRomanMatches = optString.match(/\b(I|II|III|IV|V|VI|VII|VIII|IX|X)\b/g);
+  if (upperRomanMatches && upperRomanMatches.length >= 2) {
+    return upperRoman[index] || `(${index + 1})`;
+  }
+
+  // Check for Lowercase Roman Numerals (i, ii, iii, iv, etc.)
+  const lowerRomanMatches = optString.match(/\b(i|ii|iii|iv|v|vi|vii|viii|ix|x)\b/g);
+  if (lowerRomanMatches && lowerRomanMatches.length >= 2) {
+    return lowerRoman[index] || `(${index + 1})`;
+  }
+
+  // Check for Lowercase Alphabets (a, b, c, d, etc.)
+  const lowerAlphaMatches = optString.match(/\b(a|b|c|d|e|f)\b/g);
+  const upperAlphaMatches = optString.match(/\b(A|B|C|D|E|F)\b/g);
+
+  if (lowerAlphaMatches && lowerAlphaMatches.length >= 2 && (!upperAlphaMatches || lowerAlphaMatches.length > upperAlphaMatches.length)) {
+    return String.fromCharCode(97 + index); // 'a', 'b', 'c'...
+  }
+
+  if (upperAlphaMatches && upperAlphaMatches.length >= 2) {
+    return String.fromCharCode(65 + index); // 'A', 'B', 'C'...
+  }
+
+  // Default to Uppercase Roman
+  return upperRoman[index] || `(${index + 1})`;
+};
+
+
 export const truncateText = (text, maxLength = 100) => {
   if (!text) return '';
   if (text.length <= maxLength) return text;

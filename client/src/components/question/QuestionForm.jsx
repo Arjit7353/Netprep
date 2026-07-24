@@ -22,6 +22,7 @@ import {
   AR_OPTIONS_EN
 } from '../../utils/constants';
 import { validateQuestion } from '../../utils/validators';
+import { getSequenceItemLabel } from '../../utils/helpers';
 import { useToast } from '../common/Toast';
 import questionService from '../../services/questionService';
 
@@ -711,7 +712,7 @@ const QuestionForm = ({
         <div className="space-y-2">
           {formData.sequenceData.items[language].map((item, index) => (
             <div key={index} className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-500 w-6">({String.fromCharCode(65 + index)})</span>
+              <span className="text-sm font-medium text-gray-500 w-8">({getSequenceItemLabel(index, formData.options[language])})</span>
               <input type="text" value={item} onChange={(e) => handleSequenceChange(index, e.target.value)}
                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-900 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500" />
             </div>

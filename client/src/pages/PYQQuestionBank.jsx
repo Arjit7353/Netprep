@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import Button from '../components/common/Button';
 import { useToast } from '../components/common/Toast';
+import { getSequenceItemLabel } from '../utils/helpers';
 import questionService from '../services/questionService';
 
 // ═══════════════════════════════════════════════════════
@@ -221,7 +222,8 @@ const PreviewSequenceItems = ({ q, language }) => {
   const items = language === 'hi' ? (iHi.length > 0 ? iHi : iEn) : (iEn.length > 0 ? iEn : iHi);
   if (items.length === 0) return null;
   const order = q.correctOrder || [];
-  return (<div className="space-y-2"><p className="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-wider flex items-center gap-1.5"><ArrowDownUp className="w-3.5 h-3.5" />{language === 'hi' ? 'क्रम' : 'Sequence'} ({items.length})</p><div className="space-y-1.5">{items.map((it, i) => <div key={i} className="flex items-start gap-2.5 p-2.5 bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-900/30 text-sm"><span className="w-7 h-7 rounded-lg text-[10px] font-black bg-orange-200 dark:bg-orange-800 text-orange-700 dark:text-orange-300 flex items-center justify-center flex-shrink-0">{String.fromCharCode(65+i)}</span><span className="text-gray-800 dark:text-secondary-200 flex-1 leading-relaxed pt-1">{it}</span></div>)}</div>{order.length > 0 && <div className="flex items-center gap-2 p-2.5 bg-emerald-50 dark:bg-emerald-900/15 rounded-xl border border-emerald-200 dark:border-emerald-800/50"><CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" /><span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">{order.join(' → ')}</span></div>}</div>);
+  const opts = (q.optionsHi?.length ? q.optionsHi : q.optionsEn) || q.options || [];
+  return (<div className="space-y-2"><p className="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-wider flex items-center gap-1.5"><ArrowDownUp className="w-3.5 h-3.5" />{language === 'hi' ? 'क्रम' : 'Sequence'} ({items.length})</p><div className="space-y-1.5">{items.map((it, i) => <div key={i} className="flex items-start gap-2.5 p-2.5 bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-900/30 text-sm"><span className="w-7 h-7 rounded-lg text-[10px] font-black bg-orange-200 dark:bg-orange-800 text-orange-700 dark:text-orange-300 flex items-center justify-center flex-shrink-0">{getSequenceItemLabel(i, opts)}</span><span className="text-gray-800 dark:text-secondary-200 flex-1 leading-relaxed pt-1">{it}</span></div>)}</div>{order.length > 0 && <div className="flex items-center gap-2 p-2.5 bg-emerald-50 dark:bg-emerald-900/15 rounded-xl border border-emerald-200 dark:border-emerald-800/50"><CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" /><span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">{order.join(' → ')}</span></div>}</div>);
 };
 
 // ═══════════════════════════════════════════════════════

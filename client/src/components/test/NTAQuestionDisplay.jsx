@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   getBilingualText, getBilingualArray, getOptionLabel,
-  getRomanNumeral, getChartLabels, getDatasetLabel
+  getRomanNumeral, getSequenceItemLabel, getChartLabels, getDatasetLabel
 } from '../../utils/helpers';
 import { QUESTION_TYPE_LABELS, CHART_COLORS, AR_OPTIONS_HI, AR_OPTIONS_EN } from '../../utils/constants';
 
@@ -179,7 +179,6 @@ const NTAQuestionDisplay = ({
   const renderSequenceOrder = () => {
     const items = getBilingualArray(question.sequenceData?.items, language);
     const options = getBilingualArray(question.options, language);
-    const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
     return (
       <div>
@@ -190,7 +189,7 @@ const NTAQuestionDisplay = ({
         <div className="pl-2 space-y-2 mb-6">
           {items.map((item, idx) => (
             <div key={idx} className="flex items-start gap-3 text-[14px]">
-              <span className="font-bold shrink-0">({letters[idx]})</span>
+              <span className="font-bold shrink-0">({getSequenceItemLabel(idx, options)})</span>
               <span>{item}</span>
             </div>
           ))}
