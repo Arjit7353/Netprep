@@ -12,6 +12,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>
 );
 
+// Global error handler for DOM Selection / Range errors
+window.addEventListener('error', (event) => {
+  if (event?.message?.includes('InvalidNodeTypeError') || event?.message?.includes('selectNode')) {
+    event.preventDefault();
+    console.warn('[Global Error Handler] Prevented InvalidNodeTypeError:', event.message);
+  }
+});
+
 // Service Worker (sirf ek jagah - yahan)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

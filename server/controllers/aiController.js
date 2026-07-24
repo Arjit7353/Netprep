@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════════
 
 const axios = require('axios');
+const config = require('../config/config');
 
 // Helper to extract bilingual text
 const bText = (obj, lang = 'hi') => {
@@ -30,13 +31,17 @@ const explainQuestion = async (req, res, next) => {
     }
 
     const lang = language === 'hi' ? 'hi' : 'en';
-    const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || '';
+    const rawKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || config.geminiKey || '';
+    const geminiKey = (rawKey || '').trim().replace(/^["']|["']$/g, '');
+
+    console.log(`[AI Explanation] Request received. Gemini key present: ${!!geminiKey} (length: ${geminiKey.length})`);
 
     // If Gemini key is available, attempt real AI generation
     if (geminiKey) {
       try {
         const aiResponse = await callGeminiAI(question, selectedAnswer, correctAnswer, lang, geminiKey);
         if (aiResponse) {
+          console.log('[AI Explanation] Successfully generated Gemini AI response!');
           return res.json({
             success: true,
             source: 'gemini-ai',
@@ -44,8 +49,10 @@ const explainQuestion = async (req, res, next) => {
           });
         }
       } catch (aiErr) {
-        console.warn('[AI Explanation] Gemini call failed, using rich fallback engine:', aiErr.message);
+        console.warn('[AI Explanation] Gemini call failed, using rich fallback engine:', aiErr.response?.data || aiErr.message);
       }
+    } else {
+      console.log('[AI Explanation] No GEMINI_API_KEY found in process.env, using fallback engine.');
     }
 
     // Fallback to rich structured engine logic
@@ -62,7 +69,7 @@ const explainQuestion = async (req, res, next) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// GEMINI API INTEGRATION
+// GEMINI API INTEGRATION — Robust Multi-Attempt Call
 // ═══════════════════════════════════════════════════════════════════
 async function callGeminiAI(question, selectedAnswer, correctAnswer, lang, apiKey) {
   const qText = bText(question.question, lang) || bText(question.question, 'en');
@@ -93,18 +100,19 @@ Keys required:
   "relatedTopics": ["Topic 1", "Topic 2", "Topic 3"]
 }`;
 
-  // Try models in sequence
-  const models = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash'];
+  const models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
 
   for (const model of models) {
+    // Attempt 1: With responseMimeType
     try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        url,
         {
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { responseMimeType: "application/json", temperature: 0.2 }
         },
-        { timeout: 9000 }
+        { timeout: 10000 }
       );
 
       const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -112,8 +120,32 @@ Keys required:
         const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
         return JSON.parse(cleaned);
       }
-    } catch (err) {
-      console.warn(`[Gemini AI] Model ${model} failed:`, err.message);
+    } catch (err1) {
+      console.warn(`[Gemini API] Model ${model} with json mime failed:`, err1.response?.data?.error?.message || err1.message);
+
+      // Attempt 2: Standard call without responseMimeType
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const response = await axios.post(
+          url,
+          {
+            contents: [{ parts: [{ text: prompt }] }]
+          },
+          { timeout: 10000 }
+        );
+
+        const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+          // Extract JSON if wrapped in text
+          const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+          }
+        }
+      } catch (err2) {
+        console.warn(`[Gemini API] Model ${model} standard call failed:`, err2.response?.data?.error?.message || err2.message);
+      }
     }
   }
 
@@ -127,7 +159,6 @@ function generateRichStructuredFallback(q, selectedIdx, correctIdx, lang) {
   const options = bArr(q.options, lang);
   const correctText = options[correctIdx] || (lang === 'hi' ? `विकल्प ${correctIdx + 1}` : `Option ${correctIdx + 1}`);
   const rawExp = bText(q.explanation, lang);
-  const qText = bText(q.question, lang);
 
   let whyCorrect = rawExp;
   if (!whyCorrect) {
