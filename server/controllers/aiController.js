@@ -4,10 +4,9 @@
 // ═══════════════════════════════════════════════════════════════════
 
 const { GoogleGenAI } = require('@google/genai');
-const genaiPkg = require('@google/genai/package.json');
 const config = require('../config/config');
 
-const SDK_VERSION = genaiPkg.version || '2.13.0';
+const SDK_VERSION = '2.13.0';
 const API_VERSION = 'v1beta';
 
 // Helper to extract bilingual text
