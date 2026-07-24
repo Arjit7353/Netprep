@@ -345,10 +345,7 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
           </div>
         </div>
 
-        {/* ════════════════════════════════════════════
-            AUTOMATED SYLLABUS TARGET PLANNER
-        ════════════════════════════════════════════ */}
-        <AutoSyllabusPlanner language={language} />
+
 
         {/* ════════════════════════════════════════════
             §2  JRF / NET PREDICTION + DAILY REPORT
