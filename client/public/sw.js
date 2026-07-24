@@ -1,7 +1,7 @@
-const CACHE_NAME = 'netprep-cache-v1';
-const STATIC_CACHE = 'netprep-static-v1';
-const DYNAMIC_CACHE = 'netprep-dynamic-v1';
-const API_CACHE = 'netprep-api-v1';
+const CACHE_NAME = 'netprep-cache-v2';
+const STATIC_CACHE = 'netprep-static-v2';
+const DYNAMIC_CACHE = 'netprep-dynamic-v2';
+const API_CACHE = 'netprep-api-v2';
 
 // Static assets to pre-cache
 const STATIC_ASSETS = [
@@ -9,26 +9,23 @@ const STATIC_ASSETS = [
   '/index.html',
   '/manifest.json',
   '/favicon.svg',
-  '/icons/icon-72.png',
-  '/icons/icon-96.png',
-  '/icons/icon-128.png',
-  '/icons/icon-144.png',
-  '/icons/icon-152.png',
-  '/icons/icon-192.png',
-  '/icons/icon-384.png',
-  '/icons/icon-512.png',
-  '/icons/icon-512-maskable.png'
 ];
 
-// Install event - cache static assets
+// Install event - cache static assets safely
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing Service Worker...');
+  console.log('[SW] Installing Service Worker v2...');
   
   event.waitUntil(
     caches.open(STATIC_CACHE)
-      .then((cache) => {
+      .then(async (cache) => {
         console.log('[SW] Pre-caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        for (const asset of STATIC_ASSETS) {
+          try {
+            await cache.add(asset);
+          } catch (e) {
+            console.warn('[SW] Could not pre-cache asset:', asset, e);
+          }
+        }
       })
       .then(() => {
         console.log('[SW] Static assets cached successfully');
@@ -42,7 +39,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating Service Worker...');
+  console.log('[SW] Activating Service Worker v2...');
   
   const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE, API_CACHE];
   
@@ -97,8 +94,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // HTML pages - Network First with offline fallback
-  if (request.headers.get('accept')?.includes('text/html')) {
+  // HTML pages & Navigation - Network First with offline fallback
+  if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(networkFirstWithOfflineFallback(request));
     return;
   }
@@ -118,15 +115,18 @@ function isStaticAsset(pathname) {
 
 // Cache First strategy - good for static assets
 async function cacheFirst(request, cacheName) {
-  const cachedResponse = await caches.match(request);
-  
-  if (cachedResponse) {
-    // Return cached response, but also update cache in background
-    fetchAndCache(request, cacheName);
-    return cachedResponse;
+  try {
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      // Update in background silently
+      fetchAndCache(request, cacheName).catch(() => {});
+      return cachedResponse;
+    }
+    return await fetchAndCache(request, cacheName);
+  } catch (error) {
+    console.warn('[SW] Cache First failed for:', request.url);
+    return new Response('Asset unavailable', { status: 404 });
   }
-
-  return fetchAndCache(request, cacheName);
 }
 
 // Network First strategy - good for API calls
@@ -134,9 +134,9 @@ async function networkFirst(request, cacheName) {
   try {
     const networkResponse = await fetch(request);
     
-    if (networkResponse.ok) {
+    if (networkResponse && networkResponse.ok) {
       const cache = await caches.open(cacheName);
-      cache.put(request, networkResponse.clone());
+      cache.put(request, networkResponse.clone()).catch(() => {});
     }
     
     return networkResponse;
@@ -162,34 +162,37 @@ async function networkFirst(request, cacheName) {
   }
 }
 
-// Network First with offline fallback for HTML pages
+// Network First with offline fallback for HTML pages & SPA Navigation
 async function networkFirstWithOfflineFallback(request) {
   try {
     const networkResponse = await fetch(request);
     
-    if (networkResponse.ok) {
+    if (networkResponse && networkResponse.ok) {
       const cache = await caches.open(DYNAMIC_CACHE);
-      cache.put(request, networkResponse.clone());
+      cache.put(request, networkResponse.clone()).catch(() => {});
+      return networkResponse;
     }
-    
-    return networkResponse;
   } catch (error) {
-    console.log('[SW] Network failed for HTML, checking cache...');
-    
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    // Return cached index.html for SPA navigation
-    const indexResponse = await caches.match('/index.html');
-    if (indexResponse) {
-      return indexResponse;
-    }
-    
-    // Ultimate fallback
-    return caches.match('/');
+    console.log('[SW] Network failed for HTML/Navigation, checking cache:', request.url);
   }
+
+  // 1. Try exact URL match in cache
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) return cachedResponse;
+
+  // 2. Try index.html in cache (for SPA routing)
+  const indexResponse = await caches.match('/index.html');
+  if (indexResponse) return indexResponse;
+
+  // 3. Try / in cache
+  const rootResponse = await caches.match('/');
+  if (rootResponse) return rootResponse;
+
+  // 4. Guaranteed valid Response object fallback (never return undefined)
+  return new Response(
+    '<!DOCTYPE html><html><head><meta charset="utf-8"><title>NETprep - Offline</title></head><body style="font-family:sans-serif;text-align:center;padding:50px;"><h2>You are offline</h2><p>Please check your internet connection and reload.</p></body></html>',
+    { headers: { 'Content-Type': 'text/html' } }
+  );
 }
 
 // Stale While Revalidate - return cached, update in background
@@ -197,21 +200,31 @@ async function staleWhileRevalidate(request, cacheName) {
   const cachedResponse = await caches.match(request);
   
   const fetchPromise = fetchAndCache(request, cacheName)
+    .then((netRes) => netRes)
     .catch((error) => {
-      console.error('[SW] Fetch failed:', error);
-      return cachedResponse;
+      console.warn('[SW] Background fetch failed for:', request.url);
+      if (cachedResponse) return cachedResponse;
+      return new Response('', { status: 504, statusText: 'Gateway Timeout' });
     });
 
-  return cachedResponse || fetchPromise;
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+  
+  return fetchPromise;
 }
 
 // Fetch and cache helper
 async function fetchAndCache(request, cacheName) {
   const networkResponse = await fetch(request);
   
-  if (networkResponse.ok) {
-    const cache = await caches.open(cacheName);
-    cache.put(request, networkResponse.clone());
+  if (networkResponse && networkResponse.ok) {
+    try {
+      const cache = await caches.open(cacheName);
+      await cache.put(request, networkResponse.clone());
+    } catch (e) {
+      // Ignore cache put errors (e.g. quota, opaque)
+    }
   }
   
   return networkResponse;
