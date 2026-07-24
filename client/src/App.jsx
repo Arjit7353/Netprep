@@ -453,15 +453,31 @@ function App() {
               }
             />
             
-            {/* Take Test */}
+            {/* Take Test Routes */}
             <Route 
               path="/test/:id" 
               element={<TakeTest language={language} setLanguage={setLanguage} />} 
             />
+            <Route 
+              path="/tests/:id" 
+              element={<TakeTest language={language} setLanguage={setLanguage} />} 
+            />
+            <Route 
+              path="/tests/:id/take" 
+              element={<TakeTest language={language} setLanguage={setLanguage} />} 
+            />
             
-            {/* NTA Test Interface */}
+            {/* NTA Test Interface Routes */}
             <Route 
               path="/nta-test/:id" 
+              element={<NTATakeTest language={language} setLanguage={setLanguage} />} 
+            />
+            <Route 
+              path="/tests/nta/:id" 
+              element={<NTATakeTest language={language} setLanguage={setLanguage} />} 
+            />
+            <Route 
+              path="/tests/:id/nta" 
               element={<NTATakeTest language={language} setLanguage={setLanguage} />} 
             />
             
