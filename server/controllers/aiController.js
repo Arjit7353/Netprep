@@ -51,7 +51,7 @@ function categorizeError(err) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// DYNAMIC MODEL DISCOVERY via Official SDK ai.models.list()
+// DYNAMIC MODEL DISCOVERY & PRIORITIZATION via Official SDK ai.models.list()
 // ═══════════════════════════════════════════════════════════════════
 const fetchSupportedModelsSDK = async (ai) => {
   try {
@@ -68,16 +68,32 @@ const fetchSupportedModelsSDK = async (ai) => {
       modelsList.push(...listResult);
     }
 
-    const generateModels = modelsList
+    // Filter strictly for generateContent text models, excluding TTS/audio/embeddings
+    const validModels = modelsList
       .filter(m => {
+        const name = (m.name || m || '').toLowerCase();
         const methods = m.supportedGenerationMethods || [];
-        return methods.length === 0 || methods.includes('generateContent');
+        const isGenerate = methods.length === 0 || methods.includes('generateContent');
+        const isNonText = name.includes('tts') || name.includes('embedding') || name.includes('imagen') || name.includes('realtime');
+        return isGenerate && !isNonText;
       })
-      .map(m => (m.name || m).replace(/^models\//, '')); // Convert models/gemini-2.5-flash -> gemini-2.5-flash
+      .map(m => (m.name || m).replace(/^models\//, '')); // Convert models/gemini-2.0-flash -> gemini-2.0-flash
 
-    if (generateModels.length > 0) {
-      console.log(`[Google GenAI SDK v${SDK_VERSION}] ListModels discovered ${generateModels.length} supported models:`, generateModels);
-      return generateModels;
+    // Prioritize standard flagship text models FIRST (matching Google AI Studio Playground)
+    const priorityModels = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-lite'];
+
+    const sortedModels = validModels.sort((a, b) => {
+      const idxA = priorityModels.findIndex(p => a === p || a.startsWith(p));
+      const idxB = priorityModels.findIndex(p => b === p || b.startsWith(p));
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return 0;
+    });
+
+    if (sortedModels.length > 0) {
+      console.log(`[Google GenAI SDK v${SDK_VERSION}] ListModels discovered ${sortedModels.length} text models (Prioritized order):`, sortedModels.slice(0, 8));
+      return sortedModels;
     }
   } catch (err) {
     const cat = categorizeError(err);
@@ -89,7 +105,8 @@ const fetchSupportedModelsSDK = async (ai) => {
     }
   }
 
-  return [];
+  // Guaranteed fallback model priority order matching Google AI Studio Playground
+  return ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-lite'];
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -109,7 +126,7 @@ const runGeminiDiagnostics = async () => {
     const ai = new GoogleGenAI({ apiKey });
     const models = await fetchSupportedModelsSDK(ai);
     if (models.length > 0) {
-      console.log(`[Google GenAI SDK v${SDK_VERSION}] Diagnostic successful! Clean model names:`, models.join(', '));
+      console.log(`[Google GenAI SDK v${SDK_VERSION}] Diagnostic successful! Prioritized model execution queue:`, models.slice(0, 5).join(', '));
     }
   } catch (err) {
     const cat = categorizeError(err);
@@ -178,7 +195,7 @@ const explainQuestion = async (req, res, next) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// CALL GEMINI SDK — Implementation using @google/genai
+// CALL GEMINI SDK — Full Diagnostic Logging & SDK Execution
 // ═══════════════════════════════════════════════════════════════════
 async function callGeminiSDK(question, selectedAnswer, correctAnswer, lang, apiKey) {
   // Official SDK Client Initialization
@@ -212,28 +229,37 @@ Keys required:
   "relatedTopics": ["Topic 1", "Topic 2", "Topic 3"]
 }`;
 
-  const supportedModels = await fetchSupportedModelsSDK(ai);
-  const modelsToTry = supportedModels.length > 0 ? supportedModels : ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+  const modelsToTry = await fetchSupportedModelsSDK(ai);
 
   for (const rawModelName of modelsToTry) {
-    // Task 8: Convert models/gemini-2.5-flash -> gemini-2.5-flash
     const cleanModelName = rawModelName.replace(/^models\//, '');
     const endpoint = `ai.models.generateContent(${cleanModelName})`;
 
-    console.log(`[Google GenAI SDK v${SDK_VERSION}] Executing request | API: ${API_VERSION} | Model: ${cleanModelName} | Endpoint: ${endpoint}`);
+    const requestPayload = {
+      model: cleanModelName,
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        temperature: 0.2
+      }
+    };
+
+    console.log('====================================================');
+    console.log(`[Google GenAI SDK v${SDK_VERSION}] COMPLETE REQUEST OBJECT:`);
+    console.log(JSON.stringify(requestPayload, null, 2));
+    console.log(`[Google GenAI SDK v${SDK_VERSION}] SDK Version:`, SDK_VERSION);
+    console.log(`[Google GenAI SDK v${SDK_VERSION}] API Version:`, API_VERSION);
+    console.log(`[Google GenAI SDK v${SDK_VERSION}] Endpoint:`, endpoint);
+    console.log('====================================================');
 
     // Attempt 1: With JSON responseMimeType
     try {
-      const response = await ai.models.generateContent({
-        model: cleanModelName,
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-          temperature: 0.2
-        }
-      });
+      const response = await ai.models.generateContent(requestPayload);
 
-      console.log(`[Google GenAI SDK v${SDK_VERSION}] Response Received | Model: ${cleanModelName} | Status: 200 OK`);
+      console.log('====================================================');
+      console.log(`[Google GenAI SDK v${SDK_VERSION}] COMPLETE RESPONSE OBJECT:`);
+      console.log(JSON.stringify(response, null, 2));
+      console.log('====================================================');
 
       const text = response?.text || response?.candidates?.[0]?.content?.parts?.[0]?.text;
       if (text) {
@@ -242,7 +268,13 @@ Keys required:
       }
     } catch (err1) {
       const cat1 = categorizeError(err1);
-      console.warn(`[Google GenAI SDK v${SDK_VERSION}] Execution error on ${cleanModelName} [Category: ${cat1.type}, Code: ${cat1.code}]:`, cat1.message);
+
+      console.error('====================================================');
+      console.error(`[Google GenAI SDK v${SDK_VERSION}] RAW GOOGLE ERROR BODY on model ${cleanModelName}:`);
+      console.error(err1.response?.data || err1.errorDetails || err1.message || err1);
+      console.error(`[Google GenAI SDK v${SDK_VERSION}] STACK TRACE:`);
+      console.error(err1.stack);
+      console.error('====================================================');
 
       if (cat1.type === 'QUOTA_EXCEEDED' || cat1.type === 'PERMISSION_DENIED' || cat1.type === 'AUTHENTICATION_ERROR') {
         const qErr = new Error(cat1.message);
@@ -257,12 +289,18 @@ Keys required:
 
       // Attempt 2: Standard text call without responseMimeType
       try {
-        const response2 = await ai.models.generateContent({
+        const requestPayload2 = {
           model: cleanModelName,
           contents: prompt
-        });
+        };
 
-        console.log(`[Google GenAI SDK v${SDK_VERSION}] Standard Response Received | Model: ${cleanModelName} | Status: 200 OK`);
+        console.log(`[Google GenAI SDK v${SDK_VERSION}] Retrying with standard payload:`, JSON.stringify(requestPayload2, null, 2));
+        const response2 = await ai.models.generateContent(requestPayload2);
+
+        console.log('====================================================');
+        console.log(`[Google GenAI SDK v${SDK_VERSION}] STANDARD RESPONSE OBJECT:`);
+        console.log(JSON.stringify(response2, null, 2));
+        console.log('====================================================');
 
         const text2 = response2?.text || response2?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (text2) {
@@ -272,7 +310,7 @@ Keys required:
         }
       } catch (err2) {
         const cat2 = categorizeError(err2);
-        console.warn(`[Google GenAI SDK v${SDK_VERSION}] Standard call failed on ${cleanModelName} [Category: ${cat2.type}, Code: ${cat2.code}]:`, cat2.message);
+        console.error(`[Google GenAI SDK v${SDK_VERSION}] Standard call failed on ${cleanModelName}:`, err2.message);
 
         if (cat2.type === 'QUOTA_EXCEEDED' || cat2.type === 'PERMISSION_DENIED' || cat2.type === 'AUTHENTICATION_ERROR') {
           const qErr = new Error(cat2.message);
