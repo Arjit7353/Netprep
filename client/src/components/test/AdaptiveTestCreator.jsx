@@ -29,6 +29,7 @@ const AdaptiveTestCreator = ({
   loading = false,
 }) => {
   const [selectedMode, setSelectedMode] = useState(ADAPTIVE_MODES.BALANCED_ADAPTIVE);
+  const [customCount, setCustomCount] = useState(null); // null means default mode count
   const [showReport, setShowReport] = useState(false);
   const L = (en, hi) => language === 'hi' ? hi : en;
 
@@ -45,8 +46,9 @@ const AdaptiveTestCreator = ({
       questionStats,
       availableQuestions,
       mode: selectedMode,
+      customQuestionCount: customCount,
     });
-  }, [allAttempts, questionStats, availableQuestions, selectedMode]);
+  }, [allAttempts, questionStats, availableQuestions, selectedMode, customCount]);
 
   const handleCreate = () => {
     if (!adaptiveResult.hasEnoughQuestions) return;
@@ -58,6 +60,9 @@ const AdaptiveTestCreator = ({
   const weakTopics = topicAnalysis.filter(t => t.strength === 'weak');
   const moderateTopics = topicAnalysis.filter(t => t.strength === 'moderate');
   const strongTopics = topicAnalysis.filter(t => t.strength === 'strong');
+
+  const COUNT_PRESETS = [5, 10, 15, 20, 25, 30, 50];
+  const activeCount = customCount || ADAPTIVE_MODE_CONFIG[selectedMode]?.questionCount.max || 25;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -117,7 +122,7 @@ const AdaptiveTestCreator = ({
                 return (
                   <button
                     key={key}
-                    onClick={() => setSelectedMode(key)}
+                    onClick={() => { setSelectedMode(key); setCustomCount(null); }}
                     className={`relative p-4 rounded-2xl border-2 text-left transition-all ${
                       isSelected
                         ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-lg shadow-purple-500/10'
@@ -135,13 +140,60 @@ const AdaptiveTestCreator = ({
                     <p className="text-sm font-black text-gray-900 dark:text-white">{L(config.name, config.nameHi)}</p>
                     <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">{L(config.desc, config.descHi)}</p>
                     <div className="flex items-center gap-2 mt-3 text-[10px] font-bold text-gray-400">
-                      <span>{config.questionCount.max}Q</span>
+                      <span>{isSelected ? `${activeCount}Q` : `${config.questionCount.max}Q`}</span>
                       <span>•</span>
-                      <span>{Math.round(config.questionCount.max * config.durationPerQ)} min</span>
+                      <span>{Math.round((isSelected ? activeCount : config.questionCount.max) * config.durationPerQ)} min</span>
                     </div>
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Question Count Selector (Quick Pills + Dropdown) */}
+          <div className="p-4 bg-purple-50/50 dark:bg-purple-900/10 rounded-2xl border border-purple-100 dark:border-purple-800/40 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Target className="w-4 h-4 text-purple-600" />
+                {L('Select Number of Questions', 'प्रश्नों की संख्या चुनें')}
+              </h3>
+              <span className="text-xs font-black text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/40 px-2.5 py-0.5 rounded-full">
+                {activeCount} {L('Questions', 'प्रश्न')} ({Math.round(activeCount * (ADAPTIVE_MODE_CONFIG[selectedMode]?.durationPerQ || 1.2))} {L('min', 'मिनट')})
+              </span>
+            </div>
+
+            {/* Quick Select Pills + Dropdown */}
+            <div className="flex flex-wrap items-center gap-2">
+              {COUNT_PRESETS.map(count => (
+                <button
+                  key={count}
+                  onClick={() => setCustomCount(count)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all ${
+                    activeCount === count
+                      ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md shadow-purple-500/20 scale-105'
+                      : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-purple-300'
+                  }`}
+                >
+                  {count} Q
+                </button>
+              ))}
+
+              {/* Custom Count Dropdown */}
+              <div className="relative">
+                <select
+                  value={COUNT_PRESETS.includes(activeCount) ? activeCount : 'custom'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val !== 'custom') setCustomCount(Number(val));
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 outline-none cursor-pointer hover:border-purple-300"
+                >
+                  <option value="" disabled>{L('Select...', 'चुनें...')}</option>
+                  {[5, 10, 15, 20, 25, 30, 40, 50, 75, 100].map(n => (
+                    <option key={n} value={n}>{n} {L('Questions', 'प्रश्न')}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 

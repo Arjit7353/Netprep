@@ -308,6 +308,7 @@ export function generateAdaptiveTestConfig({
   availableQuestions = [],
   mode = 'balanced_adaptive',
   paper = 'paper2',
+  customQuestionCount = null,
 }) {
   const modeConfig = ADAPTIVE_MODE_CONFIG[mode] || ADAPTIVE_MODE_CONFIG.balanced_adaptive;
   const completedAttempts = allAttempts.filter(a => a.status === 'completed');
@@ -318,12 +319,17 @@ export function generateAdaptiveTestConfig({
   const diffPerformance = analyzeDifficultyPerformance(completedAttempts);
   const diffRecommendation = getRecommendedDifficulty(diffPerformance);
 
-  // Determine question count
-  const targetCount = Math.min(
-    modeConfig.questionCount.max,
-    Math.max(modeConfig.questionCount.min, availableQuestions.length)
-  );
-  const duration = Math.round(targetCount * modeConfig.durationPerQ);
+  // Determine question count (custom or mode default)
+  const defaultCount = modeConfig.questionCount.max;
+  const desiredCount = customQuestionCount && Number(customQuestionCount) > 0
+    ? Number(customQuestionCount)
+    : defaultCount;
+
+  const targetCount = availableQuestions.length > 0
+    ? Math.min(desiredCount, availableQuestions.length)
+    : desiredCount;
+
+  const duration = Math.max(5, Math.round(targetCount * modeConfig.durationPerQ));
 
   // Select questions adaptively
   const selectedQuestions = selectAdaptiveQuestions(
