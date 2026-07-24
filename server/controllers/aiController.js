@@ -34,16 +34,10 @@ const explainQuestion = async (req, res, next) => {
     const rawKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || config.geminiKey || '';
     const geminiKey = (rawKey || '').trim().replace(/^["']|["']$/g, '');
 
-    const isValidKeyFormat = geminiKey.startsWith('AIzaSy');
+    console.log(`[AI Explanation] Request received. Gemini key present: ${!!geminiKey} (length: ${geminiKey.length})`);
 
-    console.log(`[AI Explanation] Request received. Gemini key present: ${!!geminiKey} (starts with AIzaSy: ${isValidKeyFormat})`);
-
-    if (geminiKey && !isValidKeyFormat) {
-      console.warn(`[AI Explanation] WARNING: The key in GEMINI_API_KEY ("${geminiKey.substring(0, 10)}...") does NOT start with 'AIzaSy'. Google Gemini API keys must start with 'AIzaSy'. Get a free key at https://aistudio.google.com/app/apikey`);
-    }
-
-    // If Gemini key is available and has valid format, attempt real AI generation
-    if (geminiKey && isValidKeyFormat) {
+    if (geminiKey) {
+      console.log('[AI Explanation] Gemini API key detected. Prefix validation has been removed because Google now supports multiple API key formats.');
       try {
         const aiResponse = await callGeminiAI(question, selectedAnswer, correctAnswer, lang, geminiKey);
         if (aiResponse) {
