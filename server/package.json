@@ -9,6 +9,7 @@
     "import:lr-pyq": "node scripts/importLogicalReasoningPYQ.js"
   },
   "dependencies": {
+    "@google/genai": "^2.13.0",
     "@vitalets/google-translate-api": "^9.2.0",
     "axios": "^1.13.5",
     "cloudinary": "^2.0.1",
