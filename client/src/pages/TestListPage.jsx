@@ -561,26 +561,6 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
         <button onClick={() => loadTests(pagination.pages)} disabled={pagination.page >= pagination.pages} className="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 transition-colors"><ChevronsRight className="w-4 h-4 text-gray-600 dark:text-gray-400" /></button>
       </div>
     );
-  };
-
-  // â•â•â• SOURCE TYPE BADGE for test cards â•â•â•
-  const SourceBadge = ({ test }) => {
-    if (!test.hasPYQ) return null;
-    const icon = test.sourceType === 'pyq' ? Star : test.sourceType === 'mixed' ? GitMerge : null;
-    if (!icon) return null;
-    const Icon = icon;
-    const label = test.sourceType === 'pyq' ? 'PYQ' : 'Mixed';
-    const colors = test.sourceType === 'pyq'
-      ? 'bg-amber-100 text-amber-700 border-amber-200'
-      : 'bg-purple-100 text-purple-700 border-purple-200';
-    return (
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${colors}`}>
-        <Icon className="w-3 h-3" />
-        {label}
-        {test.pyqCount > 0 && <span className="opacity-70">({test.pyqCount}Q)</span>}
-      </span>
-    );
-  };
 
   // â•â•â• RENDER TEST CARDS â•â•â•
   const renderTests = () => {
@@ -967,8 +947,8 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
                        }
                        return (
                          <div className="flex flex-col gap-4">
-                           {tests.map(test => (
-                             <TestCardPro key={test._id} test={test} language={language} variant="list" 
+                           {(tests || []).filter(Boolean).map(test => (
+                             <TestCardPro key={test._id || Math.random()} test={test} language={language} variant="list" 
                                onEdit={() => navigate('/tests/edit/' + test._id)}
                                onView={() => navigate('/tests/' + test._id)}
                                onDelete={() => {}}

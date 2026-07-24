@@ -129,9 +129,12 @@ const TestCardPro = ({
   const [translateState, setTranslateState] = useState(TRANSLATE_STATES.idle);
   const [translateResult, setTranslateResult] = useState(null);
 
-  const t = TYPE_THEMES[test.testType] || DEFAULT_THEME;
-  const cfg = TEST_TYPE_CONFIG[test.testType] || {};
-  const TypeIcon = t.icon;
+  if (!test) return null;
+
+  const testType = test.testType || 'practice';
+  const t = TYPE_THEMES[testType] || DEFAULT_THEME;
+  const cfg = TEST_TYPE_CONFIG[testType] || {};
+  const TypeIcon = t?.icon || Target;
   const best = test.totalMarks > 0 && test.highestScore > 0 ? Math.round((test.highestScore / test.totalMarks) * 100) : null;
 
   const unitList = parseUnits(test.unit);

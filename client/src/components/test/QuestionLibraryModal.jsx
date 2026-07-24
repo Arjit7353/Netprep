@@ -647,7 +647,7 @@ const TestUsageModal = ({ question, tests, isOpen, onClose, language }) => {
                     <p className="text-sm font-bold text-gray-800 dark:text-secondary-200">{test.title}</p>
                     <p className="text-[10px] text-gray-500 dark:text-secondary-500 flex items-center gap-2">
                       <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-secondary-700 rounded text-[9px] font-bold uppercase text-gray-600 dark:text-secondary-300">
-                        {test.testType}
+                        {test?.testType || 'practice'}
                       </span>
                       {test.paper && <span>{test.paper}</span>}
                       {test.totalQuestions && <span>{test.totalQuestions}Q</span>}

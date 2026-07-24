@@ -77,7 +77,10 @@ const TestCard = ({
   const [showMenu, setShowMenu] = React.useState(false);
   const [showSelectorModal, setShowSelectorModal] = useState(false);
 
-  const typeConfig = TEST_TYPE_CONFIG[test.testType] || {};
+  if (!test) return null;
+
+  const testType = test.testType || 'practice';
+  const typeConfig = TEST_TYPE_CONFIG[testType] || {};
   const paperLabel = PAPER_LABELS[test.paper] || {};
 
   // Parse unit/chapter/topic
