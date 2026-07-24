@@ -232,6 +232,10 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
                 </p>
               </div>
               <div className="flex gap-2 flex-wrap">
+                <button onClick={() => navigate('/planner')}
+                  className="bg-amber-400 text-gray-900 px-4 py-2 rounded-xl font-black text-sm shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2">
+                  <Target className="w-4 h-4 text-gray-900" /> {hi ? 'मिशन JRF टाइमटेबल' : 'Mission JRF Planner'}
+                </button>
                 <button onClick={() => navigate('/tests')}
                   className="bg-white text-blue-700 px-4 py-2 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2">
                   <Play className="w-4 h-4" /> {hi ? 'टेस्ट दें' : 'Take Test'}

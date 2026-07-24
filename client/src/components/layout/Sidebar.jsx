@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileQuestion, Upload, ClipboardList, PlusCircle,
   BarChart3, Settings, ChevronLeft, ChevronRight, X, GraduationCap,
-  BookOpen, Database, ScrollText, TrendingUp, Target, Sparkles,
+  BookOpen, Database, ScrollText, TrendingUp, Target, Sparkles, CalendarCheck,
   FlaskConical, Library, Search, ChevronDown, Command,
   Keyboard, HelpCircle, ArrowRight, Layers, Hash, Zap, AlertTriangle
 } from 'lucide-react';
@@ -132,6 +132,7 @@ const MENU = [
     label: { en: 'Overview', hi: 'अवलोकन' },
     items: [
       { id: 'dashboard', label: { en: 'Dashboard', hi: 'डैशबोर्ड' }, icon: LayoutDashboard, path: '/', shortcut: 'D' },
+      { id: 'planner', label: { en: 'Mission JRF Planner', hi: 'मिशन JRF टाइमटेबल' }, icon: CalendarCheck, path: '/planner', shortcut: 'P', accent: true },
       { id: 'questions', label: { en: 'Question Bank', hi: 'प्रश्न बैंक' }, icon: FileQuestion, path: '/questions', shortcut: 'Q' },
       { id: 'import', label: { en: 'Import', hi: 'आयात करें' }, icon: Upload, path: '/import', shortcut: 'I' },
     ]

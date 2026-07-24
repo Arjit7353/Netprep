@@ -8,6 +8,7 @@ import {
 
 // Pages
 import Dashboard from './pages/Dashboard';
+import MissionJRFPlannerPage from './pages/MissionJRFPlannerPage';
 import QuestionBank from './pages/QuestionBank';
 import ImportQuestions from './pages/ImportQuestions';
 import Settings from './pages/Settings';
@@ -384,6 +385,14 @@ function App() {
               path="/"
               element={
                 <Dashboard language={language} setLanguage={setLanguage} />
+              }
+            />
+
+            {/* Mission JRF Planner */}
+            <Route
+              path="/planner"
+              element={
+                <MissionJRFPlannerPage language={language} setLanguage={setLanguage} />
               }
             />
             
