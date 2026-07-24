@@ -6,6 +6,7 @@ const path = require('path');
 const connectDB = require('./config/db');
 const config = require('./config/config');
 const { notFound, globalErrorHandler } = require('./middleware/errorHandler');
+const { runGeminiDiagnostics } = require('./controllers/aiController');
 
 const app = express();
 
@@ -98,6 +99,9 @@ const server = app.listen(PORT, () => {
   console.log(`NETprep API running on port ${PORT}`);
   console.log(`Environment: ${config.nodeEnv}`);
   console.log(`Allowed Origins: ${allowedOrigins.join(', ')}`);
+  
+  // Run startup Gemini models diagnostic using official ListModels
+  runGeminiDiagnostics();
 });
 
 // Graceful shutdown

@@ -1,6 +1,7 @@
 // server/controllers/aiController.js
 // ═══════════════════════════════════════════════════════════════════
-// REAL AI EXPLANATION CONTROLLER — Gemini API with Rich Engine Fallback
+// REAL AI EXPLANATION CONTROLLER — Dynamic Gemini API Engine
+// Uses Official Google GenAI ListModels & Dynamic Model Execution
 // ═══════════════════════════════════════════════════════════════════
 
 const axios = require('axios');
@@ -17,6 +18,93 @@ const bText = (obj, lang = 'hi') => {
 const bArr = (arr, lang = 'hi') => {
   if (!Array.isArray(arr)) return [];
   return arr.map(item => bText(item, lang)).filter(Boolean);
+};
+
+// Error categorization helpers
+const isQuotaError = (err) => {
+  const status = err.response?.status;
+  const message = (err.response?.data?.error?.message || err.message || '').toLowerCase();
+  const statusText = (err.response?.data?.error?.status || '').toUpperCase();
+
+  if (status === 429) return true;
+  if (statusText === 'RESOURCE_EXHAUSTED' || statusText === 'QUOTA_EXCEEDED') return true;
+  if (
+    message.includes('quota') ||
+    message.includes('resource_exhausted') ||
+    message.includes('limit: 0') ||
+    message.includes('suspended') ||
+    message.includes('permission denied') ||
+    message.includes('free_tier_requests')
+  ) {
+    return true;
+  }
+  return false;
+};
+
+const isNotFoundError = (err) => {
+  const status = err.response?.status;
+  const message = (err.response?.data?.error?.message || err.message || '').toLowerCase();
+  const statusText = (err.response?.data?.error?.status || '').toUpperCase();
+
+  if (status === 404) return true;
+  if (statusText === 'NOT_FOUND') return true;
+  if (message.includes('not found') || message.includes('is not found')) return true;
+  return false;
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// DYNAMIC MODEL DISCOVERY via official ListModels API
+// ═══════════════════════════════════════════════════════════════════
+const fetchSupportedModels = async (apiKey) => {
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+    const response = await axios.get(url, { timeout: 8000 });
+    const rawModels = response.data?.models || [];
+
+    const supportedModels = rawModels
+      .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+      .map(m => m.name); // e.g. "models/gemini-2.0-flash", "models/gemini-1.5-flash-latest"
+
+    if (supportedModels.length > 0) {
+      console.log(`[Gemini ListModels] Dynamically discovered ${supportedModels.length} supported models:`, supportedModels);
+      return supportedModels;
+    }
+  } catch (err) {
+    if (isQuotaError(err)) {
+      console.error('[Gemini ListModels Error]:', 'Gemini API quota has been exhausted or is unavailable for this project. Check Google AI Studio quota and billing.');
+      const quotaErr = new Error('Gemini API quota has been exhausted or is unavailable for this project. Check Google AI Studio quota and billing.');
+      quotaErr.isQuotaExhausted = true;
+      throw quotaErr;
+    }
+    console.warn('[Gemini ListModels Warning]: Could not fetch models dynamically via ListModels:', err.response?.data?.error?.message || err.message);
+  }
+
+  return [];
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// STARTUP DIAGNOSTIC FUNCTION
+// ═══════════════════════════════════════════════════════════════════
+const runGeminiDiagnostics = async () => {
+  const rawKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || config.geminiKey || '';
+  const apiKey = (rawKey || '').trim().replace(/^["']|["']$/g, '');
+
+  if (!apiKey) {
+    console.log('[Gemini Diagnostic] No GEMINI_API_KEY set in process.env. Rich fallback engine active.');
+    return;
+  }
+
+  console.log('[Gemini Diagnostic] Running Google GenAI ListModels diagnostic...');
+  try {
+    const models = await fetchSupportedModels(apiKey);
+    if (models.length > 0) {
+      console.log('[Gemini Diagnostic] Diagnostic successful! Supported models for generateContent:', models.join(', '));
+    } else {
+      console.log('[Gemini Diagnostic] ListModels completed but returned no generateContent models.');
+    }
+  } catch (err) {
+    console.error('[Gemini Diagnostic Error]:', err.message);
+  }
 };
 
 // ═══════════════════════════════════════════════════════════════════
@@ -37,7 +125,6 @@ const explainQuestion = async (req, res, next) => {
     console.log(`[AI Explanation] Request received. Gemini key present: ${!!geminiKey} (length: ${geminiKey.length})`);
 
     if (geminiKey) {
-      console.log('[AI Explanation] Gemini API key detected. Prefix validation has been removed because Google now supports multiple API key formats.');
       try {
         const aiResponse = await callGeminiAI(question, selectedAnswer, correctAnswer, lang, geminiKey);
         if (aiResponse) {
@@ -49,7 +136,21 @@ const explainQuestion = async (req, res, next) => {
           });
         }
       } catch (aiErr) {
-        console.warn('[AI Explanation] Gemini call failed, using rich fallback engine:', aiErr.response?.data || aiErr.message);
+        if (aiErr.isQuotaExhausted || isQuotaError(aiErr)) {
+          const quotaMessage = "Gemini API quota has been exhausted or is unavailable for this project. Check Google AI Studio quota and billing.";
+          console.error('[AI Explanation] Quota Exhausted:', quotaMessage);
+
+          const fallbackResponse = generateRichStructuredFallback(question, selectedAnswer, correctAnswer, lang);
+          return res.json({
+            success: true,
+            source: 'structured-engine-quota-exhausted',
+            error: quotaMessage,
+            message: quotaMessage,
+            data: fallbackResponse
+          });
+        }
+
+        console.warn('[AI Explanation] Gemini call failed, using rich fallback engine:', aiErr.response?.data?.error?.message || aiErr.message);
       }
     } else {
       console.log('[AI Explanation] No GEMINI_API_KEY found in process.env, using fallback engine.');
@@ -69,7 +170,7 @@ const explainQuestion = async (req, res, next) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// GEMINI API INTEGRATION — Robust Multi-Attempt Call
+// GEMINI API INTEGRATION — Dynamic & Quota-Aware Model Caller
 // ═══════════════════════════════════════════════════════════════════
 async function callGeminiAI(question, selectedAnswer, correctAnswer, lang, apiKey) {
   const qText = bText(question.question, lang) || bText(question.question, 'en');
@@ -100,12 +201,20 @@ Keys required:
   "relatedTopics": ["Topic 1", "Topic 2", "Topic 3"]
 }`;
 
-  const models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
+  // Dynamically discover supported models via ListModels endpoint
+  let modelsToTry = await fetchSupportedModels(apiKey);
 
-  for (const model of models) {
-    // Attempt 1: With responseMimeType
+  if (!modelsToTry || modelsToTry.length === 0) {
+    console.warn('[Gemini API] Dynamic ListModels returned 0 models or failed. Relying on fallback engine.');
+    return null;
+  }
+
+  for (const modelPath of modelsToTry) {
+    // modelPath can be "models/gemini-2.0-flash" or "models/gemini-1.5-flash-latest"
+    const cleanModelPath = modelPath.startsWith('models/') ? modelPath : `models/${modelPath}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/${cleanModelPath}:generateContent?key=${apiKey}`;
+
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const response = await axios.post(
         url,
         {
@@ -120,31 +229,47 @@ Keys required:
         const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
         return JSON.parse(cleaned);
       }
-    } catch (err1) {
-      console.warn(`[Gemini API] Model ${model} with json mime failed:`, err1.response?.data?.error?.message || err1.message);
+    } catch (err) {
+      if (isQuotaError(err)) {
+        console.error(`[Gemini API] Quota or resource limit exceeded for ${cleanModelPath}:`, 'Gemini API quota has been exhausted or is unavailable for this project. Check Google AI Studio quota and billing.');
+        const quotaErr = new Error('Gemini API quota has been exhausted or is unavailable for this project. Check Google AI Studio quota and billing.');
+        quotaErr.isQuotaExhausted = true;
+        throw quotaErr;
+      }
 
-      // Attempt 2: Standard call without responseMimeType
+      if (isNotFoundError(err)) {
+        console.warn(`[Gemini API] Model ${cleanModelPath} NOT_FOUND (404). Trying next supported model...`);
+        continue;
+      }
+
+      // Secondary attempt without responseMimeType
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        const response = await axios.post(
+        const response2 = await axios.post(
           url,
-          {
-            contents: [{ parts: [{ text: prompt }] }]
-          },
+          { contents: [{ parts: [{ text: prompt }] }] },
           { timeout: 10000 }
         );
 
-        const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-          // Extract JSON if wrapped in text
-          const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            return JSON.parse(jsonMatch[0]);
-          }
+        const text2 = response2.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text2) {
+          const cleaned2 = text2.replace(/```json/gi, '').replace(/```/g, '').trim();
+          const jsonMatch = cleaned2.match(/\{[\s\S]*\}/);
+          if (jsonMatch) return JSON.parse(jsonMatch[0]);
         }
       } catch (err2) {
-        console.warn(`[Gemini API] Model ${model} standard call failed:`, err2.response?.data?.error?.message || err2.message);
+        if (isQuotaError(err2)) {
+          console.error(`[Gemini API] Quota or resource limit exceeded for ${cleanModelPath}:`, 'Gemini API quota has been exhausted or is unavailable for this project. Check Google AI Studio quota and billing.');
+          const quotaErr = new Error('Gemini API quota has been exhausted or is unavailable for this project. Check Google AI Studio quota and billing.');
+          quotaErr.isQuotaExhausted = true;
+          throw quotaErr;
+        }
+
+        if (isNotFoundError(err2)) {
+          console.warn(`[Gemini API] Model ${cleanModelPath} NOT_FOUND (404) on standard attempt. Trying next supported model...`);
+          continue;
+        }
+
+        console.warn(`[Gemini API] Model ${cleanModelPath} failed:`, err2.response?.data?.error?.message || err2.message);
       }
     }
   }
@@ -216,5 +341,6 @@ function generateRichStructuredFallback(q, selectedIdx, correctIdx, lang) {
 }
 
 module.exports = {
-  explainQuestion
+  explainQuestion,
+  runGeminiDiagnostics
 };
