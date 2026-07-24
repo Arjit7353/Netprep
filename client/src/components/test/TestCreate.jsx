@@ -46,7 +46,7 @@ const STEPS = [
 ];
 
 const QUICK_TEMPLATES = [
-  { id: 'adaptive', name: 'AI Adaptive', nameHi: 'AI एडाप्टिव', desc: 'Personalized Test', descHi: 'व्यक्तिगत परीक्षा', icon: Brain, gradient: 'from-violet-600 to-purple-600', isAdaptive: true },
+  { id: 'adaptive', name: 'AI Adaptive', nameHi: 'AI एडाप्टिव', desc: 'Personalized Test', descHi: 'व्यक्तिगत परीक्षा', icon: Brain, gradient: 'from-violet-600 to-purple-600', isAdaptive: true, config: { testType: 'practice', totalQuestions: 25, duration: 30 } },
   { id: 'quick_10', name: 'Quick 10', nameHi: 'त्वरित 10', desc: '10 Q, 15 min', descHi: '10 प्रश्न, 15 मिनट', icon: Zap, gradient: 'from-amber-500 to-orange-500', config: { testType: 'dpp', totalQuestions: 10, duration: 15 } },
   { id: 'chapter_25', name: 'Chapter Test', nameHi: 'अध्याय परीक्षा', desc: '25 Q, 30 min', descHi: '25 प्रश्न, 30 मिनट', icon: BookOpen, gradient: 'from-purple-500 to-indigo-500', config: { testType: 'chapter_test', totalQuestions: 25, duration: 30 } },
   { id: 'full_mock', name: 'Full Mock', nameHi: 'फुल मॉक', desc: '50 Q, 60 min', descHi: '50 प्रश्न, 60 मिनट', icon: Target, gradient: 'from-rose-500 to-pink-500', config: { testType: 'full_mock_p1', totalQuestions: 50, duration: 60 } },
@@ -616,8 +616,14 @@ const TestCreate = ({ language = 'hi', testId }) => {
   const totalMarks = qCount * (formData.marksPerQuestion || 2);
 
   const applyTemplate = (tpl) => {
-    handleChange('testType', tpl.config.testType);
-    setFormData(p => ({ ...p, totalQuestions: tpl.config.totalQuestions, duration: tpl.config.duration }));
+    if (tpl.isAdaptive) {
+      setShowAdaptiveModal(true);
+      return;
+    }
+    if (tpl.config) {
+      handleChange('testType', tpl.config.testType);
+      setFormData(p => ({ ...p, totalQuestions: tpl.config.totalQuestions, duration: tpl.config.duration }));
+    }
   };
 
   // ═══ SUBMIT ═══
@@ -718,7 +724,7 @@ const TestCreate = ({ language = 'hi', testId }) => {
                 <div><h3 className="font-black text-xl text-gray-900 dark:text-white">{t('त्वरित टेम्पलेट', 'Quick Templates')}</h3><p className="text-sm text-gray-500 dark:text-gray-400">{t('एक क्लिक में शुरू', 'Start with one click')}</p></div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {QUICK_TEMPLATES.map(tpl => <QuickTemplateCard key={tpl.id} template={tpl} onClick={() => applyTemplate(tpl)} language={language} isActive={formData.testType === tpl.config.testType} />)}
+                {QUICK_TEMPLATES.map(tpl => <QuickTemplateCard key={tpl.id} template={tpl} onClick={() => applyTemplate(tpl)} language={language} isActive={tpl.config && formData.testType === tpl.config.testType} />)}
               </div>
             </GlassCard>
             <GlassCard animate>

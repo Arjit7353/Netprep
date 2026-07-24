@@ -1,7 +1,7 @@
-const CACHE_NAME = 'netprep-cache-v2';
-const STATIC_CACHE = 'netprep-static-v2';
-const DYNAMIC_CACHE = 'netprep-dynamic-v2';
-const API_CACHE = 'netprep-api-v2';
+const CACHE_NAME = 'netprep-cache-v4';
+const STATIC_CACHE = 'netprep-static-v4';
+const DYNAMIC_CACHE = 'netprep-dynamic-v4';
+const API_CACHE = 'netprep-api-v4';
 
 // Static assets to pre-cache
 const STATIC_ASSETS = [
