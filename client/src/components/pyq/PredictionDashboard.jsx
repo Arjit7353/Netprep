@@ -1,10 +1,13 @@
 import React, { useEffect } from 'react';
 import { Loader2, Sparkles, TrendingUp, TrendingDown, Minus, AlertCircle, Flame, Zap, CircleDot } from 'lucide-react';
 import usePYQAnalysis from '../../hooks/usePYQAnalysis';
+import useDashboard from '../../hooks/useDashboard';
+import ExplainableAIPredictor from '../analytics/ExplainableAIPredictor';
 import pyqService from '../../services/pyqService';
 
 const PredictionDashboard = ({ language }) => {
   const { predictions, loading, error, fetchPredictions } = usePYQAnalysis();
+  const d = useDashboard();
   const L = (en, hi) => language === 'hi' ? hi : en;
 
   useEffect(() => { fetchPredictions('paper2').catch(() => {}); }, []);
@@ -13,22 +16,10 @@ const PredictionDashboard = ({ language }) => {
   const trendColors = { increasing: 'text-red-500', decreasing: 'text-green-500', stable: 'text-gray-400', emerged: 'text-purple-500' };
   const likelihoodIcons = { very_likely: Flame, likely: Zap, possible: CircleDot, unlikely: Minus };
 
-  if (loading && !predictions) {
-    return <div className="flex justify-center py-24"><div className="relative w-14 h-14"><div className="absolute inset-0 rounded-full border-[3px] border-violet-200 dark:border-violet-800" /><div className="absolute inset-0 rounded-full border-[3px] border-violet-500 border-t-transparent animate-spin" /></div></div>;
-  }
-
-  if (!predictions?.predictions?.length) {
-    return (
-      <div className="bg-white dark:bg-secondary-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-secondary-700 p-14 text-center">
-        <Sparkles className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-        <h3 className="text-base font-bold text-gray-700 dark:text-secondary-300 mb-2">{L('Need More Data','अधिक डेटा चाहिए')}</h3>
-        <p className="text-xs text-gray-500">{predictions?.message || L('Import at least 2 years','कम से कम 2 वर्ष आयात करें')}</p>
-      </div>
-    );
-  }
-
   const categories = { very_likely: [], likely: [], possible: [], unlikely: [] };
-  predictions.predictions.forEach(p => { if (categories[p.likelihood]) categories[p.likelihood].push(p); });
+  if (predictions?.predictions?.length) {
+    predictions.predictions.forEach(p => { if (categories[p.likelihood]) categories[p.likelihood].push(p); });
+  }
 
   const categoryMeta = {
     very_likely: { title: L('Very Likely','बहुत संभावित'), subtitle: L('Almost certain to appear','लगभग निश्चित'), gradient: 'from-red-500 to-rose-500', ring: 'ring-red-500/20', bgLight: 'bg-red-50/80 dark:bg-red-900/10' },
@@ -38,7 +29,16 @@ const PredictionDashboard = ({ language }) => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
+      {/* 1. Explainable AI Score Predictor Module */}
+      <ExplainableAIPredictor
+        allAttempts={d.allAttempts}
+        createdTests={d.createdTests}
+        questionStats={d.questionStats}
+        language={language}
+        onRefresh={d.refresh}
+        refreshing={d.refreshing}
+      />
       {/* Header */}
       <div className="relative overflow-hidden bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 rounded-3xl p-5 sm:p-7 text-white shadow-2xl shadow-violet-500/20">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />

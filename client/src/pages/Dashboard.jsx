@@ -16,6 +16,7 @@ import {
 import Layout from '../components/layout/Layout';
 import useDashboard from '../hooks/useDashboard';
 import AutoSyllabusPlanner from '../components/dashboard/AutoSyllabusPlanner';
+import ExplainableAIPredictor from '../components/analytics/ExplainableAIPredictor';
 
 // ═══════════════════════════════════════════════════════
 //  ICON MAP (for dynamic icon rendering from hook data)
@@ -348,109 +349,20 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
 
 
         {/* ════════════════════════════════════════════
-            §2  JRF / NET PREDICTION + DAILY REPORT
+            §2  EXPLAINABLE AI SCORE PREDICTOR + DAILY REPORT
         ════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* JRF/NET Prediction */}
-          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md">
-                <GraduationCap className="w-4.5 h-4.5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-gray-900 dark:text-white">{hi ? 'AI भविष्यवाणी' : 'AI Prediction Engine'}</h2>
-                <p className="text-[10px] text-gray-500">{hi ? `आत्मविश्वास: ${jp.confidence} | डेटा: ${jp.dataPoints}` : `Confidence: ${jp.confidence} | Data points: ${jp.dataPoints}`}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-              {/* NET Probability */}
-              <div className="text-center">
-                <div className="relative inline-flex items-center justify-center">
-                  <svg width={90} height={90} className="-rotate-90">
-                    <circle cx={45} cy={45} r={36} fill="none" stroke="currentColor" strokeWidth={7} className="text-gray-200 dark:text-gray-700" />
-                    <circle cx={45} cy={45} r={36} fill="none" stroke={jp.netProbability >= 60 ? '#22c55e' : jp.netProbability >= 35 ? '#f59e0b' : '#ef4444'}
-                      strokeWidth={7} strokeDasharray={226} strokeDashoffset={226 * (1 - jp.netProbability / 100)}
-                      strokeLinecap="round" className="transition-all duration-1000" />
-                  </svg>
-                  <span className="absolute text-lg font-black text-gray-900 dark:text-white">{jp.netProbability}%</span>
-                </div>
-                <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mt-1">NET</p>
-              </div>
-
-              {/* JRF Probability */}
-              <div className="text-center">
-                <div className="relative inline-flex items-center justify-center">
-                  <svg width={90} height={90} className="-rotate-90">
-                    <circle cx={45} cy={45} r={36} fill="none" stroke="currentColor" strokeWidth={7} className="text-gray-200 dark:text-gray-700" />
-                    <circle cx={45} cy={45} r={36} fill="none" stroke={jp.jrfProbability >= 60 ? '#22c55e' : jp.jrfProbability >= 35 ? '#f59e0b' : '#ef4444'}
-                      strokeWidth={7} strokeDasharray={226} strokeDashoffset={226 * (1 - jp.jrfProbability / 100)}
-                      strokeLinecap="round" className="transition-all duration-1000" />
-                  </svg>
-                  <span className="absolute text-lg font-black text-gray-900 dark:text-white">{jp.jrfProbability}%</span>
-                </div>
-                <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mt-1">JRF</p>
-              </div>
-
-              {/* PhD */}
-              <div className="text-center">
-                <div className="relative inline-flex items-center justify-center">
-                  <svg width={90} height={90} className="-rotate-90">
-                    <circle cx={45} cy={45} r={36} fill="none" stroke="currentColor" strokeWidth={7} className="text-gray-200 dark:text-gray-700" />
-                    <circle cx={45} cy={45} r={36} fill="none" stroke={jp.netProbability >= 50 ? '#22c55e' : '#ef4444'}
-                      strokeWidth={7} strokeDasharray={226} strokeDashoffset={226 * (1 - jp.netProbability / 100)}
-                      strokeLinecap="round" className="transition-all duration-1000" />
-                  </svg>
-                  <span className="absolute text-sm font-bold text-gray-900 dark:text-white">{jp.netProbability >= 50 ? (hi ? 'योग्य' : 'Eligible') : (hi ? 'अयोग्य' : 'Ineligible')}</span>
-                </div>
-                <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mt-1">PhD</p>
-              </div>
-
-              {/* Projected Score */}
-              <div className="flex flex-col items-center justify-center gap-1">
-                <div className="grid grid-cols-2 gap-2 w-full">
-                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2 text-center">
-                    <p className="text-xs text-gray-500">P1</p>
-                    <p className="text-lg font-black text-blue-600">{jp.predictedP1}%</p>
-                  </div>
-                  <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2 text-center">
-                    <p className="text-xs text-gray-500">P2</p>
-                    <p className="text-lg font-black text-purple-600">{jp.predictedP2}%</p>
-                  </div>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-2 text-center w-full">
-                  <p className="text-[10px] text-gray-500">{hi ? 'अनुमानित कुल' : 'Projected'}</p>
-                  <p className="text-lg font-black text-gray-900 dark:text-white">{jp.predictedTotal}%</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Factors & Suggestions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{hi ? 'कारक' : 'Factors'}</p>
-                {jp.factors.map((f, i) => (
-                  <div key={i} className={`flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg ${
-                    f.type === 'positive' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
-                  }`}>
-                    {f.type === 'positive' ? <CheckCircle className="w-3 h-3 flex-shrink-0" /> : <AlertTriangle className="w-3 h-3 flex-shrink-0" />}
-                    <span className="truncate">{f.text}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{hi ? 'सुझाव' : 'Suggestions'}</p>
-                {jp.suggestions.length > 0 ? jp.suggestions.map((s, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400">
-                    <Lightbulb className="w-3 h-3 flex-shrink-0" />
-                    <span className="truncate">{s}</span>
-                  </div>
-                )) : (
-                  <p className="text-xs text-gray-400 italic">{hi ? 'कोई सुझाव नहीं' : 'No suggestions'}</p>
-                )}
-              </div>
-            </div>
+          {/* Explainable AI Score Predictor */}
+          <div className="lg:col-span-2">
+            <ExplainableAIPredictor
+              allAttempts={d.allAttempts}
+              createdTests={d.createdTests}
+              questionStats={d.questionStats}
+              language={language}
+              onRefresh={d.refresh}
+              refreshing={d.refreshing}
+            />
           </div>
 
           {/* Daily Report Card */}
