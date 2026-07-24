@@ -400,7 +400,7 @@ export function generateAdaptiveTestConfig({
     testConfig,
     adaptiveReport,
     hasEnoughData: completedAttempts.length >= 1,
-    hasEnoughQuestions: selectedQuestions.length >= modeConfig.questionCount.min,
+    hasEnoughQuestions: selectedQuestions.length > 0,
   };
 }
 

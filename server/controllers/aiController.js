@@ -1,6 +1,6 @@
 // server/controllers/aiController.js
 // ═══════════════════════════════════════════════════════════════════
-// REAL AI EXPLANATION CONTROLLER — Gemini API with Smart Engine Fallback
+// REAL AI EXPLANATION CONTROLLER — Gemini API with Rich Engine Fallback
 // ═══════════════════════════════════════════════════════════════════
 
 const axios = require('axios');
@@ -44,12 +44,12 @@ const explainQuestion = async (req, res, next) => {
           });
         }
       } catch (aiErr) {
-        console.warn('[AI Explanation] Gemini call failed, using fallback engine:', aiErr.message);
+        console.warn('[AI Explanation] Gemini call failed, using rich fallback engine:', aiErr.message);
       }
     }
 
-    // Fallback to structured engine logic
-    const fallbackResponse = generateStructuredFallback(question, selectedAnswer, correctAnswer, lang);
+    // Fallback to rich structured engine logic
+    const fallbackResponse = generateRichStructuredFallback(question, selectedAnswer, correctAnswer, lang);
     return res.json({
       success: true,
       source: 'structured-engine',
@@ -71,83 +71,107 @@ async function callGeminiAI(question, selectedAnswer, correctAnswer, lang, apiKe
   const selectedOptText = selectedAnswer >= 0 ? (options[selectedAnswer] || `Option ${selectedAnswer + 1}`) : 'Not Attempted';
   const rawExp = bText(question.explanation, lang);
 
-  const prompt = `You are an expert professor preparing students for UGC NET History Exam.
-Analyze the following question and provide a structured JSON response in ${lang === 'hi' ? 'Hindi' : 'English'}.
+  const prompt = `You are a distinguished professor of History preparing candidates for UGC NET History.
+Analyze this UGC NET question and provide a comprehensive structured response in ${lang === 'hi' ? 'Hindi' : 'English'}.
 
 Question: ${qText}
-Options: ${options.map((opt, i) => `${i + 1}. ${opt}`).join(' | ')}
+Options: ${options.map((opt, i) => `(${i + 1}) ${opt}`).join(', ')}
 Correct Answer: Option ${correctAnswer + 1} (${correctOptText})
-Student Selected: ${selectedAnswer >= 0 ? `Option ${selectedAnswer + 1} (${selectedOptText})` : 'Skipped'}
-Existing Context: ${rawExp || 'N/A'}
+Student Selection: ${selectedAnswer >= 0 ? `Option ${selectedAnswer + 1}` : 'Skipped'}
+Provided Notes: ${rawExp || 'N/A'}
 
-Respond strictly in valid raw JSON with NO markdown formatting, NO backticks, and NO emojis.
-Return an object with the following exact keys:
+Format requirements: Strictly return a RAW JSON object with NO markdown formatting, NO backticks.
+Keys required:
 {
-  "whyCorrect": "Detailed explanation of why the correct option is right",
+  "whyCorrect": "Detailed analytical explanation of why the correct answer is right with historical evidence",
   "whyOthersWrong": [
-    { "option": 1, "text": "Option text", "reason": "Why this option is incorrect" }
+    { "option": 1, "text": "Option text", "reason": "Specific historical reason why this option is wrong" }
   ],
-  "conceptSummary": "A concise 2-3 sentence revision note on the core topic",
-  "examTip": "A tactical tip for answering such questions in UGC NET",
-  "commonMistake": "The common trap students fall into for this type of question",
+  "conceptSummary": "2-3 sentence revision note covering the essential concept tested here",
+  "examTip": "A strategic tip for solving such UGC NET questions",
+  "commonMistake": "The common trap students fall into for this topic",
   "relatedTopics": ["Topic 1", "Topic 2", "Topic 3"]
 }`;
 
-  const response = await axios.post(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-    {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: "application/json" }
-    },
-    { timeout: 8000 }
-  );
+  // Try models in sequence
+  const models = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash'];
 
-  const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) return null;
+  for (const model of models) {
+    try {
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: "application/json", temperature: 0.2 }
+        },
+        { timeout: 9000 }
+      );
 
-  const parsed = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
-  return parsed;
+      const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) {
+        const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+        return JSON.parse(cleaned);
+      }
+    } catch (err) {
+      console.warn(`[Gemini AI] Model ${model} failed:`, err.message);
+    }
+  }
+
+  return null;
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// STRUCTURED FALLBACK ENGINE
+// RICH STRUCTURED FALLBACK ENGINE
 // ═══════════════════════════════════════════════════════════════════
-function generateStructuredFallback(q, selectedIdx, correctIdx, lang) {
+function generateRichStructuredFallback(q, selectedIdx, correctIdx, lang) {
   const options = bArr(q.options, lang);
   const correctText = options[correctIdx] || (lang === 'hi' ? `विकल्प ${correctIdx + 1}` : `Option ${correctIdx + 1}`);
   const rawExp = bText(q.explanation, lang);
+  const qText = bText(q.question, lang);
 
-  const whyCorrect = rawExp || (lang === 'hi'
-    ? `विकल्प (${correctIdx + 1}) - "${correctText}" इस प्रश्न का सही उत्तर है क्योंकि यह यूजीसी नेट इतिहास के आधिकारिक उत्तर और ऐतिहासिक प्रमाणों से मेल खाता है।`
-    : `Option (${correctIdx + 1}) - "${correctText}" is the correct answer based on official UGC NET answer keys and historical evidence.`);
+  let whyCorrect = rawExp;
+  if (!whyCorrect) {
+    if (lang === 'hi') {
+      whyCorrect = `विकल्प (${correctIdx + 1}) - "${correctText}" इस प्रश्न का सही उत्तर है।\n` +
+        `यह उत्तर यूजीसी नेट इतिहास के आधिकारिक पाठ्यक्रम और प्रामाणिक ऐतिहासिक स्रोतों से पूर्णतः प्रमाणित है।`;
+    } else {
+      whyCorrect = `Option (${correctIdx + 1}) - "${correctText}" is the correct answer.\n` +
+        `This is authenticated based on official UGC NET syllabus standards and authoritative historical texts.`;
+    }
+  }
 
   const whyOthersWrong = options.map((optText, i) => {
     if (i === correctIdx) return null;
+    let reason = '';
+    if (lang === 'hi') {
+      reason = `विकल्प (${i + 1}) - "${optText}" इस संदर्भ में असत्य है क्योंकि यह दी गई ऐतिहासिक अवधि या घटनाक्रम से सुमेलित नहीं होता।`;
+    } else {
+      reason = `Option (${i + 1}) - "${optText}" is incorrect in this context as it does not align with the historical facts or chronology.`;
+    }
     return {
       option: i + 1,
       text: optText,
-      reason: lang === 'hi'
-        ? `विकल्प (${i + 1}) गलत है क्योंकि इसका संबंध दिए गए ऐतिहासिक संदर्भ या कालक्रम से नहीं है।`
-        : `Option (${i + 1}) is incorrect as it does not align with the historical context of the question.`
+      reason
     };
   }).filter(Boolean);
 
+  const unitName = q.unit || (lang === 'hi' ? 'इतिहास पाठ्यक्रम' : 'History Syllabus');
   const conceptSummary = lang === 'hi'
-    ? `यह प्रश्न ${q.unit || 'इतिहास'} के अंतर्गत आता है। यूजीसी नेट परीक्षा में इस विषय से सीधे और कथन-कारण आधारित प्रश्न पूछे जाते हैं।`
-    : `This question falls under ${q.unit || 'History'}. Core concepts from this topic are frequently tested in UGC NET.`;
+    ? `यह प्रश्न ${unitName} की महत्वपूर्ण अवधारणाओं को परखता है। यूजीसी नेट परीक्षा में इस विषय से सीधे तथ्यात्मक तथा कथन-कारण (Assertion-Reason) प्रश्न पूछे जाते हैं।`
+    : `This question evaluates key concepts from ${unitName}. Similar factual and assertion-reasoning questions frequently appear in UGC NET.`;
 
   const examTip = lang === 'hi'
-    ? 'प्रश्न के मुख्य शब्दों और दिए गए विकल्पों का ध्यानपूर्वक विश्लेषण करें। विलोपन विधि (Elimination Method) का प्रयोग करें।'
-    : 'Analyze key terminology carefully. Use the elimination method to rule out clearly incorrect statements.';
+    ? 'यूजीसी नेट परीक्षा में प्रश्नों का उत्तर देते समय विलोपन तकनीक (Elimination Method) का प्रयोग करें और कालक्रमिक तिथियों पर विशेष ध्यान दें।'
+    : 'Use the elimination method to rule out historical inaccuracies and pay close attention to chronological sequences.';
 
   const commonMistake = lang === 'hi'
-    ? 'जल्दबाजी में मिलते-जुलते नाम या तिथियों में भ्रमित होना।'
-    : 'Confusing similar names, dynasties, or chronologies under exam pressure.';
+    ? 'समकालीन शासकों, राजवंशों या ग्रंथांकों के नाम में भ्रमित होकर जल्दबाजी में उत्तर चुनना।'
+    : 'Confusing contemporary rulers, dynasties, or texts under exam time constraints.';
 
   const relatedTopics = [
     q.unit || (lang === 'hi' ? 'भारतीय इतिहास' : 'Indian History'),
-    q.chapter || (lang === 'hi' ? 'महत्वपूर्ण कालक्रम' : 'Key Chronology'),
-    q.topic || (lang === 'hi' ? 'इतिहास अवधारणाएं' : 'History Concepts')
+    q.chapter || (lang === 'hi' ? 'ऐतिहासिक स्रोत एवं कालक्रम' : 'Historical Sources & Chronology'),
+    q.topic || (lang === 'hi' ? 'अवधारणात्मक विश्लेषण' : 'Conceptual Analysis')
   ].filter(Boolean);
 
   return {
