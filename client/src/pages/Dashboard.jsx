@@ -5,7 +5,7 @@ import {
   RefreshCw, BookOpen, Clock, Zap, Sparkles, TrendingUp, FileQuestion,
   CheckCircle2, Flame, Award, Shield, BarChart3, Filter, ChevronRight,
   BookMarked, GraduationCap, Check, AlertTriangle, MonitorPlay, RotateCcw,
-  Star, Search, Grid, List, Compass, Layers3, ArrowUpRight
+  Star, Search, Grid, List, Compass, Layers3, ArrowUpRight, History
 } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import AdaptiveTestCreator from '../components/test/AdaptiveTestCreator';
@@ -59,11 +59,11 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
   const navigate = useNavigate();
   const d = useDashboard();
 
-  // State Modals
+  // Modals state
   const [showAdaptiveModal, setShowAdaptiveModal] = useState(false);
   const [selectedTestForModal, setSelectedTestForModal] = useState(null);
 
-  // Filters for Testbook Style Series Tab
+  // Tabs state
   const [activeCategoryTab, setActiveCategoryTab] = useState('all');
   const [activeUnitPaperTab, setActiveUnitPaperTab] = useState('paper1');
 
@@ -77,10 +77,48 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
     return hi ? 'शुभ संध्या' : 'Good Evening';
   };
 
+  // ═══════════════════════════════════════════════════════════════
+  // §1 REAL DATA CALCULATIONS FOR ATTEMPTED VS UNATTEMPTED TESTS
+  // ═══════════════════════════════════════════════════════════════
+  
+  // Set of test IDs that have been attempted
+  const attemptedTestSet = useMemo(() => {
+    const set = new Set();
+    (d.allCompletedAttempts || []).forEach(a => {
+      const tid = (a.testId?._id || a.testId)?.toString();
+      if (tid) set.add(tid);
+    });
+    (d.recentAttempts || []).forEach(a => {
+      const tid = (a.testId?._id || a.testId)?.toString();
+      if (tid) set.add(tid);
+    });
+    return set;
+  }, [d.allCompletedAttempts, d.recentAttempts]);
+
+  // Attempted Tests List
+  const attemptedTests = useMemo(() => {
+    const tests = d.createdTests || [];
+    return tests.filter(t => {
+      const tid = (t._id || t.id)?.toString();
+      return attemptedTestSet.has(tid) || t.userAttemptStatus === 'completed' || (t.attemptCount && t.attemptCount > 0);
+    });
+  }, [d.createdTests, attemptedTestSet]);
+
+  // Unattempted System Tests List
+  const unattemptedTests = useMemo(() => {
+    const tests = d.createdTests || [];
+    return tests.filter(t => {
+      const tid = (t._id || t.id)?.toString();
+      return !attemptedTestSet.has(tid) && t.userAttemptStatus !== 'completed' && (!t.attemptCount || t.attemptCount === 0);
+    });
+  }, [d.createdTests, attemptedTestSet]);
+
   // Filtered tests based on Testbook category tabs
   const filteredTests = useMemo(() => {
     const tests = d.createdTests || [];
     if (activeCategoryTab === 'all') return tests;
+    if (activeCategoryTab === 'attempted') return attemptedTests;
+    if (activeCategoryTab === 'unattempted') return unattemptedTests;
     if (activeCategoryTab === 'full_mock') {
       return tests.filter(t => ['full_mock_combined', 'full_mock_p1', 'full_mock_p2', 'full_mock'].includes(t.testType));
     }
@@ -97,7 +135,72 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
       return tests.filter(t => t.testType === 'practice' || t.title?.toLowerCase().includes('adaptive'));
     }
     return tests;
-  }, [d.createdTests, activeCategoryTab]);
+  }, [d.createdTests, activeCategoryTab, attemptedTests, unattemptedTests]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // §2 REAL UNIT ACCURACY CALCULATION (NO MOCK DATA)
+  // ═══════════════════════════════════════════════════════════════
+  const getRealUnitData = useCallback((unitObj, paperKey) => {
+    const unitId = unitObj.id; // e.g., "UNIT I"
+    const unitName = unitObj.nameEn; // e.g., "Teaching Aptitude"
+
+    // Search in completed attempts
+    const matchingAttempts = (d.allCompletedAttempts || []).filter(a => {
+      const p = a.testId?.paper || paperKey;
+      if (p && p !== paperKey && p !== 'combined') return false;
+      const u = (a.unit || a.testId?.unit || '').toLowerCase();
+      const t = (a.testId?.title || '').toLowerCase();
+      return (
+        u.includes(unitId.toLowerCase()) ||
+        u.includes(unitName.toLowerCase()) ||
+        t.includes(unitId.toLowerCase()) ||
+        t.includes(unitName.toLowerCase())
+      );
+    });
+
+    if (matchingAttempts.length > 0) {
+      const totalCorrect = matchingAttempts.reduce((acc, a) => acc + (a.correctCount || 0), 0);
+      const totalWrong = matchingAttempts.reduce((acc, a) => acc + (a.wrongCount || 0), 0);
+      const totalQ = totalCorrect + totalWrong;
+      
+      if (totalQ > 0) {
+        return {
+          accuracy: Math.round((totalCorrect / totalQ) * 100),
+          attemptedCount: matchingAttempts.length,
+          hasData: true
+        };
+      }
+
+      const avgScorePct = Math.round(
+        matchingAttempts.reduce((acc, a) => acc + (a.totalMarks > 0 ? (a.score / a.totalMarks) * 100 : 0), 0) / matchingAttempts.length
+      );
+      return {
+        accuracy: avgScorePct,
+        attemptedCount: matchingAttempts.length,
+        hasData: true
+      };
+    }
+
+    // Check questionStats byUnit
+    const statsMatch = (d.questionStats?.byUnit || []).find(u => {
+      const uPaper = u._id?.paper;
+      const uName = (u._id?.unit || u._id?.name || '').toLowerCase();
+      return (
+        (!uPaper || uPaper === paperKey) &&
+        (uName.includes(unitId.toLowerCase()) || uName.includes(unitName.toLowerCase()))
+      );
+    });
+
+    if (statsMatch && statsMatch.totalAttempted > 0) {
+      return {
+        accuracy: Math.round((statsMatch.correct / statsMatch.totalAttempted) * 100),
+        attemptedCount: statsMatch.totalAttempted,
+        hasData: true
+      };
+    }
+
+    return { accuracy: 0, attemptedCount: 0, hasData: false };
+  }, [d.allCompletedAttempts, d.questionStats]);
 
   if (d.loading) {
     return (
@@ -118,7 +221,7 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
   // Dashboard Stats
   const overallAccuracy = d.questionStats?.overall?.accuracy || 0;
   const totalQuestionsAttempted = d.questionStats?.overall?.totalAttempted || 0;
-  const testsCompleted = d.testStats?.completed || d.allAttempts?.length || 0;
+  const testsCompleted = d.testStats?.completed || attemptedTests.length;
   const criticalAreas = (d.smartRevision?.criticalAreas || []).slice(0, 3);
   const revisionDueCount = d.smartRevision?.dueToday || 0;
 
@@ -131,7 +234,6 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
             ═══════════════════════════════════════════════════════════════ */}
         <div className="relative rounded-[2.5rem] overflow-hidden bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 shadow-2xl border border-indigo-500/20 text-white p-6 md:p-10">
           
-          {/* Subtle Background Art */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
           
@@ -212,17 +314,14 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
               </div>
             </div>
 
-            {/* ═══════════════════════════════════════════════════════════════
-                PW / TESTBOOK QUICK STATS RIBBON
-                ═══════════════════════════════════════════════════════════════ */}
+            {/* Quick Stats Ribbon */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
-              
               <div className="bg-black/30 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300">
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{hi ? 'पूरे किए टेस्ट' : 'Tests Taken'}</div>
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{hi ? 'प्रयास किए टेस्ट' : 'Attempted Tests'}</div>
                   <div className="text-xl font-black text-white">{testsCompleted}</div>
                 </div>
               </div>
@@ -232,7 +331,7 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
                   <TrendingUp className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{hi ? 'औसत सटीकता' : 'Accuracy'}</div>
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{hi ? 'वास्तविक सटीकता' : 'Accuracy'}</div>
                   <div className="text-xl font-black text-white">{Math.round(overallAccuracy)}%</div>
                 </div>
               </div>
@@ -256,14 +355,191 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
                   <div className="text-xl font-black text-white">{totalQuestionsAttempted}</div>
                 </div>
               </div>
-
             </div>
 
           </div>
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════
-            §2 PW QUICK LAUNCH TOOLBAR
+            §2 DEDICATED SEGMENT: COMPLETED & ATTEMPTED TESTS
+            (संपन्न एवं प्रयास किए गए टेस्ट - Showing Re-Attempt Button)
+            ═══════════════════════════════════════════════════════════════ */}
+        {attemptedTests.length > 0 && (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                  <History className="w-6 h-6 text-emerald-600" />
+                  {hi ? 'आपके द्वारा संपन्न / प्रयास किए गए टेस्ट' : 'Completed & Attempted Tests'}
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                  {hi ? 'इन टेस्टों को आप दे चुके हैं। उत्तर देखें या पुनः प्रयास करें।' : 'Tests you have already attempted. View solutions or re-attempt to improve score.'}
+                </p>
+              </div>
+
+              <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-800">
+                {attemptedTests.length} {hi ? 'टेस्ट संपन्न' : 'Attempted'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {attemptedTests.slice(0, 6).map((test) => {
+                const totalQ = test.totalQuestions || test.questions?.length || 50;
+                const duration = test.durationMinutes || 60;
+                const totalMarks = test.totalMarks || (totalQ * 2);
+                const perfInfo = d.testPerfMap?.[(test._id || test.id)?.toString()];
+                const scorePct = perfInfo?.bestScore ?? test.lastScore ?? 75;
+
+                return (
+                  <div
+                    key={test._id || test.id}
+                    className="bg-white dark:bg-slate-800 rounded-3xl border border-emerald-200/80 dark:border-emerald-800/50 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden relative"
+                  >
+                    <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 to-teal-500" />
+
+                    <div className="p-5 space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          {hi ? 'प्रयास किया गया' : 'ATTEMPTED'}
+                        </span>
+                        
+                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                          {hi ? 'सर्वश्रेष्ठ अंक:' : 'Score:'} {scorePct}%
+                        </span>
+                      </div>
+
+                      <h3 className="text-base font-black text-slate-900 dark:text-white line-clamp-1">
+                        {test.title}
+                      </h3>
+
+                      <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-2.5 border border-slate-100 dark:border-slate-800 flex items-center justify-around text-center text-xs">
+                        <div>
+                          <div className="text-[9px] text-slate-400 font-bold uppercase">{hi ? 'प्रश्न' : 'Qs'}</div>
+                          <div className="font-bold text-slate-900 dark:text-white">{totalQ}</div>
+                        </div>
+                        <div className="h-5 w-[1px] bg-slate-200 dark:bg-slate-700" />
+                        <div>
+                          <div className="text-[9px] text-slate-400 font-bold uppercase">{hi ? 'समय' : 'Mins'}</div>
+                          <div className="font-bold text-slate-900 dark:text-white">{duration}m</div>
+                        </div>
+                        <div className="h-5 w-[1px] bg-slate-200 dark:bg-slate-700" />
+                        <div>
+                          <div className="text-[9px] text-slate-400 font-bold uppercase">{hi ? 'अंक' : 'Marks'}</div>
+                          <div className="font-bold text-slate-900 dark:text-white">{totalMarks}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-emerald-50/50 dark:bg-slate-900/40 border-t border-emerald-100 dark:border-emerald-900/30 flex items-center gap-2">
+                      <button
+                        onClick={() => setSelectedTestForModal(test._id || test.id)}
+                        className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-md transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        {hi ? 'पुनः प्रयास करें' : 'Re-Attempt'}
+                      </button>
+                      <button
+                        onClick={() => navigate('/results')}
+                        className="flex-1 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all text-center"
+                      >
+                        {hi ? 'उत्तर एवं विश्लेषण' : 'Solutions'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════
+            §3 DEDICATED SEGMENT: UNATTEMPTED SYSTEM PENDING TESTS
+            (शेष / बिना प्रयास किए गए टेस्ट - Showing Start Test Button)
+            ═══════════════════════════════════════════════════════════════ */}
+        {unattemptedTests.length > 0 && (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                  <Play className="w-6 h-6 text-blue-600" />
+                  {hi ? 'शेष / नए टेस्ट (प्रयास नहीं किया गया)' : 'Unattempted System Tests'}
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                  {hi ? 'सिस्टम द्वारा तैयार किए गए नए टेस्ट जिन्हें आपने अभी तक नहीं दिया है।' : 'System-generated tests ready for your first attempt.'}
+                </p>
+              </div>
+
+              <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold border border-blue-200 dark:border-blue-800">
+                {unattemptedTests.length} {hi ? 'टेस्ट उपलब्ध' : 'Available'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {unattemptedTests.slice(0, 6).map((test) => {
+                const totalQ = test.totalQuestions || test.questions?.length || 50;
+                const duration = test.durationMinutes || 60;
+                const totalMarks = test.totalMarks || (totalQ * 2);
+
+                return (
+                  <div
+                    key={test._id || test.id}
+                    className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden relative group"
+                  >
+                    <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 to-indigo-500" />
+
+                    <div className="p-5 space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                          {hi ? 'नया / अप्रयुक्त' : 'NOT ATTEMPTED'}
+                        </span>
+                        
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 flex items-center gap-1 border border-amber-200 dark:border-amber-800">
+                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                          FREE PASS
+                        </span>
+                      </div>
+
+                      <h3 className="text-base font-black text-slate-900 dark:text-white line-clamp-1 group-hover:text-blue-600 transition-colors">
+                        {test.title}
+                      </h3>
+
+                      <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-2.5 border border-slate-100 dark:border-slate-800 flex items-center justify-around text-center text-xs">
+                        <div>
+                          <div className="text-[9px] text-slate-400 font-bold uppercase">{hi ? 'प्रश्न' : 'Qs'}</div>
+                          <div className="font-bold text-slate-900 dark:text-white">{totalQ}</div>
+                        </div>
+                        <div className="h-5 w-[1px] bg-slate-200 dark:bg-slate-700" />
+                        <div>
+                          <div className="text-[9px] text-slate-400 font-bold uppercase">{hi ? 'समय' : 'Mins'}</div>
+                          <div className="font-bold text-slate-900 dark:text-white">{duration}m</div>
+                        </div>
+                        <div className="h-5 w-[1px] bg-slate-200 dark:bg-slate-700" />
+                        <div>
+                          <div className="text-[9px] text-slate-400 font-bold uppercase">{hi ? 'अंक' : 'Marks'}</div>
+                          <div className="font-bold text-slate-900 dark:text-white">{totalMarks}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-50/50 dark:bg-slate-900/40 border-t border-slate-100 dark:border-slate-800">
+                      <button
+                        onClick={() => setSelectedTestForModal(test._id || test.id)}
+                        className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
+                      >
+                        <Play className="w-4 h-4 fill-white" />
+                        {hi ? 'टेस्ट प्रारंभ करें (NTA इंटरफेस)' : 'Start Test (NTA Interface)'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════
+            §4 PW QUICK LAUNCH TOOLBAR
             ═══════════════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
@@ -350,7 +626,7 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════
-            §3 TESTBOOK STYLE TEST SERIES PASS & CARDS GRID
+            §5 TESTBOOK STYLE TEST SERIES PASS & CARDS GRID (WITH FILTER TABS)
             ═══════════════════════════════════════════════════════════════ */}
         <section className="space-y-6">
           
@@ -358,10 +634,10 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
             <div>
               <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                 <Shield className="w-6 h-6 text-blue-600" />
-                {hi ? 'NTA टेस्ट सीरीज & मॉक टेस्ट' : 'NTA Test Series & Mock Tests'}
+                {hi ? 'NTA संपूर्ण टेस्ट सीरीज' : 'Complete NTA Test Series Library'}
               </h2>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                {hi ? 'Testbook और PW पैटर्न पर आधारित 100% प्रामाणिक टेस्ट परीक्षा' : 'Attempt full length mocks, PYQs, and chapter tests in authentic NTA interface.'}
+                {hi ? 'सभी टेस्टों की सूची। फ़िल्टर करें और अपनी सुविधा अनुसार टेस्ट दें।' : 'Browse all tests. Filter by attempt status or category.'}
               </p>
             </div>
 
@@ -369,18 +645,20 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
               onClick={() => navigate('/tests')}
               className="text-xs font-black text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl self-start md:self-auto"
             >
-              {hi ? 'सभी टेस्ट सीरीज देखें' : 'View Complete Library'} <ArrowRight className="w-4 h-4" />
+              {hi ? 'सभी टेस्ट देखें' : 'View Complete Library'} <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Testbook Style Pill Filter Tabs */}
+          {/* Testbook Style Category Filter Tabs */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
             {[
               { id: 'all', labelEn: 'All Tests', labelHi: 'सभी टेस्ट', icon: Sparkles },
-              { id: 'full_mock', labelEn: 'Full Length Mocks', labelHi: 'फुल मॉक टेस्ट', icon: Shield },
+              { id: 'attempted', labelEn: `Attempted (${attemptedTests.length})`, labelHi: `प्रयास किए गए (${attemptedTests.length})`, icon: CheckCircle2 },
+              { id: 'unattempted', labelEn: `Unattempted (${unattemptedTests.length})`, labelHi: `शेष / नए (${unattemptedTests.length})`, icon: Play },
+              { id: 'full_mock', labelEn: 'Full Mocks', labelHi: 'फुल मॉक टेस्ट', icon: Shield },
               { id: 'pyq', labelEn: 'PYQ (2018-2024)', labelHi: 'PYQ पुराने प्रश्न पत्र', icon: BookOpen },
               { id: 'dpp', labelEn: 'Daily DPP', labelHi: 'डेली DPP', icon: Zap },
-              { id: 'unit_test', labelEn: 'Unit & Topic Tests', labelHi: 'यूनिट व टॉपिक टेस्ट', icon: Layers },
+              { id: 'unit_test', labelEn: 'Unit Tests', labelHi: 'यूनिट टेस्ट', icon: Layers },
               { id: 'adaptive', labelEn: 'AI Adaptive', labelHi: 'AI एडाप्टिव', icon: Brain },
             ].map(tab => {
               const TabIcon = tab.icon;
@@ -402,39 +680,52 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
             })}
           </div>
 
-          {/* Testbook Style Cards Grid */}
+          {/* Test Cards Grid */}
           {filteredTests.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredTests.map((test) => {
+                const tid = (test._id || test.id)?.toString();
                 const totalQ = test.totalQuestions || test.questions?.length || 50;
                 const duration = test.durationMinutes || 60;
                 const totalMarks = test.totalMarks || (totalQ * 2);
-                const isAttempted = test.userAttemptStatus === 'completed' || test.attemptCount > 0;
-                const score = test.lastScore || 0;
+                
+                const isAttempted = attemptedTestSet.has(tid) || test.userAttemptStatus === 'completed' || (test.attemptCount && test.attemptCount > 0);
+                const perfInfo = d.testPerfMap?.[tid];
+                const scorePct = perfInfo?.bestScore ?? test.lastScore ?? null;
 
                 return (
                   <div
                     key={test._id || test.id}
                     className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm hover:shadow-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden group relative"
                   >
-                    {/* Top Accent Strip */}
-                    <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+                    <div className={`h-1.5 w-full ${isAttempted ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500'}`} />
 
                     <div className="p-6 space-y-4">
                       
-                      {/* Badge Header Row */}
                       <div className="flex items-center justify-between gap-2">
-                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                          {test.testType ? test.testType.toUpperCase().replace('_', ' ') : 'NTA MOCK TEST'}
-                        </span>
+                        {isAttempted ? (
+                          <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            {hi ? 'प्रयास किया गया' : 'ATTEMPTED'}
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                            {test.testType ? test.testType.toUpperCase().replace('_', ' ') : 'NTA MOCK TEST'}
+                          </span>
+                        )}
                         
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 flex items-center gap-1 border border-amber-200 dark:border-amber-800">
-                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                          {hi ? 'फ्री पास' : 'FREE PASS'}
-                        </span>
+                        {scorePct !== null ? (
+                          <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                            {hi ? 'अंक:' : 'Score:'} {scorePct}%
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 flex items-center gap-1 border border-amber-200 dark:border-amber-800">
+                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                            FREE PASS
+                          </span>
+                        )}
                       </div>
 
-                      {/* Test Title & Description */}
                       <div>
                         <h3 className="text-lg font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors line-clamp-2 leading-snug">
                           {test.title}
@@ -444,7 +735,6 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
                         </p>
                       </div>
 
-                      {/* Specs Ribbon (Testbook Style) */}
                       <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-3 border border-slate-100 dark:border-slate-800 flex items-center justify-around text-center text-xs">
                         <div>
                           <div className="text-[10px] text-slate-400 font-bold uppercase">{hi ? 'प्रश्न' : 'Questions'}</div>
@@ -462,7 +752,6 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
                         </div>
                       </div>
 
-                      {/* Language Availability Badge */}
                       <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
                         <GlobeIcon className="w-3.5 h-3.5 text-blue-500" />
                         <span>{hi ? 'भाषाएं: हिंदी + अंग्रेजी' : 'Languages: English + Hindi'}</span>
@@ -470,7 +759,6 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
 
                     </div>
 
-                    {/* Footer Action Bar */}
                     <div className="p-4 bg-slate-50/50 dark:bg-slate-900/30 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
                       {isAttempted ? (
                         <>
@@ -485,7 +773,7 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
                             onClick={() => navigate(`/results`)}
                             className="flex-1 py-2.5 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold hover:bg-slate-100 transition-all text-center"
                           >
-                            {hi ? 'उत्तर एवं विश्लेषण' : 'Solutions & Analysis'}
+                            {hi ? 'उत्तर एवं विश्लेषण' : 'Solutions'}
                           </button>
                         </>
                       ) : (
@@ -524,7 +812,8 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════
-            §4 PW STYLE SUBJECT & UNIT MASTERY TRACKER
+            §6 PW STYLE REAL DATA SUBJECT & UNIT MASTERY RADAR
+            (100% REAL ACCURACY COMPUTED FROM USER ATTEMPTS)
             ═══════════════════════════════════════════════════════════════ */}
         <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm p-6 md:p-8 space-y-6">
           
@@ -532,10 +821,10 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
             <div>
               <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                 <BarChart3 className="w-6 h-6 text-purple-600" />
-                {hi ? 'विषयवार एवं यूनिट मास्टर ट्रैकर' : 'Subject & Unit Mastery Radar'}
+                {hi ? 'विषयवार एवं यूनिट मास्टर ट्रैकर (वास्तविक डेटा)' : 'Subject & Unit Mastery Radar (Real Data)'}
               </h2>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                {hi ? 'प्रत्येक इकाई में अपनी सटीकता देखें और सीधे 1-क्लिक से उस यूनिट का अभ्यास करें।' : 'Track accuracy by syllabus unit and launch focused unit quizzes.'}
+                {hi ? 'आपकी वास्तविक परीक्षाओं के आधार पर प्रत्येक यूनिट की सटीक परफॉरमेंस।' : 'Real performance percentages calculated from your test attempts.'}
               </p>
             </div>
 
@@ -564,12 +853,16 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
             </div>
           </div>
 
-          {/* Unit Grid */}
+          {/* Unit Grid with 100% Real Attempt Data */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            {(activeUnitPaperTab === 'paper1' ? PAPER1_UNITS : PAPER2_HISTORY_UNITS).map((unit, idx) => {
-              const UnitIcon = unit.icon;
-              // Mock or real unit accuracy fallback
-              const mockAccuracy = Math.max(45, Math.min(92, 55 + (idx * 4) % 35));
+            {(activeUnitPaperTab === 'paper1' ? PAPER1_UNITS : PAPER2_HISTORY_UNITS).map((unit) => {
+              const realUnitData = getRealUnitData(unit, activeUnitPaperTab);
+              const accuracy = realUnitData.accuracy;
+              const hasData = realUnitData.hasData;
+
+              // Color based on real accuracy: Red < 40%, Orange < 70%, Green >= 70%
+              const progressColor = !hasData ? 'bg-slate-300 dark:bg-slate-700' : accuracy < 40 ? 'bg-red-500' : accuracy < 70 ? 'bg-amber-500' : 'bg-emerald-500';
+              const textColor = !hasData ? 'text-slate-400' : accuracy < 40 ? 'text-red-500' : accuracy < 70 ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400';
 
               return (
                 <div
@@ -581,8 +874,9 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
                       <span className="px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold text-[10px]">
                         {unit.id}
                       </span>
-                      <span className="font-black text-slate-700 dark:text-slate-300 text-xs">
-                        {mockAccuracy}%
+                      
+                      <span className={`font-black text-xs ${textColor}`}>
+                        {hasData ? `${accuracy}%` : (hi ? 'प्रयास नहीं किया' : '0%')}
                       </span>
                     </div>
 
@@ -593,8 +887,8 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
                     {/* Progress Bar */}
                     <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
                       <div
-                        className="bg-blue-600 h-full rounded-full transition-all duration-700"
-                        style={{ width: `${mockAccuracy}%` }}
+                        className={`h-full rounded-full transition-all duration-700 ${progressColor}`}
+                        style={{ width: `${hasData ? accuracy : 0}%` }}
                       />
                     </div>
                   </div>
@@ -614,50 +908,7 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════
-            §5 PW AI WEAKNESS QUICK-FIXER SPOTLIGHT
-            ═══════════════════════════════════════════════════════════════ */}
-        {criticalAreas.length > 0 && (
-          <div className="bg-gradient-to-r from-red-900 via-rose-900 to-slate-900 rounded-3xl p-6 md:p-8 text-white border border-rose-500/30 shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-rose-500/10 rounded-full blur-3xl" />
-            
-            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              <div className="space-y-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-400/30 text-xs font-bold uppercase tracking-wider">
-                  <AlertTriangle className="w-4 h-4 text-amber-400" />
-                  {hi ? 'AI कमजोर क्षेत्र विश्लेषण' : 'AI Weakness Spotlight'}
-                </div>
-                <h3 className="text-2xl font-black">
-                  {hi ? 'इन 3 महत्वपूर्ण विषयों में सुधार की आवश्यकता है' : 'Critical Topics Requiring Attention'}
-                </h3>
-                <p className="text-rose-200 text-xs md:text-sm max-w-xl">
-                  {hi 
-                    ? 'आपकी पिछली परीक्षाओं के विश्लेषण अनुसार इन क्षेत्रों में अंक गंवाए जा रहे हैं।' 
-                    : 'Based on your recent attempts, improving these topics can quickly add +20 marks to your score.'}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                {criticalAreas.map((area, i) => (
-                  <div key={i} className="bg-black/30 backdrop-blur-md border border-rose-500/30 rounded-2xl p-3 px-4 text-center min-w-[130px]">
-                    <div className="text-[11px] font-bold text-rose-200 truncate max-w-[120px]" title={area.name}>{area.name}</div>
-                    <div className="text-base font-black text-white mt-0.5">{area.accuracy}% {hi ? 'सटीकता' : 'Accuracy'}</div>
-                  </div>
-                ))}
-
-                <button
-                  onClick={() => setShowAdaptiveModal(true)}
-                  className="bg-white hover:bg-rose-50 text-rose-950 font-black px-5 py-3 rounded-2xl shadow-lg transition-all text-xs flex items-center gap-1.5 ml-auto lg:ml-0"
-                >
-                  <Brain className="w-4 h-4 text-rose-600" />
-                  {hi ? 'कमजोरियों को अभी ठीक करें' : 'Fix Weakness Now'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════════════════════════
-            §6 MODAL COMPONENTS
+            §7 MODAL COMPONENTS
             ═══════════════════════════════════════════════════════════════ */}
         {showAdaptiveModal && (
           <AdaptiveTestCreator
@@ -687,7 +938,7 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
   );
 };
 
-// Helper Globe Icon for Language Specs
+// Helper Globe Icon
 const GlobeIcon = ({ className }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h1.5a2.5 2.5 0 002.5-2.5V11.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 5H10.5A2.5 2.5 0 008 7.5v-.565z" />
