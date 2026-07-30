@@ -5,7 +5,7 @@ import {
   BarChart3, Settings, ChevronLeft, ChevronRight, X, GraduationCap,
   BookOpen, Database, ScrollText, TrendingUp, Target, Sparkles, CalendarCheck,
   FlaskConical, Library, Search, ChevronDown, Command,
-  Keyboard, HelpCircle, ArrowRight, Layers, Hash, Zap, AlertTriangle, Clock
+  Keyboard, HelpCircle, ArrowRight, Layers, Hash, Zap, AlertTriangle, Clock, Activity
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════
