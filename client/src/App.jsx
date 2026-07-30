@@ -8,6 +8,7 @@ import {
 
 // Pages
 import Dashboard from './pages/Dashboard';
+import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import MissionJRFPlannerPage from './pages/MissionJRFPlannerPage';
 import QuestionBank from './pages/QuestionBank';
 import ImportQuestions from './pages/ImportQuestions';
@@ -387,6 +388,14 @@ function App() {
               path="/"
               element={
                 <Dashboard language={language} setLanguage={setLanguage} />
+              }
+            />
+
+            {/* Advanced Analytics */}
+            <Route
+              path="/analytics"
+              element={
+                <AnalyticsDashboard language={language} setLanguage={setLanguage} />
               }
             />
 

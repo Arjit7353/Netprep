@@ -132,6 +132,7 @@ const MENU = [
     label: { en: 'Overview', hi: 'अवलोकन' },
     items: [
       { id: 'dashboard', label: { en: 'Dashboard', hi: 'डैशबोर्ड' }, icon: LayoutDashboard, path: '/', shortcut: 'D' },
+      { id: 'analytics', label: { en: 'Advanced Analytics', hi: 'उन्नत एनालिटिक्स' }, icon: Activity, path: '/analytics', shortcut: 'A' },
       { id: 'planner', label: { en: 'Mission JRF Planner', hi: 'मिशन JRF टाइमटेबल' }, icon: CalendarCheck, path: '/planner', shortcut: 'P', accent: true },
       { id: 'questions', label: { en: 'Question Bank', hi: 'प्रश्न बैंक' }, icon: FileQuestion, path: '/questions', shortcut: 'Q' },
       { id: 'import', label: { en: 'Import', hi: 'आयात करें' }, icon: Upload, path: '/import', shortcut: 'I' },

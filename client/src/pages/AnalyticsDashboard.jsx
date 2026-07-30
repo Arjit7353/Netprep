@@ -11,7 +11,7 @@ import {
   RefreshCw, Calendar, Timer, Shield, Award, Brain, Lightbulb, Eye,
   Layers, Coffee, Sun, Moon, Sunset, Hash, Flag, Minus,
   ArrowUpRight, ArrowDownRight, Activity, BookMarked, GraduationCap,
-  Sparkles, Compass, CheckSquare, Layers3, CheckCircle2, ListFilter, PlusCircle
+  Sparkles, Compass, CheckSquare, Layers3, CheckCircle2
 } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import useDashboard from '../hooks/useDashboard';
@@ -131,7 +131,7 @@ const TrendArrow = ({ direction, size = 14 }) => {
 // ═══════════════════════════════════════════════════════
 //  MAIN DASHBOARD COMPONENT
 // ═══════════════════════════════════════════════════════
-const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => {
+const AnalyticsDashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => {
   // Sync language with state, localStorage, and props
   const [language, setLanguageState] = useState(() => {
     return propLanguage || localStorage.getItem('netprep-language') || 'en';
@@ -219,247 +219,8 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
       <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6 animate-fade-in pb-20">
 
         {/* ════════════════════════════════════════════
-            §1  HERO: EXAM COMMAND CENTER
+            §2  EXPLAINABLE AI SCORE PREDICTOR + DAILY REPORT
         ════════════════════════════════════════════ */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-blue-600 to-purple-700 p-6 md:p-8 text-white shadow-2xl">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-400 opacity-10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3" />
-          
-          <div className="relative z-10">
-            {/* Top row */}
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-black mb-1">{getGreeting()}</h1>
-                <p className="text-blue-100 text-sm max-w-lg">
-                  {hi ? 'UGC NET की तैयारी का कमांड सेंटर - सब कुछ एक नज़र में' : 'Your UGC NET preparation command center - everything at a glance'}
-                </p>
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <button onClick={() => setShowAdaptiveModal(true)}
-                  className="bg-gradient-to-r from-amber-400 to-orange-500 text-gray-900 px-4 py-2 rounded-xl font-black text-sm shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2">
-                  <Brain className="w-4 h-4 text-gray-900" /> {hi ? 'AI एडाप्टिव टेस्ट' : 'AI Adaptive Test'}
-                </button>
-                <button onClick={() => navigate('/timeline')}
-                  className="bg-purple-500/30 text-white border border-purple-300/40 backdrop-blur-sm px-4 py-2 rounded-xl font-bold text-sm shadow-lg hover:bg-purple-500/40 hover:scale-105 transition-all flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-purple-200" /> {hi ? 'कालक्रम टाइमलाइन' : 'Timeline'}
-                </button>
-                <button onClick={() => navigate('/planner')}
-                  className="bg-amber-400 text-gray-900 px-4 py-2 rounded-xl font-black text-sm shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2">
-                  <Target className="w-4 h-4 text-gray-900" /> {hi ? 'मिशन JRF टाइमटेबल' : 'Mission JRF Planner'}
-                </button>
-                <button onClick={() => navigate('/tests')}
-                  className="bg-white text-blue-700 px-4 py-2 rounded-xl font-bold text-sm shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2">
-                  <Play className="w-4 h-4" /> {hi ? 'टेस्ट दें' : 'Take Test'}
-                </button>
-                <button onClick={() => d.refresh()}
-                  className="bg-white/15 backdrop-blur-sm text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-white/25 transition-all flex items-center gap-2">
-                  <RefreshCw className={`w-4 h-4 ${d.refreshing ? 'animate-spin' : ''}`} /> {hi ? 'रिफ्रेश' : 'Refresh'}
-                </button>
-              </div>
-            </div>
-
-            {/* Countdown + Readiness */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
-              {/* Countdown */}
-              <div className="col-span-2 bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-                {ecc.countdown.isSet && !editingDate ? (
-                  <div className="text-center relative group">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-blue-200 text-xs font-medium">{hi ? 'परीक्षा तक (Exam Date)' : 'Exam Countdown'}</p>
-                      <button
-                        onClick={() => setEditingDate(true)}
-                        className="text-blue-200 hover:text-white text-[10px] font-bold underline transition-colors"
-                      >
-                        {hi ? 'तारीख बदलें' : 'Change Date'}
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-center gap-3">
-                      <div><p className="text-3xl font-black">{ecc.countdown.days}</p><p className="text-[10px] text-blue-200">{hi ? 'दिन' : 'Days'}</p></div>
-                      <span className="text-2xl font-light opacity-50">:</span>
-                      <div><p className="text-3xl font-black">{ecc.countdown.hours}</p><p className="text-[10px] text-blue-200">{hi ? 'घंटे' : 'Hrs'}</p></div>
-                      <span className="text-2xl font-light opacity-50">:</span>
-                      <div><p className="text-3xl font-black">{ecc.countdown.minutes}</p><p className="text-[10px] text-blue-200">{hi ? 'मिनट' : 'Min'}</p></div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-blue-200 text-xs font-medium">{hi ? 'परीक्षा तारीख चुनें' : 'Select Exam Date'}</p>
-                      {ecc.countdown.isSet && (
-                        <button onClick={() => setEditingDate(false)} className="text-blue-200 text-[10px] underline">
-                          {hi ? 'रद्द करें' : 'Cancel'}
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <input type="date" value={examDateInput} onChange={e => {
-                        setExamDateInput(e.target.value);
-                        handleSetExamDate(e.target.value);
-                      }}
-                        className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/30" />
-                      <button onClick={() => handleSetExamDate(examDateInput)}
-                        className="bg-white text-blue-700 px-3 py-1.5 rounded-lg text-sm font-bold hover:scale-105 transition-all">
-                        {hi ? 'सेट' : 'Set'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Readiness */}
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10 text-center">
-                <p className="text-blue-200 text-xs mb-1 font-medium">{hi ? 'तैयारी' : 'Readiness'}</p>
-                <p className="text-3xl font-black">{ecc.readiness.overall}%</p>
-                <ProgressBar value={ecc.readiness.overall} color="#fff" height={4} />
-              </div>
-
-              {/* Current Phase */}
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10 text-center">
-                <p className="text-blue-200 text-xs mb-1 font-medium">{hi ? 'चरण' : 'Phase'}</p>
-                <p className="text-lg font-black">{hi ? ecc.phase.current?.nameHi : ecc.phase.current?.name}</p>
-                <p className="text-[10px] text-blue-200 mt-1">{hi ? ecc.phase.current?.descHi : ecc.phase.current?.description}</p>
-              </div>
-
-              {/* Streak */}
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10 text-center">
-                <p className="text-blue-200 text-xs mb-1 font-medium">{hi ? 'स्ट्रीक' : 'Streak'}</p>
-                <p className="text-3xl font-black flex items-center justify-center gap-1">
-                  {d.streak} <Flame className="w-5 h-5 text-orange-400" />
-                </p>
-                <p className="text-[10px] text-blue-200">{hi ? `सर्वश्रेष्ठ: ${d.longestStreak}d` : `Best: ${d.longestStreak}d`}</p>
-              </div>
-
-              {/* XP */}
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10 text-center">
-                <p className="text-blue-200 text-xs mb-1 font-medium">{hi ? 'आज XP' : 'Today XP'}</p>
-                <p className="text-3xl font-black flex items-center justify-center gap-1">
-                  {d.todayXP} <Zap className="w-5 h-5 text-amber-400" />
-                </p>
-                <p className="text-[10px] text-blue-200">{hi ? `${d.todayDetailed.count} टेस्ट आज` : `${d.todayDetailed.count} tests today`}</p>
-              </div>
-            </div>
-
-            {/* Risk Alerts */}
-            {ecc.riskAlerts.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {ecc.riskAlerts.slice(0, 3).map((alert, i) => (
-                  <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold ${
-                    alert.level === 'critical' ? 'bg-red-500/20 text-red-200' :
-                    alert.level === 'warning' ? 'bg-amber-500/20 text-amber-200' : 'bg-blue-500/20 text-blue-200'
-                  }`}>
-                    <AlertTriangle className="w-3 h-3" />
-                    {hi ? alert.textHi : alert.text}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-
-
-        {/* ════════════════════════════════════════════
-            §2  ADVANCED TEST ACTION CENTER
-        ════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* AI Adaptive Test */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 hover:shadow-xl transition-all group relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400 to-orange-500 opacity-10 rounded-full blur-2xl group-hover:scale-150 transition-transform" />
-            <div className="relative z-10 flex flex-col h-full">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg flex-shrink-0">
-                  <Brain className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-gray-900 dark:text-white group-hover:text-amber-500 transition-colors">
-                    {hi ? 'AI एडाप्टिव टेस्ट' : 'AI Adaptive Test'}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {hi ? 'आपकी कमजोरी के अनुसार स्मार्ट टेस्ट' : 'Smart test tailored to your weaknesses'}
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => setShowAdaptiveModal(true)}
-                className="mt-auto w-full py-3 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-400 font-bold rounded-xl transition-all flex items-center justify-center gap-2">
-                <Play className="w-4 h-4" /> {hi ? 'शुरू करें' : 'Start Now'}
-              </button>
-            </div>
-          </div>
-
-          {/* Full Mock Test */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 hover:shadow-xl transition-all group relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500 to-indigo-600 opacity-10 rounded-full blur-2xl group-hover:scale-150 transition-transform" />
-            <div className="relative z-10 flex flex-col h-full">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg flex-shrink-0">
-                  <ClipboardList className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-gray-900 dark:text-white group-hover:text-blue-500 transition-colors">
-                    {hi ? 'फुल मॉक टेस्ट' : 'Full Mock Test'}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {hi ? 'NTA पैटर्न पर आधारित पूरा टेस्ट' : 'Full length test on NTA pattern'}
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => navigate('/tests/create')}
-                className="mt-auto w-full py-3 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 text-blue-700 dark:text-blue-400 font-bold rounded-xl transition-all flex items-center justify-center gap-2">
-                <PlusCircle className="w-4 h-4" /> {hi ? 'नया टेस्ट बनाएं' : 'Create New Test'}
-              </button>
-            </div>
-          </div>
-
-          {/* PYQ Challenge */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 hover:shadow-xl transition-all group relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400 to-teal-500 opacity-10 rounded-full blur-2xl group-hover:scale-150 transition-transform" />
-            <div className="relative z-10 flex flex-col h-full">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg flex-shrink-0">
-                  <BookOpen className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-gray-900 dark:text-white group-hover:text-emerald-500 transition-colors">
-                    {hi ? 'PYQ चैलेंज' : 'PYQ Challenge'}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {hi ? 'पिछले वर्षों के प्रश्न हल करें' : 'Practice previous year questions'}
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => navigate('/pyq/question-bank')}
-                className="mt-auto w-full py-3 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 font-bold rounded-xl transition-all flex items-center justify-center gap-2">
-                <Target className="w-4 h-4" /> {hi ? 'अभ्यास करें' : 'Practice Now'}
-              </button>
-            </div>
-          </div>
-
-          {/* Topic-wise Practice */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6 hover:shadow-xl transition-all group relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 opacity-10 rounded-full blur-2xl group-hover:scale-150 transition-transform" />
-            <div className="relative z-10 flex flex-col h-full">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg flex-shrink-0">
-                  <Layers className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-black text-gray-900 dark:text-white group-hover:text-purple-500 transition-colors">
-                    {hi ? 'टॉपिक अभ्यास' : 'Topic Practice'}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {hi ? 'किसी विशेष विषय पर ध्यान दें' : 'Focus on a specific topic'}
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => navigate('/questions')}
-                className="mt-auto w-full py-3 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-400 font-bold rounded-xl transition-all flex items-center justify-center gap-2">
-                <ListFilter className="w-4 h-4" /> {hi ? 'प्रश्न खोजें' : 'Browse Questions'}
-              </button>
-            </div>
-          </div>
-
-        </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Explainable AI Score Predictor */}
@@ -1062,4 +823,4 @@ const Dashboard = ({ language: propLanguage, setLanguage: propSetLanguage }) => 
   );
 };
 
-export default Dashboard;
+export default AnalyticsDashboard;
