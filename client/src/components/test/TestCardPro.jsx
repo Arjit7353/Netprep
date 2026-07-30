@@ -430,6 +430,14 @@ const TestCardPro = ({
             <div className={`h-full ${t.strip} transition-all duration-500`} style={{ width: `${best}%` }} />
           </div>
         )}
+
+        {/* Interface Selector Modal for Grid variant */}
+        <TestInterfaceSelectorModal
+          isOpen={showSelectorModal}
+          onClose={() => setShowSelectorModal(false)}
+          testId={test._id}
+          language={language}
+        />
       </div>
     );
   }
