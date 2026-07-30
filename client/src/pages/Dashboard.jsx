@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Brain, Target, Layers, PlusCircle, ArrowRight, RefreshCw, BookOpen, Clock } from 'lucide-react';
+import { Play, Brain, Target, Layers, PlusCircle, ArrowRight, RefreshCw, BookOpen, Clock, Zap } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import AdaptiveTestCreator from '../components/test/AdaptiveTestCreator';
 import TestCardPro from '../components/test/TestCardPro';
