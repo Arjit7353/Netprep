@@ -103,7 +103,13 @@ const parseUnits = (unitStr) => {
 
 const shortUnit = (unit) => {
   if (!unit) return '';
-  return unit.replace(/^UNIT\s*/i, 'U-').replace(/^इकाई\s*/i, 'U-').trim();
+  const match = unit.match(/(?:UNIT|इकाई)\s*([IVXLCDM]+|\d+)[:\-\s]*(.*)/i);
+  if (match) {
+    const num = match[1];
+    const rest = match[2]?.trim();
+    return rest ? `Unit ${num}: ${rest}` : `Unit ${num}`;
+  }
+  return unit.trim();
 };
 
 // ═══════════════════════════════════════════════════════
@@ -290,13 +296,13 @@ const TestCardPro = ({
                 {test.paper && <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-md ${t.badgeLight}`}>{test.paper === 'paper1' ? 'P1' : 'P2'}</span>}
 
                 {unitList.length === 1 && (
-                  <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-md ${t.badgeLight} truncate max-w-[80px]`}>
+                  <span title={unitList[0]} className={`px-2 py-0.5 text-[10px] font-bold rounded-md ${t.badgeLight} truncate max-w-[240px]`}>
                     {shortUnit(unitList[0])}
                   </span>
                 )}
                 {unitList.length > 1 && unitList.length <= 3 && (
                   unitList.map((u, i) => (
-                    <span key={i} className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-md ${t.badgeLight}`}>
+                    <span key={i} title={u} className={`px-2 py-0.5 text-[10px] font-bold rounded-md ${t.badgeLight} truncate max-w-[160px]`}>
                       {shortUnit(u)}
                     </span>
                   ))
@@ -304,11 +310,11 @@ const TestCardPro = ({
                 {unitList.length > 3 && (
                   <>
                     {unitList.slice(0, 2).map((u, i) => (
-                      <span key={i} className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-md ${t.badgeLight}`}>
+                      <span key={i} title={u} className={`px-2 py-0.5 text-[10px] font-bold rounded-md ${t.badgeLight} truncate max-w-[140px]`}>
                         {shortUnit(u)}
                       </span>
                     ))}
-                    <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-md ${t.badgeLight}`}>
+                    <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md ${t.badgeLight}`}>
                       +{unitList.length - 2}
                     </span>
                   </>

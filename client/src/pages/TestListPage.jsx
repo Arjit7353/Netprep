@@ -131,67 +131,99 @@ const unitMatchesId = (testUnit, pyqUnitId, testPyqUnits) => {
   return false;
 };
 
-const FolderCard = ({ title, subtitle, count, icon: Icon, color = 'blue', onClick }) => {
-  const colorMap = {
-    blue: 'from-blue-500 to-blue-600 shadow-blue-500/30',
-    amber: 'from-amber-500 to-amber-600 shadow-amber-500/30',
-    purple: 'from-purple-500 to-purple-600 shadow-purple-500/30',
-    green: 'from-emerald-500 to-emerald-600 shadow-emerald-500/30',
-    rose: 'from-rose-500 to-rose-600 shadow-rose-500/30',
-    gray: 'from-gray-600 to-gray-700 shadow-gray-500/30'
+const FolderCard = ({ title, subtitle, count, icon: Icon, color = 'blue', onClick, tag }) => {
+  const themeMap = {
+    blue: {
+      bgGrad: 'from-blue-500/10 via-indigo-500/5 to-transparent',
+      borderHover: 'hover:border-blue-500/60 dark:hover:border-blue-400/60',
+      iconGrad: 'from-blue-500 to-indigo-600 shadow-blue-500/30',
+      badgeBg: 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200/80 dark:border-blue-700/80',
+      textAccent: 'group-hover:text-blue-600 dark:group-hover:text-blue-400',
+    },
+    amber: {
+      bgGrad: 'from-amber-500/10 via-orange-500/5 to-transparent',
+      borderHover: 'hover:border-amber-500/60 dark:hover:border-amber-400/60',
+      iconGrad: 'from-amber-500 to-orange-600 shadow-amber-500/30',
+      badgeBg: 'bg-amber-50 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200/80 dark:border-amber-700/80',
+      textAccent: 'group-hover:text-amber-600 dark:group-hover:text-amber-400',
+    },
+    purple: {
+      bgGrad: 'from-purple-500/10 via-violet-500/5 to-transparent',
+      borderHover: 'hover:border-purple-500/60 dark:hover:border-purple-400/60',
+      iconGrad: 'from-purple-500 to-violet-600 shadow-purple-500/30',
+      badgeBg: 'bg-purple-50 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border-purple-200/80 dark:border-purple-700/80',
+      textAccent: 'group-hover:text-purple-600 dark:group-hover:text-purple-400',
+    },
+    green: {
+      bgGrad: 'from-emerald-500/10 via-teal-500/5 to-transparent',
+      borderHover: 'hover:border-emerald-500/60 dark:hover:border-emerald-400/60',
+      iconGrad: 'from-emerald-500 to-teal-600 shadow-emerald-500/30',
+      badgeBg: 'bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-700/80',
+      textAccent: 'group-hover:text-emerald-600 dark:group-hover:text-emerald-400',
+    },
+    rose: {
+      bgGrad: 'from-rose-500/10 via-pink-500/5 to-transparent',
+      borderHover: 'hover:border-rose-500/60 dark:hover:border-rose-400/60',
+      iconGrad: 'from-rose-500 to-pink-600 shadow-rose-500/30',
+      badgeBg: 'bg-rose-50 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 border-rose-200/80 dark:border-rose-700/80',
+      textAccent: 'group-hover:text-rose-600 dark:group-hover:text-rose-400',
+    },
+    gray: {
+      bgGrad: 'from-gray-500/10 via-slate-500/5 to-transparent',
+      borderHover: 'hover:border-gray-400 dark:hover:border-gray-500',
+      iconGrad: 'from-slate-600 to-gray-700 shadow-gray-500/30',
+      badgeBg: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600',
+      textAccent: 'group-hover:text-gray-900 dark:group-hover:text-white',
+    }
   };
-  
-  const bg = colorMap[color] || colorMap.gray;
-  
+
+  const theme = themeMap[color] || themeMap.gray;
+
   return (
     <button 
       onClick={onClick} 
-      className="group relative w-full flex items-center gap-4 p-4 sm:p-5 rounded-2xl bg-white dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80 transition-all duration-300 hover:shadow-xl hover:shadow-gray-200/50 dark:hover:shadow-gray-900/50 hover:-translate-y-1 hover:border-transparent dark:hover:border-transparent overflow-hidden text-left backdrop-blur-sm"
+      className={`group relative w-full flex flex-col p-5 sm:p-6 rounded-2xl bg-white dark:bg-gray-800/95 border border-gray-200/90 dark:border-gray-700/80 transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 overflow-hidden text-left backdrop-blur-md ${theme.borderHover}`}
     >
-      {/* Subtle hover gradient overlay */}
-      <div className={`absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 bg-gradient-to-r ${bg}`} />
+      {/* Background glow gradient */}
+      <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br ${theme.bgGrad}`} />
       
-      {/* Glowing Left Icon */}
-      <div className={`relative flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br ${bg} shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
-        <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-        {Icon ? <Icon className="w-7 h-7 sm:w-8 sm:h-8 text-white drop-shadow-sm relative z-10" /> : <FolderOpen className="w-7 h-7 sm:w-8 sm:h-8 text-white drop-shadow-sm relative z-10" />}
+      {/* Top bar: Icon on left, Badge on right */}
+      <div className="relative z-10 flex items-center justify-between gap-3 mb-4 w-full">
+        <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br ${theme.iconGrad} shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+          {Icon ? <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-sm" /> : <FolderOpen className="w-6 h-6 sm:w-7 sm:h-7 text-white drop-shadow-sm" />}
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {tag && (
+            <span className="px-2.5 py-1 text-[11px] font-bold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+              {tag}
+            </span>
+          )}
+          {count !== undefined && (
+            <div className={`flex items-center justify-center px-3 py-1.5 rounded-xl border text-xs sm:text-sm font-extrabold shadow-sm transition-transform duration-300 group-hover:scale-105 ${theme.badgeBg}`}>
+              <span>{count} {count === 1 ? 'Test' : 'Tests'}</span>
+            </div>
+          )}
+        </div>
       </div>
-      
-      {/* Content */}
-      <div className="flex-1 min-w-0 py-1">
-        <h3 className="text-base sm:text-lg font-extrabold text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+
+      {/* Main Title & Subtitle - NO TRUNCATE so complete unit name is shown! */}
+      <div className="relative z-10 flex-1 min-w-0">
+        <h3 className={`text-base sm:text-lg font-black text-gray-900 dark:text-white transition-colors leading-snug ${theme.textAccent}`}>
           {title}
         </h3>
         {subtitle && (
-          <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 truncate mt-0.5">
+          <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 mt-1.5 leading-relaxed break-words">
             {subtitle}
           </p>
         )}
       </div>
-      
-      {/* Count Badge */}
-      {count !== undefined && (
-        <div className="flex-shrink-0 flex flex-col items-center justify-center min-w-[2.5rem] px-3 py-1.5 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-200/80 dark:border-gray-600/50 transition-all group-hover:bg-white dark:group-hover:bg-gray-600 shadow-sm group-hover:shadow group-hover:scale-110">
-          <span className="text-xs sm:text-sm font-black text-gray-800 dark:text-gray-100 leading-none">{count}</span>
-        </div>
-      )}
-    </button>
-  );
-  
-  return (
-    <button onClick={onClick} className={`w-full relative flex items-center gap-4 p-4 rounded-2xl border-2 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md text-left ${colorMap[color] || colorMap.gray}`}>
-      <div className={`p-3 rounded-xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 flex-shrink-0`}>
-        {Icon ? <Icon className={`w-7 h-7 ${iconColorMap[color]}`} fill="currentColor" fillOpacity={0.2} /> : <FolderOpen className={`w-7 h-7 ${iconColorMap[color]}`} fill="currentColor" fillOpacity={0.2} />}
+
+      {/* Bottom action bar */}
+      <div className="relative z-10 mt-4 pt-3 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-xs font-bold text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
+        <span>Explore Tests</span>
+        <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1.5 text-gray-400 group-hover:text-amber-500" />
       </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">{title}</h3>
-        {subtitle && <p className="text-xs mt-0.5 text-gray-500 dark:text-gray-400 truncate">{subtitle}</p>}
-      </div>
-      {count !== undefined && (
-        <div className="flex-shrink-0 flex items-center justify-center min-w-[2.5rem] h-7 px-2 rounded-full bg-white dark:bg-gray-800 text-[11px] font-black shadow-sm border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-300">
-          {count}
-        </div>
-      )}
     </button>
   );
 };
@@ -671,7 +703,35 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
           {/* ----------- HOME VIEW ----------- */}
           {view === 'home' && (
             <div className="space-y-6 animate-fade-in mt-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {/* Featured History (Paper 2) Spotlight Card */}
+              <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-600 text-white shadow-xl relative overflow-hidden">
+                <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-white/10 backdrop-blur-3xl rounded-l-full transform translate-x-12 pointer-events-none" />
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="max-w-2xl">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-xs font-black uppercase tracking-wider backdrop-blur-md mb-3">
+                      <BookOpen className="w-3.5 h-3.5" /> Paper 2 • History (Code: 06)
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-black tracking-tight mb-2">
+                      UGC NET History Test Library
+                    </h2>
+                    <p className="text-amber-100 text-sm sm:text-base font-medium leading-relaxed">
+                      Complete test preparation for Ancient, Medieval, Modern India & Historiography. Browse by units, DPPs, PYQs, and full mock tests.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() => selectPaper('paper2')}
+                      className="px-6 py-3.5 bg-white text-amber-950 font-extrabold rounded-2xl shadow-xl hover:bg-amber-50 transition-all transform hover:-translate-y-0.5 flex items-center gap-2.5 text-sm sm:text-base"
+                    >
+                      <Layers className="w-5 h-5 text-amber-600" />
+                      <span>Browse History Units ({countsByPaper['paper2'] || 0} Tests)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Category Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
                 {Object.entries(PAPER_CONFIGS).map(([key, cfg]) => {
                   const count = countsByPaper[key] || 0;
                   const colorMap = {
@@ -708,7 +768,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
           {/* ----------- PYQ MAIN VIEW ----------- */}
           {view === 'pyq' && (
             <div className="space-y-6 animate-fade-in mt-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
                 {/* View All Tests Folder */}
                 <FolderCard 
                   title={T.viewAll[language]}
@@ -721,7 +781,8 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
 
                 {/* Units */}
                 {pyqUnits.map((unit, idx) => {
-                  const unitNum = unit.id?.match(/d+/)?.[0] || idx + 1;
+                  const unitNumMatch = unit.id?.match(/(?:UNIT|इकाई)\s*([IVXLCDM]+|\d+)/i) || unit.id?.match(/\d+/);
+                  const unitNum = unitNumMatch ? unitNumMatch[1] || unitNumMatch[0] : (idx + 1);
                   return (
                     <FolderCard 
                       key={unit.id}
@@ -865,11 +926,11 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
           {/* ----------- PAPER VIEW ----------- */}
           {view === 'paper' && filters.paper && (
             <div className="space-y-6 animate-fade-in mt-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
                 {/* View All Tests Folder */}
                 <FolderCard 
                   title={T.viewAll[language]}
-                  subtitle={`${PAPER_CONFIGS[filters.paper]?.title[language]} Tests`}
+                  subtitle={`${PAPER_CONFIGS[filters.paper]?.title[language]} - Complete Test Series`}
                   count={countsByPaper[filters.paper] || 0}
                   icon={List}
                   color="gray"
@@ -878,7 +939,8 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
 
                 {/* Units */}
                 {unitsForPaper.map((item, idx) => {
-                  const unitNum = item.unit?.match(/d+/)?.[0] || idx + 1;
+                  const unitNumMatch = item.unit?.match(/(?:UNIT|इकाई)\s*([IVXLCDM]+|\d+)/i) || item.unit?.match(/\d+/);
+                  const unitNum = unitNumMatch ? unitNumMatch[1] || unitNumMatch[0] : (idx + 1);
                   return (
                     <FolderCard 
                       key={item.unit}
@@ -886,7 +948,7 @@ const TestListPage = ({ language: globalLanguage = 'en', setLanguage: setGlobalL
                       subtitle={item.unit}
                       count={item.count}
                       icon={Layers}
-                      color="blue"
+                      color={filters.paper === 'paper2' ? 'amber' : 'blue'}
                       onClick={() => selectUnit(item.unit)}
                     />
                   );
