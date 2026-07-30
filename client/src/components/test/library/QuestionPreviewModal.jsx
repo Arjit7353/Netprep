@@ -202,8 +202,10 @@ const QuestionPreviewModal = ({ question, isOpen, onClose, language = 'hi' }) =>
       }
 
       case 'match_following': {
-        const listA = getBilingualArray(q.matchData?.listA, showLang);
-        const listB = getBilingualArray(q.matchData?.listB, showLang);
+        const rawListA = getBilingualArray(q.matchData?.listA, showLang);
+        const rawListB = getBilingualArray(q.matchData?.listB, showLang);
+        const listA = rawListA.map(t => (!t || typeof t !== 'string') ? (t || '') : t.replace(/^\s*\(?[A-Da-d]\)?[\.\)\-:\s]+\s*/, '').trim());
+        const listB = rawListB.map(t => (!t || typeof t !== 'string') ? (t || '') : t.replace(/^\s*\(?\(?(?:i{1,3}|iv|v|vi{0,3}|viii|ix|x|\d{1,2})\)?\)?[\.\)\-:\s]+\s*/i, '').trim());
         return (
           <div className="space-y-3">
             {qText && <p className="text-sm text-gray-800 dark:text-secondary-200 leading-relaxed font-medium">{qText}</p>}

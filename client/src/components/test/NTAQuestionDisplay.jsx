@@ -129,9 +129,25 @@ const NTAQuestionDisplay = ({
   };
 
   const renderMatchFollowing = () => {
-    const listA = getBilingualArray(question.matchData?.listA, language);
-    const listB = getBilingualArray(question.matchData?.listB, language);
+    const rawListA = getBilingualArray(question.matchData?.listA, language);
+    const rawListB = getBilingualArray(question.matchData?.listB, language);
     const options = getBilingualArray(question.options, language);
+
+    // Strip leading labels like "A.", "(A)", "A)", "A -", "A:", "1.", "(1)" from listA items
+    const cleanListAItem = (text) => {
+      if (!text || typeof text !== 'string') return text || '';
+      return text.replace(/^\s*\(?[A-Da-d]\)?[\.\)\-:\s]+\s*/, '').trim();
+    };
+
+    // Strip leading Roman numeral labels like "(i)", "((ii))", "(iii)", "i)", "i.", "1.", "(1)" from listB items
+    const cleanListBItem = (text) => {
+      if (!text || typeof text !== 'string') return text || '';
+      // Match patterns: ((iv)), (iv), (4), iv), iv., 4., 4) etc at the start
+      return text.replace(/^\s*\(?\(?(?:i{1,3}|iv|v|vi{0,3}|viii|ix|x|\d{1,2})\)?\)?[\.\)\-:\s]+\s*/i, '').trim();
+    };
+
+    const listA = rawListA.map(cleanListAItem);
+    const listB = rawListB.map(cleanListBItem);
 
     return (
       <div>
@@ -158,7 +174,7 @@ const NTAQuestionDisplay = ({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-3 items-start">
-                      <span className="w-auto min-w-[24px] px-1 h-6 rounded-full bg-[#e8f5e9] text-[#2e7d32] flex items-center justify-center text-xs font-bold shrink-0">({getRomanNumeral(idx).toLowerCase()})</span>
+                      <span className="w-auto min-w-[24px] px-1 h-6 rounded-full bg-[#e8f5e9] text-[#2e7d32] flex items-center justify-center text-xs font-bold shrink-0">{getRomanNumeral(idx).toLowerCase()}</span>
                       <span className="pt-0.5">{listB[idx] || ''}</span>
                     </div>
                   </td>

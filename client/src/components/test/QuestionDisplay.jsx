@@ -245,9 +245,23 @@ const QuestionDisplay = ({
 
   /* ─── Match Following ─── */
   const renderMatchFollowing = () => {
-    const listA = getBilingualArray(question.matchData?.listA, language);
-    const listB = getBilingualArray(question.matchData?.listB, language);
+    const rawListA = getBilingualArray(question.matchData?.listA, language);
+    const rawListB = getBilingualArray(question.matchData?.listB, language);
     const options = getBilingualArray(question.options, language);
+
+    // Strip leading labels like "A.", "(A)", "A)" from listA items
+    const cleanListAItem = (text) => {
+      if (!text || typeof text !== 'string') return text || '';
+      return text.replace(/^\s*\(?[A-Da-d]\)?[\.\)\-:\s]+\s*/, '').trim();
+    };
+    // Strip leading Roman numeral labels like "(i)", "((ii))", "i)", "1." from listB items
+    const cleanListBItem = (text) => {
+      if (!text || typeof text !== 'string') return text || '';
+      return text.replace(/^\s*\(?\(?(?:i{1,3}|iv|v|vi{0,3}|viii|ix|x|\d{1,2})\)?\)?[\.\)\-:\s]+\s*/i, '').trim();
+    };
+
+    const listA = rawListA.map(cleanListAItem);
+    const listB = rawListB.map(cleanListBItem);
 
     return (
       <div className="space-y-4">
