@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import {
   getBilingualText, getBilingualArray, getOptionLabel,
-  getRomanNumeral, formatDate, getRelativeTime
+  getRomanNumeral, formatDate, getRelativeTime,
+  getSequenceItemLabel, formatMatchOption, formatSequenceOption
 } from '../../../utils/helpers';
 import { QUESTION_TYPE_LABELS, DIFFICULTY_LABELS, CHART_COLORS } from '../../../utils/constants';
 
@@ -166,7 +167,9 @@ const QuestionPreviewModal = ({ question, isOpen, onClose, language = 'hi' }) =>
     return [];
   };
 
-  const options = getOptions();
+  let options = getOptions();
+  if (qType === 'match_following') options = options.map(formatMatchOption);
+  if (qType === 'sequence_order') options = options.map(formatSequenceOption);
 
   // ═══ Render Question Content by Type ═══
   const renderQuestionBody = () => {

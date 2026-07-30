@@ -11,7 +11,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import ReportIssueModal from '../test/ReportIssueModal';
-import { getSequenceItemLabel } from '../../utils/helpers';
+import { getSequenceItemLabel, formatMatchOption, formatSequenceOption } from '../../utils/helpers';
 import AIDoubtPanel from './AIDoubtPanel';
 
 // ─── Hindi Detection ───────────────────────────────────────────────────────────
@@ -77,7 +77,9 @@ const bArr = (obj, lang) => {
 };
 
 const resolveOptions = (qData, lang) => {
-  const raw = bArr(qData.options, lang);
+  let raw = bArr(qData.options, lang);
+  if (qData.questionType === 'match_following') raw = raw.map(formatMatchOption);
+  if (qData.questionType === 'sequence_order') raw = raw.map(formatSequenceOption);
   if (qData.questionType === 'assertion_reason') {
     const defaults = lang === 'hi' ? AR_OPTIONS_HI : AR_OPTIONS_EN;
     if (!raw || raw.length === 0) return defaults;
@@ -864,8 +866,18 @@ const QContent = ({ qData, language }) => {
 
   // ── Match the following ────────────────────────────────────────────────────
   if (qType === 'match_following') {
-    const la = bArr(qData.matchData?.listA, language);
-    const lb = bArr(qData.matchData?.listB, language);
+    const rawLa = bArr(qData.matchData?.listA, language);
+    const rawLb = bArr(qData.matchData?.listB, language);
+    const cleanListAItem = (text) => {
+      if (!text || typeof text !== 'string') return text || '';
+      return text.replace(/^\s*\(?[A-Da-d]\)?[\.\)\-:\s]+\s*/, '').trim();
+    };
+    const cleanListBItem = (text) => {
+      if (!text || typeof text !== 'string') return text || '';
+      return text.replace(/^\s*\(?\(?(?:i{1,3}|iv|v|vi{0,3}|viii|ix|x|\d{1,2})\)?\)?[\.\)\-:\s]+\s*/i, '').trim();
+    };
+    const la = rawLa.map(cleanListAItem);
+    const lb = rawLb.map(cleanListBItem);
     return (
       <div className="space-y-4">
         <p className="text-gray-900 dark:text-white font-medium text-base">

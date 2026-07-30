@@ -87,6 +87,27 @@ export const getSequenceItemLabel = (index, options = []) => {
   return upperRoman[index] || `(${index + 1})`;
 };
 
+export const formatMatchOption = (optStr) => {
+  if (typeof optStr !== 'string') return optStr;
+  // Replace patterns like "a-2", "A- 2", "b - 3" with "A-(ii)", "B-(iii)"
+  return optStr.replace(/([a-hA-H])\s*[-–]\s*([1-8])/g, (match, p1, p2) => {
+    const letter = p1.toUpperCase();
+    const numIndex = parseInt(p2, 10) - 1;
+    const roman = ['(i)', '(ii)', '(iii)', '(iv)', '(v)', '(vi)', '(vii)', '(viii)'][numIndex] || p2;
+    return `${letter}-${roman}`;
+  });
+};
+
+export const formatSequenceOption = (optStr) => {
+  if (typeof optStr !== 'string') return optStr;
+  const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+  // Replace standalone digits [1-9] with their corresponding Roman numeral
+  return optStr.replace(/\b([1-9])\b/g, (match, p1) => {
+    const numIndex = parseInt(p1, 10) - 1;
+    return romanNumerals[numIndex] || p1;
+  });
+};
+
 
 export const truncateText = (text, maxLength = 100) => {
   if (!text) return '';

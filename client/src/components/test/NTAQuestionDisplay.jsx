@@ -4,8 +4,8 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import {
-  getBilingualText, getBilingualArray, getOptionLabel,
-  getRomanNumeral, getSequenceItemLabel, getChartLabels, getDatasetLabel
+  getRomanNumeral, getSequenceItemLabel, getChartLabels, getDatasetLabel,
+  formatMatchOption, formatSequenceOption
 } from '../../utils/helpers';
 import { QUESTION_TYPE_LABELS, CHART_COLORS, AR_OPTIONS_HI, AR_OPTIONS_EN } from '../../utils/constants';
 
@@ -131,7 +131,8 @@ const NTAQuestionDisplay = ({
   const renderMatchFollowing = () => {
     const rawListA = getBilingualArray(question.matchData?.listA, language);
     const rawListB = getBilingualArray(question.matchData?.listB, language);
-    const options = getBilingualArray(question.options, language);
+    let options = getBilingualArray(question.options, language);
+    options = options.map(formatMatchOption);
 
     // Strip leading labels like "A.", "(A)", "A)", "A -", "A:", "1.", "(1)" from listA items
     const cleanListAItem = (text) => {
@@ -194,7 +195,8 @@ const NTAQuestionDisplay = ({
 
   const renderSequenceOrder = () => {
     const items = getBilingualArray(question.sequenceData?.items, language);
-    const options = getBilingualArray(question.options, language);
+    let options = getBilingualArray(question.options, language);
+    options = options.map(formatSequenceOption);
 
     return (
       <div>

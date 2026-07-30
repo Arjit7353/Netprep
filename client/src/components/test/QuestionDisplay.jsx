@@ -9,8 +9,8 @@ import {
   ArrowRight, X
 } from 'lucide-react';
 import {
-  getBilingualText, getBilingualArray, getOptionLabel,
-  getRomanNumeral, getSequenceItemLabel, getChartLabels, getDatasetLabel
+  getRomanNumeral, getSequenceItemLabel, getChartLabels, getDatasetLabel,
+  formatMatchOption, formatSequenceOption
 } from '../../utils/helpers';
 import { QUESTION_TYPE_LABELS, CHART_COLORS, AR_OPTIONS_HI, AR_OPTIONS_EN } from '../../utils/constants';
 
@@ -247,7 +247,8 @@ const QuestionDisplay = ({
   const renderMatchFollowing = () => {
     const rawListA = getBilingualArray(question.matchData?.listA, language);
     const rawListB = getBilingualArray(question.matchData?.listB, language);
-    const options = getBilingualArray(question.options, language);
+    let options = getBilingualArray(question.options, language);
+    options = options.map(formatMatchOption);
 
     // Strip leading labels like "A.", "(A)", "A)" from listA items
     const cleanListAItem = (text) => {
@@ -321,7 +322,8 @@ const QuestionDisplay = ({
   /* ─── Sequence Order ─── */
   const renderSequenceOrder = () => {
     const items = getBilingualArray(question.sequenceData?.items, language);
-    const options = getBilingualArray(question.options, language);
+    let options = getBilingualArray(question.options, language);
+    options = options.map(formatSequenceOption);
 
     return (
       <div className="space-y-4">
