@@ -12,7 +12,6 @@ import {
 } from 'recharts';
 import ReportIssueModal from '../test/ReportIssueModal';
 import { getSequenceItemLabel, formatMatchOption, formatSequenceOption } from '../../utils/helpers';
-import AIDoubtPanel from './AIDoubtPanel';
 
 // ─── Hindi Detection ───────────────────────────────────────────────────────────
 const HINDI_RE = /[\u0900-\u097F]/;
@@ -641,7 +640,6 @@ const QCard = ({
   onReport,
 }) => {
   const qData = q.question;
-  const [showDoubtPanel, setShowDoubtPanel] = useState(false);
   if (!qData) return null;
 
   const qType      = qData.questionType;
@@ -652,41 +650,48 @@ const QCard = ({
   const rc = q.isCorrect
     ? {
         icon:  CheckCircle,
-        label: language === 'hi' ? 'सही' : 'Correct',
+        label: language === 'hi' ? 'सही (+2)' : 'Correct (+2)',
         cls:   'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
         hdr:   'from-emerald-500/5 to-green-500/5',
+        strip: 'bg-emerald-500',
       }
     : !isSkipped(q.selectedAnswer)
     ? {
         icon:  XCircle,
-        label: language === 'hi' ? 'गलत' : 'Wrong',
+        label: language === 'hi' ? 'गलत (0)' : 'Incorrect (0)',
         cls:   'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800',
         hdr:   'from-red-500/5 to-rose-500/5',
+        strip: 'bg-red-500',
       }
     : {
         icon:  Circle,
-        label: language === 'hi' ? 'छोड़ा' : 'Skipped',
+        label: language === 'hi' ? 'छोड़ा (0)' : 'Skipped (0)',
         cls:   'bg-gray-100 dark:bg-secondary-700 text-gray-600 dark:text-secondary-400 border-gray-200 dark:border-secondary-600',
         hdr:   'from-gray-500/5 to-slate-500/5',
+        strip: 'bg-gray-400',
       };
+
+  const hasExp = qData.explanation &&
+    (bText(qData.explanation, language) || bText(qData.explanation, language === 'hi' ? 'en' : 'hi'));
 
   return (
     <div className="bg-white dark:bg-secondary-800 rounded-2xl shadow-sm border border-gray-200 dark:border-secondary-700 overflow-hidden flex flex-col h-full">
+      <div className={`h-1.5 ${rc.strip}`} />
 
       {/* Card header */}
-      <div className={`px-5 sm:px-6 py-4 border-b border-gray-100 dark:border-secondary-700 bg-gradient-to-r ${rc.hdr}`}>
+      <div className={`px-5 sm:px-6 py-3.5 border-b border-gray-100 dark:border-secondary-700 bg-gradient-to-r ${rc.hdr}`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
 
           {/* Left: number + badges */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white dark:bg-secondary-700 shadow-sm border border-gray-200 dark:border-secondary-600 rounded-xl flex items-center justify-center">
-              <span className="text-lg font-black text-gray-900 dark:text-white">{q.questionNumber}</span>
+            <div className="w-9 h-9 bg-white dark:bg-secondary-700 shadow-sm border border-gray-200 dark:border-secondary-600 rounded-xl flex items-center justify-center font-black text-gray-900 dark:text-white text-base">
+              {q.questionNumber}
             </div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-[10px] font-bold rounded uppercase">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="px-2.5 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-[10px] font-bold rounded uppercase">
                 {typeLbl}
               </span>
-              <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase ${
+              <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded uppercase ${
                 difficulty === 'easy' ? 'bg-emerald-100 text-emerald-700'
                 : difficulty === 'hard' ? 'bg-red-100 text-red-700'
                 : 'bg-amber-100 text-amber-700'
@@ -698,7 +703,7 @@ const QCard = ({
           <div className="flex items-center gap-2">
             {q.timeTaken > 0 && (
               <span className="flex items-center gap-1 text-[11px] font-medium text-gray-500 bg-white dark:bg-secondary-700 px-2.5 py-1 rounded-lg border">
-                <Clock className="w-3 h-3" /> {q.timeTaken}s
+                <Clock className="w-3 h-3 text-primary-500" /> {q.timeTaken}s
               </span>
             )}
 
@@ -710,7 +715,7 @@ const QCard = ({
                          hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40
                          transition-colors active:scale-90"
             >
-              <Flag className="w-4 h-4" />
+              <Flag className="w-3.5 h-3.5" />
             </button>
 
             {/* Bookmark button */}
@@ -722,30 +727,22 @@ const QCard = ({
                   : 'bg-gray-100 dark:bg-secondary-700 text-gray-400 hover:text-amber-500'
               }`}
             >
-              <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+              <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? 'fill-current' : ''}`} />
             </button>
 
             {/* Status pill */}
             <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border ${rc.cls}`}>
-              <rc.icon className="w-4 h-4" /> {rc.label}
+              <rc.icon className="w-3.5 h-3.5" /> {rc.label}
             </span>
           </div>
         </div>
-
-        {/* Topic breadcrumb */}
-        {(qData.unit || qData.chapter || qData.topic) && (
-          <div className="mt-3 pt-2 border-t border-gray-200/50 dark:border-secondary-600/50 flex items-center gap-1.5 text-xs text-gray-500 overflow-x-auto">
-            <Tag className="w-3 h-3 flex-shrink-0" />
-            {[qData.unit, qData.chapter, qData.topic].filter(Boolean).join(' › ')}
-          </div>
-        )}
       </div>
 
-      {/* Card body */}
-      <div className="flex-1 min-h-0 flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x border-t dark:border-secondary-700 border-gray-100">
+      {/* Card body: 2 Column Split View */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x border-t dark:border-secondary-700 border-gray-100">
         
-        {/* Left Side: Question and Options */}
-        <div className="flex-1 p-5 sm:p-6 lg:p-8 space-y-6 overflow-y-auto">
+        {/* Left Side (Col 7): Question and Options */}
+        <div className="lg:col-span-7 p-4 sm:p-5 lg:p-6 space-y-5 overflow-y-auto">
           <QContent qData={qData} language={language} />
           <OptsDisplay
             qData={qData}
@@ -755,58 +752,62 @@ const QCard = ({
           />
         </div>
 
-        {/* Right Side: Explanation */}
-        <div className="lg:w-[40%] xl:w-[35%] p-5 sm:p-6 lg:p-8 space-y-6 overflow-y-auto bg-gray-50/50 dark:bg-secondary-900/20">
+        {/* Right Side (Col 5): Answer Status & Explanation */}
+        <div className="lg:col-span-5 p-4 sm:p-5 lg:p-6 space-y-4 overflow-y-auto bg-gray-50/70 dark:bg-secondary-850/50">
           
-          {/* Your answer vs correct answer */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white dark:bg-secondary-800 rounded-xl border border-gray-200 dark:border-secondary-700 shadow-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">{language === 'hi' ? 'आपका:' : 'Yours:'}</span>
-              <span className={`text-sm font-bold px-2.5 py-0.5 rounded-lg ${
-                isSkipped(q.selectedAnswer) ? 'bg-gray-200 text-gray-600'
-                : q.isCorrect              ? 'bg-emerald-100 text-emerald-700'
-                :                            'bg-red-100 text-red-700'
-              }`}>
-                {isSkipped(q.selectedAnswer)
-                  ? (language === 'hi' ? 'नहीं दिया' : 'N/A')
-                  : `(${q.selectedAnswer + 1})`}
+          {/* Comparison Status Box */}
+          <div className="p-3.5 bg-white dark:bg-secondary-800 rounded-xl border border-gray-200 dark:border-secondary-700 shadow-sm space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{language === 'hi' ? 'उत्तर स्थिति' : 'Answer Status'}</span>
+              <span className={`text-xs font-black px-2.5 py-0.5 rounded-md ${q.isCorrect ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' : !isSkipped(q.selectedAnswer) ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' : 'bg-gray-100 text-gray-700 dark:bg-secondary-700 dark:text-secondary-300'}`}>
+                {rc.label}
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">{language === 'hi' ? 'सही:' : 'Correct:'}</span>
-              <span className="text-sm font-bold bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-lg">
-                ({q.correctAnswer + 1})
-              </span>
+
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="p-2 bg-gray-50 dark:bg-secondary-750 rounded-lg border border-gray-100 dark:border-secondary-700">
+                <span className="text-gray-400 block text-[10px] uppercase font-bold">{language === 'hi' ? 'आपका उत्तर' : 'Your Answer'}</span>
+                <span className={`font-extrabold text-sm ${isSkipped(q.selectedAnswer) ? 'text-gray-500' : q.isCorrect ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {isSkipped(q.selectedAnswer) ? (language === 'hi' ? 'नहीं दिया' : 'Skipped') : `Option (${optLabel(q.selectedAnswer)})`}
+                </span>
+              </div>
+              <div className="p-2 bg-emerald-50/60 dark:bg-emerald-900/10 rounded-lg border border-emerald-100 dark:border-emerald-800/30">
+                <span className="text-emerald-600 dark:text-emerald-400 block text-[10px] uppercase font-bold">{language === 'hi' ? 'सही उत्तर' : 'Correct Answer'}</span>
+                <span className="font-extrabold text-sm text-emerald-700 dark:text-emerald-300">
+                  Option ({optLabel(q.correctAnswer)})
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Explanation */}
-          {qData.explanation &&
-            (bText(qData.explanation, language) || bText(qData.explanation, language === 'hi' ? 'en' : 'hi')) && (
-            <div className="animate-fade-in mb-4">
-              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200 dark:border-secondary-700">
-                <div className="bg-amber-100 dark:bg-amber-900/30 p-1.5 rounded-lg">
-                  <Lightbulb className="w-4 h-4 text-amber-600" />
+          {/* Explanation Section */}
+          {hasExp ? (
+            <div className="p-4 bg-white dark:bg-secondary-800 rounded-xl border border-blue-100 dark:border-blue-900/30 shadow-sm space-y-2.5">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-secondary-700">
+                <div className="p-1.5 bg-blue-100 dark:bg-blue-900/40 rounded-lg text-blue-600 dark:text-blue-400">
+                  <Lightbulb className="w-4 h-4" />
                 </div>
-                <span className="font-bold text-gray-900 dark:text-white">
-                  {language === 'hi' ? 'व्याख्या (Explanation)' : 'Explanation'}
+                <span className="font-bold text-sm text-gray-900 dark:text-white">
+                  {language === 'hi' ? 'विस्तृत व्याख्या' : 'Detailed Explanation'}
                 </span>
               </div>
-              <div className="text-sm text-gray-800 dark:text-secondary-200 leading-relaxed whitespace-pre-line">
+              <div className="text-xs sm:text-sm text-gray-800 dark:text-secondary-200 leading-relaxed whitespace-pre-line">
                 {bText(qData.explanation, language) || bText(qData.explanation, language === 'hi' ? 'en' : 'hi')}
               </div>
             </div>
+          ) : (
+            <div className="p-4 bg-white dark:bg-secondary-800 rounded-xl border border-gray-200/80 dark:border-secondary-700 text-center text-xs text-gray-400">
+              {language === 'hi' ? 'इस प्रश्न के लिए कोई अतिरिक्त व्याख्या नहीं है।' : 'No additional explanation available for this question.'}
+            </div>
           )}
 
-          {/* AI Doubt Resolver Panel */}
-          <AIDoubtPanel
-            question={qData}
-            selectedAnswer={q.selectedAnswer}
-            correctAnswer={q.correctAnswer}
-            language={language}
-            isOpen={showDoubtPanel}
-            onToggle={() => setShowDoubtPanel(!showDoubtPanel)}
-          />
+          {/* Topic breadcrumb */}
+          {(qData.unit || qData.chapter || qData.topic) && (
+            <div className="pt-2 flex items-center gap-1.5 text-[11px] text-gray-500 overflow-x-auto">
+              <Tag className="w-3.5 h-3.5 text-primary-500 flex-shrink-0" />
+              {[qData.unit, qData.chapter, qData.topic].filter(Boolean).join(' › ')}
+            </div>
+          )}
         </div>
       </div>
     </div>

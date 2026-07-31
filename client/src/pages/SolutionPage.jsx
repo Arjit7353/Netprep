@@ -271,7 +271,7 @@ const SolutionPage = ({ language: propLang = 'en' }) => {
               </button>
             </div>
           ) : currentQ ? (
-            <div className={`max-w-4xl mx-auto p-4 sm:p-6 pb-8 ${animDir === 'right' ? 'animate-slide-left' : animDir === 'left' ? 'animate-slide-right' : 'animate-fade-in'}`}>
+            <div className={`max-w-7xl w-full mx-auto p-3 sm:p-5 lg:p-6 pb-6 ${animDir === 'right' ? 'animate-slide-left' : animDir === 'left' ? 'animate-slide-right' : 'animate-fade-in'}`}>
               <div className="relative">
                 <MiniConfetti show={showConfetti} />
                 <QuestionSolutionCard
@@ -285,8 +285,8 @@ const SolutionPage = ({ language: propLang = 'en' }) => {
                   onReport={() => setShowReportModal(true)}
                 />
               </div>
-              <div className="flex justify-center mt-6"><ProgressDots current={currentIdx} total={filteredQ.length} /></div>
-              <div className="hidden lg:flex items-center justify-center gap-4 mt-4 text-[11px] text-gray-400">
+              <div className="flex justify-center mt-4"><ProgressDots current={currentIdx} total={filteredQ.length} /></div>
+              <div className="hidden lg:flex items-center justify-center gap-4 mt-3 text-[11px] text-gray-400">
                 {[
                   { keys: '← →', label: language === 'hi' ? 'नेविगेट' : 'Navigate' },
                   { keys: 'B', label: language === 'hi' ? 'बुकमार्क' : 'Bookmark' },
@@ -330,7 +330,7 @@ const SolutionPage = ({ language: propLang = 'en' }) => {
 
       {/* FOOTER */}
       <footer className="bg-white/95 dark:bg-secondary-800/95 backdrop-blur-xl border-t dark:border-secondary-700 sticky bottom-0 z-30 shadow-[0_-8px_30px_rgba(0,0,0,0.06)]">
-        <div className="max-w-4xl mx-auto flex items-center justify-between px-4 py-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3">
           <button onClick={goPrev} disabled={currentIdx <= 0}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-gray-200 dark:border-secondary-600 text-gray-700 dark:text-secondary-300 font-bold text-sm hover:bg-gray-50 dark:hover:bg-secondary-700 disabled:opacity-25 disabled:cursor-not-allowed transition-all active:scale-95">
             <ChevronLeft className="w-4 h-4" /><span className="hidden sm:inline">{language === 'hi' ? 'पिछला' : 'Prev'}</span>
@@ -448,96 +448,129 @@ const QuestionSolutionCard = ({ question: q, language, index, total, isBookmarke
   const diffLbl = DIFFICULTY_LABELS[difficulty]?.[language] || difficulty;
 
   const rc = q.isCorrect
-    ? { icon: CheckCircle, label: language === 'hi' ? 'सही' : 'Correct', cls: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800', hdr: 'from-emerald-500/[0.04] to-green-500/[0.04]', strip: 'bg-emerald-500' }
+    ? { icon: CheckCircle, label: language === 'hi' ? 'सही (+2)' : 'Correct (+2)', cls: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800', hdr: 'from-emerald-500/[0.04] to-green-500/[0.04]', strip: 'bg-emerald-500' }
     : q.selectedAnswer !== -1
-    ? { icon: XCircle, label: language === 'hi' ? 'गलत' : 'Wrong', cls: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800', hdr: 'from-red-500/[0.04] to-rose-500/[0.04]', strip: 'bg-red-500' }
-    : { icon: Circle, label: language === 'hi' ? 'छोड़ा' : 'Skipped', cls: 'bg-gray-50 dark:bg-secondary-700 text-gray-600 dark:text-secondary-400 border-gray-200 dark:border-secondary-600', hdr: 'from-gray-500/[0.03] to-slate-500/[0.03]', strip: 'bg-gray-400' };
+    ? { icon: XCircle, label: language === 'hi' ? 'गलत (0)' : 'Incorrect (0)', cls: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800', hdr: 'from-red-500/[0.04] to-rose-500/[0.04]', strip: 'bg-red-500' }
+    : { icon: Circle, label: language === 'hi' ? 'छोड़ा (0)' : 'Skipped (0)', cls: 'bg-gray-50 dark:bg-secondary-700 text-gray-600 dark:text-secondary-400 border-gray-200 dark:border-secondary-600', hdr: 'from-gray-500/[0.03] to-slate-500/[0.03]', strip: 'bg-gray-400' };
+
+  const hasExp = qData.explanation && (bText(qData.explanation, language) || bText(qData.explanation, language === 'hi' ? 'en' : 'hi'));
 
   return (
-    <div className="bg-white dark:bg-secondary-800 rounded-2xl shadow-sm border border-gray-200/80 dark:border-secondary-700 overflow-hidden hover:shadow-xl transition-shadow duration-500">
-      <div className={`h-1 ${rc.strip}`} />
-      <div className={`px-5 sm:px-6 py-4 border-b border-gray-100 dark:border-secondary-700/50 bg-gradient-to-r ${rc.hdr}`}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white dark:bg-secondary-700 shadow-md border border-gray-200 dark:border-secondary-600 rounded-xl flex items-center justify-center">
-              <span className="text-lg font-black text-gray-900 dark:text-white">{q.questionNumber}</span>
+    <div className="bg-white dark:bg-secondary-800 rounded-2xl shadow-sm border border-gray-200/80 dark:border-secondary-700 overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col">
+      <div className={`h-1.5 ${rc.strip}`} />
+      
+      {/* Top Header Bar */}
+      <div className={`px-4 sm:px-6 py-3.5 border-b border-gray-100 dark:border-secondary-700/50 bg-gradient-to-r ${rc.hdr}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 bg-white dark:bg-secondary-700 shadow-sm border border-gray-200 dark:border-secondary-600 rounded-xl flex items-center justify-center font-black text-gray-900 dark:text-white text-base">
+              {q.questionNumber}
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="px-2.5 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-[10px] font-bold rounded-md uppercase tracking-wide">{typeLbl}</span>
               <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-md uppercase tracking-wide ${difficulty === 'easy' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : difficulty === 'hard' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>{diffLbl}</span>
               {qData.isPYQ && qData.year && (
                 <span className="px-2.5 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] font-bold rounded-md tracking-wide">
                   PYQ {qData.year}
-                  {qData.pyqSession ? ` - ${qData.pyqSession.charAt(0).toUpperCase() + qData.pyqSession.slice(1)}` : ''}
-                  {qData.pyqShift && qData.pyqShift !== 'none' ? ` (${qData.pyqShift.charAt(0).toUpperCase() + qData.pyqShift.slice(1)})` : ''}
                 </span>
               )}
             </div>
           </div>
+
           <div className="flex items-center gap-2">
             {q.timeTaken > 0 && (
-              <span className="flex items-center gap-1 text-[11px] font-semibold text-gray-500 bg-white dark:bg-secondary-700 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-secondary-600"><Clock className="w-3 h-3" /> {q.timeTaken}s</span>
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-gray-500 bg-white dark:bg-secondary-700 px-2 py-1 rounded-lg border border-gray-200 dark:border-secondary-600">
+                <Clock className="w-3 h-3 text-primary-500" /> {q.timeTaken}s
+              </span>
             )}
-            <button onClick={onReport}
-              className="p-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors active:scale-90" title={language === 'hi' ? 'रिपोर्ट' : 'Report'}>
+            <button onClick={onReport} className="p-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-400 hover:text-red-600 transition-colors" title="Report">
               <Flag className="w-3.5 h-3.5" />
             </button>
-            <button onClick={onCopy} className="p-1.5 rounded-lg bg-gray-50 dark:bg-secondary-700 text-gray-400 hover:text-gray-600 transition-colors active:scale-90" title="Copy">
+            <button onClick={onCopy} className="p-1.5 rounded-lg bg-gray-50 dark:bg-secondary-700 text-gray-400 hover:text-gray-600 transition-colors" title="Copy">
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
-            <button onClick={onToggleBookmark}
-              className={`p-1.5 rounded-lg transition-all active:scale-90 ${isBookmarked ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600' : 'bg-gray-50 dark:bg-secondary-700 text-gray-400 hover:text-amber-500'}`}>
-              <Bookmark className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
+            <button onClick={onToggleBookmark} className={`p-1.5 rounded-lg transition-all ${isBookmarked ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600' : 'bg-gray-50 dark:bg-secondary-700 text-gray-400 hover:text-amber-500'}`} title="Bookmark">
+              <Bookmark className={`w-3.5 h-3.5 ${isBookmarked ? 'fill-current' : ''}`} />
             </button>
-            <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border ${rc.cls}`}><rc.icon className="w-4 h-4" /> {rc.label}</span>
-          </div>
-        </div>
-        {(qData.unit || qData.chapter || qData.topic) && (
-          <div className="mt-3 pt-2 border-t border-gray-200/50 dark:border-secondary-600/50 flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-secondary-400 overflow-x-auto font-medium">
-            <Tag className="w-3 h-3 flex-shrink-0 text-primary-400" />
-            {[qData.unit, qData.chapter, qData.topic].filter(Boolean).map((p, i, arr) => (
-              <React.Fragment key={i}><span>{p}</span>{i < arr.length - 1 && <ChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />}</React.Fragment>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className={`p-5 sm:p-6 lg:p-8 space-y-6 ${compact ? 'text-sm' : ''}`}>
-        <QuestionContent qData={qData} language={language} />
-        <OptionsDisplay qData={qData} language={language} selectedAnswer={q.selectedAnswer} correctAnswer={q.correctAnswer} compact={compact} />
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-gray-50/80 dark:bg-secondary-700/30 rounded-xl border border-gray-100 dark:border-secondary-600/50">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 font-medium">{language === 'hi' ? 'आपका:' : 'Yours:'}</span>
-            <span className={`text-sm font-bold px-2.5 py-0.5 rounded-lg ${q.selectedAnswer === -1 ? 'bg-gray-200 text-gray-600 dark:bg-secondary-600 dark:text-secondary-300' : q.isCorrect ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-              {q.selectedAnswer === -1 ? 'N/A' : `(${optLabel(q.selectedAnswer)})`}
+            <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${rc.cls}`}>
+              <rc.icon className="w-3.5 h-3.5" /> {rc.label}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 font-medium">{language === 'hi' ? 'सही:' : 'Correct:'}</span>
-            <span className="text-sm font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-2.5 py-0.5 rounded-lg">({optLabel(q.correctAnswer)})</span>
-          </div>
+        </div>
+      </div>
+
+      {/* Main Content Grid: Left Column (Question + Options), Right Column (Status + Explanation) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-gray-100 dark:divide-secondary-700">
+        
+        {/* Left Side (Col-span 7): Question & Options */}
+        <div className="lg:col-span-7 p-4 sm:p-5 lg:p-6 space-y-5">
+          <QuestionContent qData={qData} language={language} />
+          <OptionsDisplay qData={qData} language={language} selectedAnswer={q.selectedAnswer} correctAnswer={q.correctAnswer} compact={compact} />
         </div>
 
-        {qData.explanation && (bText(qData.explanation, language) || bText(qData.explanation, language === 'hi' ? 'en' : 'hi')) && (
-          <div>
-            <button onClick={onToggleExplanation} className="flex items-center gap-2 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 transition-colors mb-3 group">
-              <div className="p-1 bg-blue-100 dark:bg-blue-900/30 rounded-lg group-hover:bg-blue-200 transition-colors"><Lightbulb className="w-3.5 h-3.5" /></div>
-              {language === 'hi' ? 'व्याख्या' : 'Explanation'}
-              {showExplanation ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
-            {showExplanation && (
-              <div className="p-5 bg-gradient-to-br from-blue-50/80 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10 border border-blue-200/50 dark:border-blue-800/30 rounded-xl animate-fade-in backdrop-blur-sm">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="bg-blue-100 dark:bg-blue-900/40 p-2 rounded-xl"><BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" /></div>
-                  <span className="font-black text-blue-900 dark:text-blue-300">{language === 'hi' ? 'समाधान' : 'Solution'}</span>
-                </div>
-                <p className="text-sm text-gray-800 dark:text-secondary-200 leading-relaxed whitespace-pre-line">
-                  {bText(qData.explanation, language) || bText(qData.explanation, language === 'hi' ? 'en' : 'hi')}
-                </p>
+        {/* Right Side (Col-span 5): Answer Status & Explanation */}
+        <div className="lg:col-span-5 p-4 sm:p-5 lg:p-6 space-y-4 bg-gray-50/70 dark:bg-secondary-850/50">
+          
+          {/* Comparison Status Box */}
+          <div className="p-3.5 bg-white dark:bg-secondary-800 rounded-xl border border-gray-200/80 dark:border-secondary-700 shadow-sm space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{language === 'hi' ? 'उत्तर स्थिति' : 'Answer Status'}</span>
+              <span className={`text-xs font-black px-2.5 py-0.5 rounded-md ${q.isCorrect ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' : q.selectedAnswer !== -1 ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' : 'bg-gray-100 text-gray-700 dark:bg-secondary-700 dark:text-secondary-300'}`}>
+                {rc.label}
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="p-2 bg-gray-50 dark:bg-secondary-750 rounded-lg border border-gray-100 dark:border-secondary-700">
+                <span className="text-gray-400 block text-[10px] uppercase font-bold">{language === 'hi' ? 'आपका उत्तर' : 'Your Answer'}</span>
+                <span className={`font-extrabold text-sm ${q.selectedAnswer === -1 ? 'text-gray-500' : q.isCorrect ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {q.selectedAnswer === -1 ? (language === 'hi' ? 'नहीं दिया' : 'Skipped') : `Option (${optLabel(q.selectedAnswer)})`}
+                </span>
               </div>
-            )}
+              <div className="p-2 bg-emerald-50/60 dark:bg-emerald-900/10 rounded-lg border border-emerald-100 dark:border-emerald-800/30">
+                <span className="text-emerald-600 dark:text-emerald-400 block text-[10px] uppercase font-bold">{language === 'hi' ? 'सही उत्तर' : 'Correct Answer'}</span>
+                <span className="font-extrabold text-sm text-emerald-700 dark:text-emerald-300">
+                  Option ({optLabel(q.correctAnswer)})
+                </span>
+              </div>
+            </div>
           </div>
-        )}
+
+          {/* Explanation Section */}
+          {hasExp ? (
+            <div className="p-4 bg-white dark:bg-secondary-800 rounded-xl border border-blue-100 dark:border-blue-900/30 shadow-sm space-y-2.5">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-secondary-700">
+                <div className="p-1.5 bg-blue-100 dark:bg-blue-900/40 rounded-lg text-blue-600 dark:text-blue-400">
+                  <Lightbulb className="w-4 h-4" />
+                </div>
+                <span className="font-bold text-sm text-gray-900 dark:text-white">
+                  {language === 'hi' ? 'विस्तृत व्याख्या' : 'Detailed Explanation'}
+                </span>
+              </div>
+              <div className="text-xs sm:text-sm text-gray-800 dark:text-secondary-200 leading-relaxed whitespace-pre-line">
+                {bText(qData.explanation, language) || bText(qData.explanation, language === 'hi' ? 'en' : 'hi')}
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 bg-white dark:bg-secondary-800 rounded-xl border border-gray-200/80 dark:border-secondary-700 text-center text-xs text-gray-400">
+              {language === 'hi' ? 'इस प्रश्न के लिए कोई अतिरिक्त व्याख्या नहीं है।' : 'No additional explanation available for this question.'}
+            </div>
+          )}
+
+          {/* Topic Breadcrumb */}
+          {(qData.unit || qData.chapter || qData.topic) && (
+            <div className="pt-2 flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-secondary-400 overflow-x-auto font-medium">
+              <Tag className="w-3 h-3 flex-shrink-0 text-primary-500" />
+              {[qData.unit, qData.chapter, qData.topic].filter(Boolean).map((p, i, arr) => (
+                <React.Fragment key={i}>
+                  <span>{p}</span>
+                  {i < arr.length - 1 && <ChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+
+        </div>
       </div>
     </div>
   );
