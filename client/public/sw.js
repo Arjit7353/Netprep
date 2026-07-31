@@ -95,7 +95,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // HTML pages & Navigation - Network First with offline fallback
-  if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
+  if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html') || url.pathname.startsWith('/test/') || url.pathname.startsWith('/result/')) {
     event.respondWith(networkFirstWithOfflineFallback(request));
     return;
   }

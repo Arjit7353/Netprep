@@ -9,6 +9,7 @@ import {
   ArrowRight, X
 } from 'lucide-react';
 import {
+  getBilingualText, getBilingualArray, getOptionLabel,
   getRomanNumeral, getSequenceItemLabel, getChartLabels, getDatasetLabel,
   formatMatchOption, formatSequenceOption
 } from '../../utils/helpers';

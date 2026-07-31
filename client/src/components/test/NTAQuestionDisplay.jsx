@@ -4,6 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import {
+  getBilingualText, getBilingualArray, getOptionLabel,
   getRomanNumeral, getSequenceItemLabel, getChartLabels, getDatasetLabel,
   formatMatchOption, formatSequenceOption
 } from '../../utils/helpers';
